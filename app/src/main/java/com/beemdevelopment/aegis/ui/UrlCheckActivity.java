@@ -5,8 +5,10 @@ package com.beemdevelopment.aegis.ui;
 import android.content.Context;
 import android.content.Intent;
 
+import android.os.Build;
 import android.os.Bundle;
 
+import android.util.Log;
 import android.view.View;
 
 import com.beemdevelopment.aegis.R;
@@ -24,14 +26,15 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
 
 /* URL lib */
+import androidx.annotation.RequiresApi;
+
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 /* 輸入流 */
 import java.io.InputStream;
-
-
+import java.nio.file.Path;
 
 
 public class UrlCheckActivity extends AegisActivity{
@@ -43,10 +46,13 @@ public class UrlCheckActivity extends AegisActivity{
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
+    File Domain_name_txt;
+    boolean SuccessCreate;
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,7 +73,6 @@ public class UrlCheckActivity extends AegisActivity{
         /* 設定變數 */
         url_input = findViewById(R.id.url_input);
         send_button = findViewById(R.id.send_button);
-        /* 創造ImageButton需要也宣告成ImageButton */
         clear_button = findViewById(R.id.clear_button);
         scan_qrcode_button = findViewById(R.id.scan_qrcode_button);
 
@@ -108,12 +113,34 @@ public class UrlCheckActivity extends AegisActivity{
             }
         });
 
+        /* file aegis.json */
+        System.out.println("Dir display:");
+        System.out.println(this.getApplicationContext().getFilesDir().toString());
+        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
+        try {
+            FileReader fr = new FileReader(f);
+            BufferedReader br = new BufferedReader(fr);
+//            while (br.ready()) {
+////                System.out.println(br.readLine());
+//            }
+            fr.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-
+        Create_Domain_name_txt_file();
+        /* Get File list(test) */
+        String[] files = getApplicationContext().fileList();
+        System.out.println("\nExist file list:");
+        for(String file : files)
+            System.out.println(file);
 
 
 
     }
+
     /* 接收activity傳送回來的資料 */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -170,6 +197,26 @@ public class UrlCheckActivity extends AegisActivity{
             e.printStackTrace();
         }
         URL_text = null;
+    }
+    /* 建立Domain name的檔案 */
+    public void Create_Domain_name_txt_file(){
+
+        /* Create file */
+        File dir = getApplicationContext().getFilesDir();
+        Domain_name_txt = new File(dir,"Domain_name_txt.txt");
+        try {
+            if(Domain_name_txt.createNewFile()){
+                System.out.println("Success Create Domain_name_txt file.");
+            }
+            else{
+                System.out.println("Domain_name_txt file is exist.");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        /* Write file */
+
     }
 
 }
