@@ -124,7 +124,7 @@ public class UrlCheckActivity extends AegisActivity{
         if (resultCode != RESULT_OK) {
             return;
         }
-
+        //local test
         switch (requestCode) {
             case Scan_QR_CODE:
                 URL_text = data.getStringExtra(pass_name);
