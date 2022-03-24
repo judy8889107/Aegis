@@ -1,3 +1,4 @@
+
 package com.beemdevelopment.aegis.ui;
 
 import android.content.Intent;

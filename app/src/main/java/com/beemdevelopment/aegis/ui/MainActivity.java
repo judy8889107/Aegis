@@ -66,6 +66,7 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
     private static final int CODE_DECRYPT = 4;
     private static final int CODE_PREFERENCES = 5;
     private static final int CODE_SCAN_IMAGE = 6;
+    /* 加入Result Code CODE_URL_CHECK */
     private static final int CODE_URL_CHECK = 7;
 
     // permission request codes
