@@ -28,13 +28,20 @@ import android.widget.ImageButton;
 /* URL lib */
 import androidx.annotation.RequiresApi;
 
+import org.json.JSONObject;
+
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 /* 輸入流 */
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+/* JSON */
+import org.json.*;
+
 
 
 public class UrlCheckActivity extends AegisActivity{
@@ -45,6 +52,8 @@ public class UrlCheckActivity extends AegisActivity{
     Button scan_qrcode_button;
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
+    private ArrayList<String> issuer;
+
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File Domain_name_txt;
     boolean SuccessCreate;
@@ -113,22 +122,7 @@ public class UrlCheckActivity extends AegisActivity{
             }
         });
 
-//        /* file aegis.json */
-//        System.out.println("Dir display:");
-//        System.out.println(this.getApplicationContext().getFilesDir().toString());
-//        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
-//        try {
-//            FileReader fr = new FileReader(f);
-//            BufferedReader br = new BufferedReader(fr);
-////            while (br.ready()) {
-//////                System.out.println(br.readLine());
-////            }
-//            fr.close();
-//        } catch (FileNotFoundException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+//
 
         Create_Domain_name_txt_file();
         /* Get File list(test) */
@@ -198,8 +192,12 @@ public class UrlCheckActivity extends AegisActivity{
         }
         URL_text = null;
     }
+
     /* 建立Domain name的檔案 */
     public void Create_Domain_name_txt_file(){
+
+        /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
+        Create_issuer_arrayList();
 
         /* Create file */
         File dir = getApplicationContext().getFilesDir();
@@ -214,8 +212,49 @@ public class UrlCheckActivity extends AegisActivity{
         } catch (IOException e) {
             e.printStackTrace();
         }
+        int index = 0;
+        while(index<issuer.size()){
+            System.out.println(issuer.get(index));
+            index++;
+        }
 
-        /* Write file */
+
+
+    }
+
+    /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
+    public void Create_issuer_arrayList(){
+        /* 打開 aegis.json 轉換 && 解析JSON檔，並創建 issuer arraylist */
+        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
+        BufferedReader br;
+        String aegis_json_string =""; /* File JSON檔轉為String */
+        JSONObject jsonObject; /* String再建立成jsonObject */
+        JSONArray jsonArray;   /* 用來解析jsonObject */
+        issuer = new ArrayList<>(); /* 利用ArrayList儲存issuer */
+        try {
+            /* 讀取 file轉換成String，因為JDK版本關係要用 BufferedReader轉(用BufferedReader是因為讀取效率高) */
+            br = new BufferedReader(new FileReader(f));
+            while(br.ready()){
+                aegis_json_string += br.readLine();
+            }
+            System.out.println(aegis_json_string);
+            br.close();
+            /* 創立並解析 JSON物件 */
+            jsonObject = new JSONObject(aegis_json_string);
+            jsonObject = jsonObject.getJSONObject("db");
+            jsonArray = jsonObject.getJSONArray("entries");
+            for(int i=0;i<jsonArray.length();i++){
+                jsonObject = jsonArray.getJSONObject(i);
+                issuer.add(jsonObject.get("issuer").toString());
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
