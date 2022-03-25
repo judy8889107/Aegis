@@ -125,6 +125,7 @@ public class UrlCheckActivity extends AegisActivity{
 //
 
         Create_Domain_name_txt_file();
+
         /* Get File list(test) */
         String[] files = getApplicationContext().fileList();
         System.out.println("\nExist file list:");
