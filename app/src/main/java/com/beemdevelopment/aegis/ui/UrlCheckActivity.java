@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Locale;
 /* JSON */
 import org.json.*;
 
@@ -213,11 +214,8 @@ public class UrlCheckActivity extends AegisActivity{
         } catch (IOException e) {
             e.printStackTrace();
         }
-        int index = 0;
-        while(index<issuer.size()){
-//            System.out.println(issuer.get(index));
-            index++;
-        }
+
+        for(int i=0;i<issuer.size();i++) System.out.println(issuer.get(i));
 
 
 
@@ -245,7 +243,7 @@ public class UrlCheckActivity extends AegisActivity{
             jsonArray = jsonObject.getJSONArray("entries");
             for(int i=0;i<jsonArray.length();i++){
                 jsonObject = jsonArray.getJSONObject(i);
-                issuer.add(jsonObject.get("issuer").toString());
+                issuer.add(jsonObject.get("issuer").toString().toLowerCase()); /* issuer轉換成小寫放入arrayList */
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
