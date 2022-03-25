@@ -237,7 +237,6 @@ public class UrlCheckActivity extends AegisActivity{
             while(br.ready()){
                 aegis_json_string += br.readLine();
             }
-            System.out.println(aegis_json_string);
             br.close();
             /* 創立並解析 JSON物件 */
             jsonObject = new JSONObject(aegis_json_string);
