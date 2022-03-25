@@ -35,13 +35,19 @@ public class GoogleAuthInfo implements Serializable {
         return GoogleAuthInfo.parseUri(uri);
     }
 
+    /* 檢查輸入進去的 uri */
     public static GoogleAuthInfo parseUri(Uri uri) throws GoogleAuthInfoException {
         String scheme = uri.getScheme();
+        /* SCHEME = "otpauth"，2FA提供的 QRcode掃出來前面都是這個開頭
+        * otpauth://totp/ID:100001534662130?secret=PVPVDQLV6RM3EQLLAV6NRROOB5F6N2US&digits=6&issuer=Facebook */
         if (scheme == null || !scheme.equals(SCHEME)) {
             throw new GoogleAuthInfoException(uri, String.format("Unsupported protocol: %s", scheme));
         }
 
         // 'secret' is a required parameter
+        /* 將 String型別的URL轉變為URI
+        * 利用URI的getQueryParameter方法獲取引數
+        * 這裡是密鑰號碼 */
         String encodedSecret = uri.getQueryParameter("secret");
         if (encodedSecret == null) {
             throw new GoogleAuthInfoException(uri, "Parameter 'secret' is not present");
@@ -53,10 +59,13 @@ public class GoogleAuthInfo implements Serializable {
         } catch (EncodingException e) {
             throw new GoogleAuthInfoException(uri, "Bad secret", e);
         }
-
+        /* type parameter */
         OtpInfo info;
         String issuer = "";
         try {
+            /* uri.getHost()本來是返回主機名，但是 2FA QRcode掃描出的內容長這樣
+            * otpauth://totp/ID:100001534662130?secret=PVPVDQLV6RM3EQLLAV6NRROOB5F6N2US&digits=6&issuer=Facebook
+            * 所以主機明會自動變成中間 totp 那段 */
             String type = uri.getHost();
             if (type == null) {
                 throw new GoogleAuthInfoException(uri, String.format("Host not present in URI: %s", uri.toString()));
@@ -105,18 +114,32 @@ public class GoogleAuthInfo implements Serializable {
         }
 
         // provider info used to disambiguate accounts
+        /* 這裡getPath會得到
+        * otpauth://totp/ID:100001534662130?secret=PVPVDQLV6RM3EQLLAV6NRROOB5F6N2US&digits=6&issuer=Facebook
+        * /ID:100001534662130 這段 */
         String path = uri.getPath();
+
+
         String label = path != null && path.length() > 0 ? path.substring(1) : "";
 
+
         String accountName = "";
+        String issuerParam = uri.getQueryParameter("issuer");
 
         if (label.contains(":")) {
             // a label can only contain one colon
             // it's ok to fail if that's not the case
+            /* Judy修復 Facebook issuer Bug問題 */
+            /* 出錯的地方在這裡，若有 :則直接以:前面的值為issuer
+            * otpauth://totp/ID:100001534662130?secret=PVPVDQLV6RM3EQLLAV6NRROOB5F6N2US&digits=6&issuer=Facebook */
             String[] strings = label.split(":");
             if (strings.length == 2) {
                 issuer = strings[0];
                 accountName = strings[1];
+                /* issuerParam和issuer都不為空，去比較兩個字串的值，並以issuerParam為主 */
+                if(issuerParam!=null && issuer!=null && !issuerParam.equals(issuer)){
+                    issuer = issuerParam;
+                }
             } else {
                 // at this point, just dump the whole thing into the accountName
                 accountName = label;
@@ -124,10 +147,14 @@ public class GoogleAuthInfo implements Serializable {
         } else {
             // label only contains the account name
             // grab the issuer's info from the 'issuer' parameter if it's present
-            String issuerParam = uri.getQueryParameter("issuer");
+            /* 這裡則是針對在path得到的資料，若沒有issuer(沒有 :)才去填入issuer
+            * otpauth://totp/ID:100001534662130?secret=PVPVDQLV6RM3EQLLAV6NRROOB5F6N2US&digits=6&issuer=Facebook */
+//            String issuerParam = uri.getQueryParameter("issuer");
+
             if (issuer.isEmpty()) {
                 issuer = issuerParam != null ? issuerParam : "";
             }
+
             accountName = label;
         }
 

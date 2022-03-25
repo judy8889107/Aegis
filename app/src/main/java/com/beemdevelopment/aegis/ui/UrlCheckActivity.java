@@ -113,22 +113,22 @@ public class UrlCheckActivity extends AegisActivity{
             }
         });
 
-        /* file aegis.json */
-        System.out.println("Dir display:");
-        System.out.println(this.getApplicationContext().getFilesDir().toString());
-        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
-        try {
-            FileReader fr = new FileReader(f);
-            BufferedReader br = new BufferedReader(fr);
-//            while (br.ready()) {
-////                System.out.println(br.readLine());
-//            }
-            fr.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        /* file aegis.json */
+//        System.out.println("Dir display:");
+//        System.out.println(this.getApplicationContext().getFilesDir().toString());
+//        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
+//        try {
+//            FileReader fr = new FileReader(f);
+//            BufferedReader br = new BufferedReader(fr);
+////            while (br.ready()) {
+//////                System.out.println(br.readLine());
+////            }
+//            fr.close();
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
         Create_Domain_name_txt_file();
         /* Get File list(test) */

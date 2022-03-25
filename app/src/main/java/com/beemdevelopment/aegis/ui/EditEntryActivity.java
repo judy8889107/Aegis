@@ -1,4 +1,4 @@
-/* 手動新增的 activity */
+/* 手動新增功能 的 activity */
 package com.beemdevelopment.aegis.ui;
 
 import android.content.Intent;

@@ -170,13 +170,14 @@ public class ScannerActivity extends AegisActivity implements QrCodeAnalyzer.Lis
         cameraProvider.unbindAll();
     }
 
+    /* 這塊是QRcode解析出URL的地方 */
     @Override
     public void onQrCodeDetected(Result result) {
         if (_analysis != null) {
             try {
-                Uri uri = Uri.parse(result.getText().trim());
+                Uri uri = Uri.parse(result.getText().trim()); /* 去掉空白 */
                 if (uri.getScheme() != null && uri.getScheme().equals(GoogleAuthInfo.SCHEME_EXPORT)) {
-                    handleExportUri(uri);
+                    handleExportUri(uri); /* 串接到處理網址的部分 */
                 } else {
                     handleUri(uri);
                 }
@@ -190,9 +191,10 @@ public class ScannerActivity extends AegisActivity implements QrCodeAnalyzer.Lis
             }
         }
     }
-
+    /* 處理 URL 的 function，並把他加入到 entry */
     private void handleUri(Uri uri) throws GoogleAuthInfoException {
         GoogleAuthInfo info = GoogleAuthInfo.parseUri(uri);
+        System.out.println(info);
         List<VaultEntry> entries = new ArrayList<>();
         entries.add(new VaultEntry(info));
         finish(entries);
