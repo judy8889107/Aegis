@@ -204,17 +204,17 @@ public class UrlCheckActivity extends AegisActivity{
         Domain_name_txt = new File(dir,"Domain_name_txt.txt");
         try {
             if(Domain_name_txt.createNewFile()){
-                System.out.println("Success Create Domain_name_txt file.");
+//                System.out.println("Success Create Domain_name_txt file.");
             }
             else{
-                System.out.println("Domain_name_txt file is exist.");
+//                System.out.println("Domain_name_txt file is exist.");
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
         int index = 0;
         while(index<issuer.size()){
-            System.out.println(issuer.get(index));
+//            System.out.println(issuer.get(index));
             index++;
         }
 
