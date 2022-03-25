@@ -194,7 +194,6 @@ public class ScannerActivity extends AegisActivity implements QrCodeAnalyzer.Lis
     /* 處理 URL 的 function，並把他加入到 entry */
     private void handleUri(Uri uri) throws GoogleAuthInfoException {
         GoogleAuthInfo info = GoogleAuthInfo.parseUri(uri);
-        System.out.println(info);
         List<VaultEntry> entries = new ArrayList<>();
         entries.add(new VaultEntry(info));
         finish(entries);
