@@ -51,7 +51,7 @@ import org.json.*;
 
 
 
-public class UrlCheckActivity extends AegisActivity{
+public class UrlCheckActivity extends AegisActivity implements View.OnClickListener{
     /* 變數宣告 */
     EditText url_input;
     Button send_button;
@@ -85,9 +85,6 @@ public class UrlCheckActivity extends AegisActivity{
         this.setContentView(R.layout.activity_url_check);
         this.setSupportActionBar(findViewById(R.id.toolbar));
 
-
-
-
         /* 設定變數 */
         url_input = findViewById(R.id.url_input);
         send_button = findViewById(R.id.send_button);
@@ -95,43 +92,10 @@ public class UrlCheckActivity extends AegisActivity{
         scan_qrcode_button = findViewById(R.id.scan_qrcode_button);
 
 
-
-
-
         /* 監聽器設定 */
-        /* sent_button */
-        send_button.setOnClickListener(new View.OnClickListener()  {
-            @Override
-            public void onClick(View view) {
-//                System.out.println("URL輸入: "+url_input.getText().toString()); test
-                /* 按下send_button就隱藏鍵盤 */
-                InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(send_button.getWindowToken(), 0);
-                URL_text = url_input.getText().toString();
-                /* 執行 URL check */
-                UrlCheck();
-
-
-
-            }
-        });
-        /* clear_button監聽事件 */
-        clear_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                url_input.setText("");
-            }
-        });
-
-        /* scan_qrcode_button監聽事件 */
-        scan_qrcode_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-            Intent scan_qrcode_activity = new Intent(getApplicationContext(),UrlCheckActivity_ScanQrcodeActivity.class);
-                startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
-
-            }
-        });
+        send_button.setOnClickListener(this);
+        clear_button.setOnClickListener(this);
+        scan_qrcode_button.setOnClickListener(this);
 
         /* 初始化 */
         initialize();
@@ -163,7 +127,30 @@ public class UrlCheckActivity extends AegisActivity{
 
     }
 
-    /* 接收activity傳送回來的資料 */
+    /* 監聽器事件，實作 View.OnClickListener */
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.send_button:
+                /* 按下send_button就隱藏鍵盤 */
+                InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(send_button.getWindowToken(), 0);
+                URL_text = url_input.getText().toString();
+                /* 執行 URL check */
+                UrlCheck();
+                break;
+            case R.id.clear_button:
+                url_input.setText("");
+                break;
+            case R.id.scan_qrcode_button:
+                Intent scan_qrcode_activity = new Intent(getApplicationContext(),UrlCheckActivity_ScanQrcodeActivity.class);
+                startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
+                break;
+
+        }
+    }
+
+    /* RequestCode/ResultCode 在兩個intent間接收/傳遞資料 */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
@@ -185,18 +172,17 @@ public class UrlCheckActivity extends AegisActivity{
 
         AlertDialog.Builder alert_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
 
-        alert_dialog_builder.setTitle("警告");
-        alert_dialog_builder.setMessage("這個網址可能不安全，請問要將此網址加入安全名單嗎？");
-        alert_dialog_builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
+        alert_dialog_builder.setTitle(R.string.warning);
+        alert_dialog_builder.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                dialog_toast.setText("已把網址加入安全名單");
+                dialog_toast.setText(R.string.addURL);
                 dialog_toast.show();
 
             }
         });
 
-        alert_dialog_builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+        alert_dialog_builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
 
@@ -229,7 +215,7 @@ public class UrlCheckActivity extends AegisActivity{
                 host = url_obj.getHost().toLowerCase();
 
                 if(!protocol.equals("http") && !protocol.equals("https")){
-                    alert_dialog.setMessage(URL_text+"\n這個網址可能不安全，請問要將此網址加入安全名單嗎？");
+                    alert_dialog.setMessage(URL_text+"\n"+ getResources().getString(R.string.unsafeURL));
                     alert_dialog.show();
                 }
                 for(int i=0;i<issuer.size();i++){
@@ -240,17 +226,17 @@ public class UrlCheckActivity extends AegisActivity{
                     }
                 }
                 if(!containsIssuer){
-                    alert_dialog.setMessage(URL_text+"\n這個網址可能不安全，請問要將此網址加入安全名單嗎？");
+                    alert_dialog.setMessage(URL_text+"\n"+ getResources().getString(R.string.unsafeURL));
                     alert_dialog.show();
                 }
                 else{
-                    dialog_toast.setText("此為安全網站，可以放心登入");
+                    dialog_toast.setText(R.string.safeURL);
                     dialog_toast.show();
                 }
 
 
             }catch (MalformedURLException e){
-                dialog_toast.setText("解析失敗：非網址格式，請重新嘗試");
+                dialog_toast.setText(R.string.parseFail);
                 dialog_toast.show();
                 e.printStackTrace();
             }
@@ -319,6 +305,7 @@ public class UrlCheckActivity extends AegisActivity{
 
 
     }
+
 
 }
 

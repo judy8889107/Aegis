@@ -334,4 +334,8 @@
     <string name="importer_help_direct">直接导入来自%s的条目。这要求将应用程序安装在此设备上，并授予Aegis根访问权限。</string>
     <string name="groups">群组</string>
     <string name="url_check">网址检查</string>
+    <string name="warning">警告</string>
+    <string name="unsafeURL">URL 可能不安全。您想将此 URL 添加到安全列表吗？</string>
+    <string name="safeURL">这是一个安全的网站，您可以放心登录</string>
+    <string name="parseFail">解析失败：不是 URL 模式，请重试</string>
 </resources>
