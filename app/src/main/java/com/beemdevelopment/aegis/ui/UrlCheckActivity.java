@@ -2,7 +2,9 @@
 package com.beemdevelopment.aegis.ui;
 
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 
 import android.os.Build;
@@ -24,6 +26,7 @@ import android.widget.EditText;
 import android.view.inputmethod.InputMethodManager;
 /* ImageButton的import */
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 /* URL lib */
 import androidx.annotation.RequiresApi;
@@ -32,6 +35,9 @@ import org.json.JSONObject;
 
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 /* 輸入流 */
@@ -54,6 +60,8 @@ public class UrlCheckActivity extends AegisActivity{
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
     private ArrayList<String> issuer;
+    private AlertDialog alert_dialog;
+    private Toast dialog_toast;
 
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File Domain_name_txt;
@@ -95,17 +103,19 @@ public class UrlCheckActivity extends AegisActivity{
         send_button.setOnClickListener(new View.OnClickListener()  {
             @Override
             public void onClick(View view) {
-                System.out.println("URL輸入: "+url_input.getText().toString());
+//                System.out.println("URL輸入: "+url_input.getText().toString()); test
                 /* 按下send_button就隱藏鍵盤 */
                 InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(send_button.getWindowToken(), 0);
                 URL_text = url_input.getText().toString();
+                /* 執行 URL check */
+                UrlCheck();
 
 
 
             }
         });
-        /* clear_button */
+        /* clear_button監聽事件 */
         clear_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -113,7 +123,7 @@ public class UrlCheckActivity extends AegisActivity{
             }
         });
 
-        /* scan_qrcode_button */
+        /* scan_qrcode_button監聽事件 */
         scan_qrcode_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -123,17 +133,33 @@ public class UrlCheckActivity extends AegisActivity{
             }
         });
 
-//
+        /* 初始化 */
+        initialize();
 
-        Create_Domain_name_txt_file();
 
         /* Get File list(test) */
-        String[] files = getApplicationContext().fileList();
-        System.out.println("\nExist file list:");
-        for(String file : files)
-            System.out.println(file);
+//        String[] files = getApplicationContext().fileList();
+//        System.out.println("\nExist file list:");
+//        for(String file : files)
+//            System.out.println(file); test
 
 
+
+
+    }
+
+    /* 初始化 設定所有參數等等 */
+    public void initialize(){
+        /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
+        Create_issuer_arrayList();
+
+        /* 創立 Domain name的 txt file(目前為空) */
+        Create_Domain_name_txt_file();
+
+        /* 設定alert dialog toast的參數 */
+        setAlertDialogToast();
+        /* 設定alert dialog的參數 */
+        setAlertDialog();
 
     }
 
@@ -142,80 +168,118 @@ public class UrlCheckActivity extends AegisActivity{
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         super.onActivityResult(requestCode, resultCode, data);
-        /* 加入resultCode(該activity回傳的回傳碼，RESULT_OK預設為-1) 在 Scan_QR_code甚麼都不做按返回鍵的話，resultCode = 0
-        * 所以要判斷resultCode = 0 的話返回原activity*/
-        if (resultCode != RESULT_OK) {
-            return;
-        }
+        /* resultcode 正常無動作(不掃描QRcode)返回時，是0 */
 
-        switch (requestCode) {
+        switch (resultCode) {
             case Scan_QR_CODE:
                 URL_text = data.getStringExtra(pass_name);
-                System.out.println("test");
+                /* 執行 URL check */
+                UrlCheck();
                 break;
+            default: return;  //resultCode為 0 時，return回原本activity
         }
     }
 
+    /* 設定alert_dialog */
+    public void setAlertDialog(){
+
+        AlertDialog.Builder alert_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+
+        alert_dialog_builder.setTitle("警告");
+        alert_dialog_builder.setMessage("這個網址可能不安全，請問要將此網址加入安全名單嗎？");
+        alert_dialog_builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog_toast.setText("已把網址加入安全名單");
+                dialog_toast.show();
+
+            }
+        });
+
+        alert_dialog_builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+            }
+        });
+
+        alert_dialog = alert_dialog_builder.create();
+        alert_dialog.dismiss();
+
+
+    }
+    /* 設定alert_dialog_toast */
+    public void setAlertDialogToast(){
+        dialog_toast = Toast.makeText(this.getApplicationContext(),"",Toast.LENGTH_LONG);
+    }
 
     /* 檢查URL function */
     public void UrlCheck(){
 
         /* 變數宣告 */
         URL url_obj; /* URL class 提供了解析 URL 地址的基本方法 */
-        URLConnection url_connection;
-        try{
-            /* 設定變數 */
-            url_obj = new URL(URL_text);
-            url_connection = url_obj.openConnection();
+        String host;
+        String protocol;
+        boolean containsIssuer = false;
+
+            try{
+                /* 設定變數 */
+                url_obj = new URL(URL_text);
+                protocol = url_obj.getProtocol();
+                host = url_obj.getHost().toLowerCase();
+
+                if(!protocol.equals("http") && !protocol.equals("https")){
+                    alert_dialog.setMessage(URL_text+"\n這個網址可能不安全，請問要將此網址加入安全名單嗎？");
+                    alert_dialog.show();
+                }
+                for(int i=0;i<issuer.size();i++){
+                    containsIssuer = false;
+                    if(host.contains(issuer.get(i))){
+                        containsIssuer = true;
+                        break;
+                    }
+                }
+                if(!containsIssuer){
+                    alert_dialog.setMessage(URL_text+"\n這個網址可能不安全，請問要將此網址加入安全名單嗎？");
+                    alert_dialog.show();
+                }
+                else{
+                    dialog_toast.setText("此為安全網站，可以放心登入");
+                    dialog_toast.show();
+                }
 
 
-
-            /* print URL參數 */
-            System.out.println("URL參數：");
-            System.out.println("URL：" + url_obj.toString());
-            System.out.println("協議：" + url_obj.getProtocol());
-            System.out.println("驗證信息：" + url_obj.getAuthority());
-            System.out.println("文件名及請求參數：" + url_obj.getFile());
-            System.out.println("主機名：" + url_obj.getHost());
-            System.out.println("路徑：" + url_obj.getPath());
-            System.out.println("端口：" + url_obj.getPort());
-            System.out.println("默認端口：" + url_obj.getDefaultPort());
-            System.out.println("請求參數：" + url_obj.getQuery());
-            System.out.println("定位位置：" + url_obj.getRef());
-            System.out.println("使用者資訊：" + url_obj.getUserInfo());
-
-            System.out.println();
-            /* URL Connection參數 */
-//            System.out.println(url_connection.getContentType());
+            }catch (MalformedURLException e){
+                dialog_toast.setText("解析失敗：非網址格式，請重新嘗試");
+                dialog_toast.show();
+                e.printStackTrace();
+            }
 
 
-        }catch (IOException e){
-            e.printStackTrace();
-        }
+        /* 每次檢查完都將 URL_text清空 */
         URL_text = null;
     }
 
     /* 建立Domain name的檔案 */
     public void Create_Domain_name_txt_file(){
 
-        /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
-        Create_issuer_arrayList();
+
 
         /* Create file */
         File dir = getApplicationContext().getFilesDir();
         Domain_name_txt = new File(dir,"Domain_name_txt.txt");
         try {
             if(Domain_name_txt.createNewFile()){
-//                System.out.println("Success Create Domain_name_txt file.");
+//                System.out.println("Success Create Domain_name_txt file."); test
             }
             else{
-//                System.out.println("Domain_name_txt file is exist.");
+//                System.out.println("Domain_name_txt file is exist."); test
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        for(int i=0;i<issuer.size();i++) System.out.println(issuer.get(i));
+//        for(int i=0;i<issuer.size();i++) System.out.println(issuer.get(i)); test
 
 
 
