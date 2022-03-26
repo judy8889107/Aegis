@@ -2,6 +2,8 @@
 package com.beemdevelopment.aegis.ui;
 
 
+import static android.content.ContentValues.TAG;
+
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -31,11 +33,13 @@ import android.widget.Toast;
 /* URL lib */
 import androidx.annotation.RequiresApi;
 
+import org.apache.commons.net.whois.WhoisClient;
 import org.json.JSONObject;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -171,7 +175,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     public void setAlertDialog(){
 
         AlertDialog.Builder alert_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-
         alert_dialog_builder.setTitle(R.string.warning);
         alert_dialog_builder.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
             @Override
@@ -208,16 +211,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String protocol;
         boolean containsIssuer = false;
 
+
             try{
                 /* 設定變數 */
                 url_obj = new URL(URL_text);
                 protocol = url_obj.getProtocol();
                 host = url_obj.getHost().toLowerCase();
 
+                /* check protocol */
                 if(!protocol.equals("http") && !protocol.equals("https")){
                     alert_dialog.setMessage(URL_text+"\n"+ getResources().getString(R.string.unsafeURL));
                     alert_dialog.show();
                 }
+                /* check issuer */
                 for(int i=0;i<issuer.size();i++){
                     containsIssuer = false;
                     if(host.contains(issuer.get(i))){
@@ -233,6 +239,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     dialog_toast.setText(R.string.safeURL);
                     dialog_toast.show();
                 }
+                /* WHOIS */
+                WhoisHandler();
+
 
 
             }catch (MalformedURLException e){
@@ -244,6 +253,39 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
         /* 每次檢查完都將 URL_text清空 */
         URL_text = null;
+    }
+
+    /* Whois子線程 */
+    private void WhoisHandler(){
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+
+                System.out.println("WhoisHandler");
+                System.out.println(Thread.currentThread());
+                System.out.println("當前執行緒名稱: "+Thread.currentThread().getName());
+                System.out.println("當前執行緒ID: "+Thread.currentThread().getId());
+//                Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+                System.out.println("當前執行緒Priority: "+Thread.currentThread().getPriority());
+                WhoisClient whois = new WhoisClient();
+                try {
+                    /* 連接 whois伺服器(默認為 whois.internic.net) 端口 43 */
+                    /* 不同的域名字尾往往需要像不同的whois伺服器傳送請求，
+                    比如以.jp(日本域名)結尾的域名和.ru(俄羅斯)結尾的域名就需要向不同 whois伺服器傳送請求以獲取資訊 */
+                    System.out.println("test");
+                    whois.connect("whois.nic.google");
+                    System.out.println("test1");
+                    System.out.println(whois.query("google.com").toString());
+                    System.out.println("test2");
+                    whois.disconnect();
+                    System.out.println("test3");
+                } catch (IOException e) {
+                    Log.e(TAG,Log.getStackTraceString(e));
+                }
+            }
+        });
+        thread.start();
+
     }
 
     /* 建立Domain name的檔案 */
