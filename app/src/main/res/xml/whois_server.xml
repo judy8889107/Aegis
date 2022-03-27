@@ -1,0 +1,472 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+    Whois_server
+-->
+<whois>
+
+    <webserver>
+        <xdot>sc</xdot>
+        <xname>whois2.afilias-grs.net</xname>
+    </webserver>
+
+
+    <webserver>
+        <xdot>bz</xdot>
+        <xname>whois2.afilias-grs.net</xname>
+    </webserver>
+
+
+    <webserver>
+        <xdot>ws</xdot>
+        <xname>whois.website.ws</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>com</xdot>
+        <xname>whois.verisign-grs.net</xname>
+    </webserver>
+
+
+    <webserver>
+        <xdot>net</xdot>
+        <xname>whois.verisign-grs.net</xname>
+    </webserver>
+
+
+    <webserver>
+        <xdot>edu</xdot>
+        <xname>whois.verisign-grs.net</xname>
+    </webserver>
+
+
+
+    <webserver>
+        <xdot>ae</xdot>
+        <xname>whois.uaenic.ae</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>tw</xdot>
+        <xname>whois.twnic.net</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>to</xdot>
+        <xname>whois.tonic.to</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>th</xdot>
+        <xname>whois.thnic.net</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>nz</xdot>
+        <xname>whois.srs.net.nz</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ro</xdot>
+        <xname>whois.rotld.ro</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ru</xdot>
+        <xname>whois.ripn.net</xname>
+    </webserver>
+
+
+    <webserver>
+        <xdot>va</xdot>
+        <xname>whois.ripn.net</xname>
+    </webserver>
+
+
+
+    <webserver>
+        <xdot>pro</xdot>
+        <xname>whois.registrypro.pro</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>hm</xdot>
+        <xname>whois.registry.hm</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>br</xdot>
+        <xname>whois.registro.br</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>bg</xdot>
+        <xname>whois.register.bg</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>org</xdot>
+        <xname>whois.pir.org</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>no</xdot>
+        <xname>whois.norid.no</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>uk</xdot>
+        <xname>whois.nic.uk</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>tv</xdot>
+        <xname>whois.nic.tv</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>tr</xdot>
+        <xname>whois.nic.tr</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>tm</xdot>
+        <xname>whois.nic.tm</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>st</xdot>
+        <xname>whois.nic.st</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>sh</xdot>
+        <xname>whois.nic.sh</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>nu</xdot>
+        <xname>whois.nic.nu</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>sg</xdot>
+        <xname>whois.nic.net.sg</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>name</xdot>
+        <xname>whois.nic.name</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>mx</xdot>
+        <xname>whois.nic.mx</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>mil</xdot>
+        <xname>whois.nic.mil</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>lv</xdot>
+        <xname>whois.nic.lv</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>lk</xdot>
+        <xname>whois.nic.lk</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>li</xdot>
+        <xname>whois.nic.li</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>la</xdot>
+        <xname>whois.nic.la</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>it</xdot>
+        <xname>whois.nic.it</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>io</xdot>
+        <xname>whois.nic.io</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>hu</xdot>
+        <xname>whois.nic.hu</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>gs</xdot>
+        <xname>whois.nic.gs</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>gov</xdot>
+        <xname>whois.nic.gov</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>tf</xdot>
+        <xname>whois.nic.tf</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>tr</xdot>
+        <xname>whois.nic.tr</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>cz</xdot>
+        <xname>whois.nic.cz</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>cx</xdot>
+        <xname>whois.nic.cx</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>coop</xdot>
+        <xname>whois.nic.coop</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>cl</xdot>
+        <xname>whois.nic.cl</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ck</xdot>
+        <xname>whois.nic.ck</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ch</xdot>
+        <xname>whois.nic.ch</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>cc</xdot>
+        <xname>whois.nic.cc</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>at</xdot>
+        <xname>whois.nic.at</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>as</xdot>
+        <xname>whois.nic.as</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>af</xdot>
+        <xname>whois.nic.af</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ac</xdot>
+        <xname>whois.nic.ck</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>kr</xdot>
+        <xname>whois.krnic.net</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>jp</xdot>
+        <xname>whois.jprs.jp</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>il</xdot>
+        <xname>whois.isoc.org.il</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>is</xdot>
+        <xname>whois.isnic.is</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>in</xdot>
+        <xname>whois.inregistry.net</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>se</xdot>
+        <xname>whois.iis.se</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>int</xdot>
+        <xname>whois.iana.org</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>hk</xdot>
+        <xname>whois.hkdnr.net.hk</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>fi</xdot>
+        <xname>whois.ficora.fi</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>eu</xdot>
+        <xname>whois.eu</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ee</xdot>
+        <xname>whois.eenet.ee</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>mobi</xdot>
+        <xname>whois.dotmobiregistry.net</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>tk</xdot>
+        <xname>whois.dot.tk</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>lt</xdot>
+        <xname>whois.domreg.lt</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>nl</xdot>
+        <xname>whois.domain-registry.nl</xname>
+    </webserver>
+
+
+    <webserver>
+        <xdot>ie</xdot>
+        <xname>whois.domainregistry.ie</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>pt</xdot>
+        <xname>whois.dns.pt</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>pl</xdot>
+        <xname>whois.dns.pl</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>lu</xdot>
+        <xname>whois.dns.lu</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>be</xdot>
+        <xname>whois.dns.be</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>dk</xdot>
+        <xname>whois.dk-hostmaster.dk</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>de</xdot>
+        <xname>whois.denic.de</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>cn</xdot>
+        <xname>whois.cnnic.net.cn</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ca</xdot>
+        <xname>whois.cira.ca</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>cd</xdot>
+        <xname>whois.cd</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>cat</xdot>
+        <xname>whois.cat</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>biz</xdot>
+        <xname>whois.biz</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>au</xdot>
+        <xname>whois.aunic.net</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>si</xdot>
+        <xname>whois.arnes.si</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>am</xdot>
+        <xname>whois.amnic.net</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>info</xdot>
+        <xname>whois.afilias.info</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>aero</xdot>
+        <xname>whois.aero</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>tc|ms|vg</xdot>
+        <xname>whois.adamsnames.tc</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>sa</xdot>
+        <xname>saudinic.net.sa</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>jobs</xdot>
+        <xname>jobswhois.verisign-grs.com</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>us</xdot>
+        <xname>whois.nic.us</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>vc</xdot>
+        <xname>whois2.afilias-grs.net</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>museum</xdot>
+        <xname>whois.museum</xname>
+    </webserver>
+
+</whois>

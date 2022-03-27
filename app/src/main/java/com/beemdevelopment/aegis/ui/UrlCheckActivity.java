@@ -2,20 +2,19 @@
 package com.beemdevelopment.aegis.ui;
 
 
-import static android.content.ContentValues.TAG;
-
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 
+import android.content.res.XmlResourceParser;
 import android.os.Build;
 import android.os.Bundle;
 
-import android.util.Log;
 import android.view.View;
 
 import com.beemdevelopment.aegis.R;
+import com.bumptech.glide.load.engine.Resource;
 
 
 import java.io.IOException;
@@ -25,7 +24,6 @@ import android.widget.Button;
 /* 使用EditText */
 import android.widget.EditText;
 /* 控制鍵盤 */
-import android.view.inputmethod.InputMethodManager;
 /* ImageButton的import */
 import android.widget.ImageButton;
 import android.widget.Toast;
@@ -37,25 +35,19 @@ import org.apache.commons.net.whois.WhoisClient;
 import org.json.JSONObject;
 
 import java.io.*;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
-import java.net.SocketException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLConnection;
 /* 輸入流 */
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Locale;
 /* JSON */
 import org.json.*;
+import org.w3c.dom.Document;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 
-
-public class UrlCheckActivity extends AegisActivity implements View.OnClickListener{
+public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable{
     /* 變數宣告 */
     EditText url_input;
     Button send_button;
@@ -225,7 +217,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 }
                 /* check issuer */
                 for(int i=0;i<issuer.size();i++){
-                    containsIssuer = false;
                     if(host.contains(issuer.get(i))){
                         containsIssuer = true;
                         break;
@@ -240,7 +231,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     dialog_toast.show();
                 }
                 /* WHOIS */
-                WhoisHandler();
+                Thread subThread = new Thread(this);
+                subThread.start();
 
 
 
@@ -252,39 +244,52 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
         /* 每次檢查完都將 URL_text清空 */
-        URL_text = null;
+
     }
 
-    /* Whois子線程 */
-    private void WhoisHandler(){
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
 
-                System.out.println("WhoisHandler");
-                System.out.println(Thread.currentThread());
-                System.out.println("當前執行緒名稱: "+Thread.currentThread().getName());
-                System.out.println("當前執行緒ID: "+Thread.currentThread().getId());
-//                Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
-                System.out.println("當前執行緒Priority: "+Thread.currentThread().getPriority());
-                WhoisClient whois = new WhoisClient();
-                try {
-                    /* 連接 whois伺服器(默認為 whois.internic.net) 端口 43 */
-                    /* 不同的域名字尾往往需要像不同的whois伺服器傳送請求，
-                    比如以.jp(日本域名)結尾的域名和.ru(俄羅斯)結尾的域名就需要向不同 whois伺服器傳送請求以獲取資訊 */
-                    System.out.println("test");
-                    whois.connect("whois.nic.google");
-                    System.out.println("test1");
-                    System.out.println(whois.query("google.com").toString());
-                    System.out.println("test2");
-                    whois.disconnect();
-                    System.out.println("test3");
-                } catch (IOException e) {
-                    Log.e(TAG,Log.getStackTraceString(e));
-                }
+    /* implements Runnable(subThread會執行裡面內容) */
+    @Override
+    public void run() {
+
+        URL obj = null;
+        int start;
+        String domain_name;
+        /* 有引用套件，直接使用 WhoisClient */
+        WhoisClient whois = new WhoisClient();
+        try {
+            /* 處理 Domain name */
+            obj = new URL(URL_text);
+                /* 第一個點 */
+            start = obj.getHost().toString().lastIndexOf('.');
+                /* 若有第二個點，則返回第二個點位置 +1 */
+            if(obj.getHost().toString().lastIndexOf('.', start-1) != -1){
+                start = obj.getHost().toString().lastIndexOf('.', start-1);
             }
-        });
-        thread.start();
+            else start = 0;
+            domain_name = obj.getHost().substring(start+1);
+            /* 處理 Whois_server */
+            String tmp = get_whois_server(domain_name);
+            whois.connect(WhoisClient.DEFAULT_HOST);
+            System.out.println(whois.query("strato.de"));
+            whois.disconnect();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+    /* 在 XML 中找 whois server */
+    public String get_whois_server(String domain_name){
+        String whois_server = null;
+
+        /* 利用 resources讀取 res/xml中檔案 */
+        XmlResourceParser server_file = getResources().getXml(R.xml.whois_server);
+
+
+        return whois_server;
+
+
 
     }
 
@@ -347,6 +352,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     }
+
 
 
 }
