@@ -362,7 +362,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             Thread.sleep(9999);
 
         } catch (IOException | InterruptedException e) {
-            /* 當執行緒結束會傳遞 msg給 func，並執行 */
+            /* 當執行緒結束會傳遞 msg給 func，並執行set and display */
             set_and_display_whois_message(msg);
             e.printStackTrace();
         }
