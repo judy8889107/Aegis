@@ -2,6 +2,9 @@
 package com.beemdevelopment.aegis.ui;
 
 
+import static android.content.DialogInterface.BUTTON_NEGATIVE;
+import static android.content.DialogInterface.BUTTON_POSITIVE;
+
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -11,6 +14,7 @@ import android.content.res.XmlResourceParser;
 import android.os.Build;
 import android.os.Bundle;
 
+import android.provider.Settings;
 import android.view.View;
 
 import com.beemdevelopment.aegis.R;
@@ -42,12 +46,14 @@ import java.util.ArrayList;
 /* JSON */
 import org.json.*;
 import org.w3c.dom.Document;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 
-public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable{
+public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener{
     /* 變數宣告 */
     EditText url_input;
     Button send_button;
@@ -56,7 +62,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
     private ArrayList<String> issuer;
-    private AlertDialog alert_dialog;
+    private AlertDialog alert_dialog; /* 警告diaolog */
+    private AlertDialog whois_search_dialog; /* 搜尋whois dialog */
+    private AlertDialog whois_message_dialog; /* 搜尋whois dialog */
     private Toast dialog_toast;
 
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
@@ -118,12 +126,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
         /* 設定alert dialog toast的參數 */
         setAlertDialogToast();
-        /* 設定alert dialog的參數 */
-        setAlertDialog();
+        /* 建立所有 dialog */
+        buildAllDialog();
 
     }
 
-    /* 監聽器事件，實作 View.OnClickListener */
+    /* Layout按鈕監聽器事件，實作 View.OnClickListener */
     @Override
     public void onClick(View v) {
         switch (v.getId()){
@@ -163,29 +171,34 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         }
     }
 
-    /* 設定alert_dialog */
-    public void setAlertDialog(){
-
+    /* 設定所有dialog */
+    public void buildAllDialog(){
+        /* alert dialog */
         AlertDialog.Builder alert_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
         alert_dialog_builder.setTitle(R.string.warning);
-        alert_dialog_builder.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog_toast.setText(R.string.addURL);
-                dialog_toast.show();
-
-            }
-        });
-
-        alert_dialog_builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-
-            }
-        });
-
+        /* 設定按鈕監聽器 */
+        alert_dialog_builder.setPositiveButton(R.string.yes, this);
+        alert_dialog_builder.setNegativeButton(R.string.no, this);
         alert_dialog = alert_dialog_builder.create();
         alert_dialog.dismiss();
+
+        /* Whois search dialog */
+        AlertDialog.Builder whois_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+        whois_dialog_builder.setTitle(R.string.warning);
+        /* 設定按鈕監聽器 */
+        whois_dialog_builder.setPositiveButton(R.string.yes,this);
+        whois_dialog_builder.setNegativeButton(R.string.no, this);
+        whois_search_dialog = whois_dialog_builder.create();
+        whois_search_dialog.dismiss();
+
+        /* Whois資訊 dialog */
+        AlertDialog.Builder whois_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+        whois_message_builder.setTitle("網站資訊");
+        /* 設定按鈕監聽器 */
+        whois_message_builder.setPositiveButton(R.string.yes,this);
+        whois_message_builder.setNegativeButton(R.string.no, this);
+        whois_message_dialog = whois_message_builder.create();
+        whois_message_dialog.dismiss();
 
 
     }
@@ -193,6 +206,70 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     public void setAlertDialogToast(){
         dialog_toast = Toast.makeText(this.getApplicationContext(),"",Toast.LENGTH_LONG);
     }
+
+
+    /* 實作dialog按鈕監聽 */
+    @Override
+    public void onClick(DialogInterface dialog, int which) {
+        /* 先判斷哪個dialog */
+
+        /* whois_search_dialog */
+        if(dialog.equals(whois_search_dialog)){
+            /* 判斷哪個按鈕被按下 */
+            switch (which){
+                /* 是 */
+                case BUTTON_POSITIVE:
+                    /* int which = -1 */
+                    /* 啟動 whois thread 檢查 */
+                    Thread whois_thread = new Thread(this);
+                    whois_thread.start();
+                    dialog.dismiss();
+                    whois_thread.interrupt();
+                    break;
+                case BUTTON_NEGATIVE:
+                    /* int which = -2 */
+                    dialog.dismiss();
+                    alert_dialog.setMessage(URL_text+"\n"+R.string.unsafeURL);
+                    alert_dialog.show();
+                    break;
+            }
+        }
+        /* whois message dialog */
+        if(dialog.equals(whois_message_dialog)){
+            /* 判斷哪個按鈕被按下 */
+            switch (which){
+                /* 是 */
+                case BUTTON_POSITIVE:
+                    /* int which = -1 */
+                    dialog.dismiss();
+                    break;
+                case BUTTON_NEGATIVE:
+                    /* int which = -2 */
+                    dialog.dismiss();
+                    break;
+            }
+        }
+        /* 警告dialog */
+        if(dialog.equals(alert_dialog)){
+            /* 判斷哪個按鈕被按下 */
+            switch (which){
+                /* 是 */
+                case BUTTON_POSITIVE:
+                    /* int which = -1 */
+                    dialog_toast.setText(R.string.addURL); /* 此網址已添加到安全名單 */
+                    dialog_toast.show();
+                    dialog.dismiss();
+                    break;
+                case BUTTON_NEGATIVE:
+                    /* int which = -2 */
+                    dialog.dismiss();
+                    break;
+            }
+        }
+
+
+    }
+
 
     /* 檢查URL function */
     public void UrlCheck(){
@@ -215,7 +292,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     alert_dialog.setMessage(URL_text+"\n"+ getResources().getString(R.string.unsafeURL));
                     alert_dialog.show();
                 }
-                /* check issuer */
+                /* 檢查 host有無包含 issuer */
                 for(int i=0;i<issuer.size();i++){
                     if(host.contains(issuer.get(i))){
                         containsIssuer = true;
@@ -223,16 +300,16 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     }
                 }
                 if(!containsIssuer){
-                    alert_dialog.setMessage(URL_text+"\n"+ getResources().getString(R.string.unsafeURL));
-                    alert_dialog.show();
+                    /* 若 host中不包含 otp引入的issuer，則先詢問是否要用 whois查找網站相關資訊 */
+                    whois_search_dialog.setMessage(URL_text+"\n"+"這個網址可能不安全，請問要查看網站相關資訊嗎？");
+                    whois_search_dialog.show();
                 }
                 else{
+                    /* 檢查網址 host包含 issuer */
                     dialog_toast.setText(R.string.safeURL);
                     dialog_toast.show();
                 }
-                /* WHOIS */
-                Thread subThread = new Thread(this);
-                subThread.start();
+
 
 
 
@@ -249,42 +326,82 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     /* implements Runnable(subThread會執行裡面內容) */
+    /* 執行 whois search */
     @Override
     public void run() {
 
         URL obj = null;
         int start;
-        String domain_name;
+        String domain_name = "";
+        String host;
+        String msg = null;
         /* 有引用套件，直接使用 WhoisClient */
         WhoisClient whois = new WhoisClient();
         try {
-            /* 處理 Domain name */
+
+            /* 處理 Host name */
             obj = new URL(URL_text);
-                /* 第一個點 */
-            start = obj.getHost().toString().lastIndexOf('.');
-                /* 若有第二個點，則返回第二個點位置 +1 */
-            if(obj.getHost().toString().lastIndexOf('.', start-1) != -1){
-                start = obj.getHost().toString().lastIndexOf('.', start-1);
+            host = obj.getHost();
+            String[] token = host.split("\\."); /* 將 host name拆分 */
+
+            /* 查詢whois_server.xml 得到 Whois_server */
+            String whois_server = get_whois_server(token[token.length-1]);
+//
+            if(whois_server == null){ /* 若返回的伺服器為空(xml檔案中找不到可以配對的伺服器) */
+                System.out.println("抱歉，沒有適合的伺服器可以提供查詢");
             }
-            else start = 0;
-            domain_name = obj.getHost().substring(start+1);
-            /* 處理 Whois_server */
-            String tmp = get_whois_server(domain_name);
-            whois.connect(WhoisClient.DEFAULT_HOST);
-            System.out.println(whois.query("strato.de"));
-            whois.disconnect();
-        } catch (IOException e) {
+            else{
+                  /* 連接剛剛得到的 whois server找尋資料 */
+                  System.out.println("whois_server= "+whois_server);
+
+                whois.connect(whois_server);
+                msg = whois.query("google.com.tw");
+//                System.out.println(msg);
+                whois.disconnect();
+            }
+            Thread.sleep(9999);
+
+        } catch (IOException | InterruptedException e) {
+            /* 當執行緒結束會傳遞 msg給 func，並執行 */
+            set_and_display_whois_message(msg);
             e.printStackTrace();
         }
 
 
+
+    }
+    /* 當執行緒結束，執行set_and_display whois message dialog */
+    public void set_and_display_whois_message(String msg){
+        System.out.println("set_and_display_whois_message");
+        System.out.println("Whois訊息= "+msg);
     }
     /* 在 XML 中找 whois server */
-    public String get_whois_server(String domain_name){
-        String whois_server = null;
+    public String get_whois_server(String xdot_text) {
 
+        String whois_server = null;
         /* 利用 resources讀取 res/xml中檔案 */
         XmlResourceParser server_file = getResources().getXml(R.xml.whois_server);
+        boolean isFind = false;
+        try{
+            int event = server_file.getEventType(); /* 得到現在光標的位置 */
+            while(event != XmlPullParser.END_DOCUMENT){ /* 當光標還未到文件結尾 */
+                if(event == XmlPullParser.TEXT){ /* 若得到的是文字(非 XmlPullParser.START_TAG <XXX></XXX> ) */
+                    if(isFind){
+                        whois_server = server_file.getText(); /* 找到的server給whois_server, whois_server就不為空了 */
+                        break;
+                    }
+                    if(xdot_text.equalsIgnoreCase(server_file.getText())){
+                        isFind = true;
+                    }
+                }
+
+                if(whois_server != null) break;
+                event = server_file.next(); /* 移動光標 */
+            }
+        }catch (IOException | XmlPullParserException e){
+            e.printStackTrace();
+        }
+
 
 
         return whois_server;
@@ -352,7 +469,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     }
-
 
 
 }
