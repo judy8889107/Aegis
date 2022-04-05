@@ -419,7 +419,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             for(int i =0;i < jsonArray2.length();i ++){
                 result += ((JSONArray) jsonArray2.get(i)).get(0).toString();
             }
-            System.out.println(result);
+            System.out.println(result); /* 印出結果字串 */
         }catch (JSONException e){
             e.printStackTrace();
         }
