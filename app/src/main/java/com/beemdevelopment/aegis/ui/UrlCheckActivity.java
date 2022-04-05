@@ -41,16 +41,22 @@ import org.apache.commons.net.whois.WhoisClient;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.URL;
 /* 輸入流 */
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 /* JSON */
 import org.json.*;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
+
+/* google translation */
 
 
 public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener{
@@ -226,7 +232,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     whois_thread.setName("whois_thread");
                     whois_thread.start();
                     dialog.dismiss();
-                    whois_thread.interrupt();
                     break;
                 case BUTTON_NEGATIVE:
                     /* int which = -2 */
@@ -344,7 +349,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String msg = null;
 
 
-        if(Thread.currentThread().getName().equals("whois_thread")){
+
+
             try {
                 /* 建立Whois連線 */
                 obj = new URL(URL_text);
@@ -362,29 +368,61 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     msg = whois.query(domain_name);
                     whois.disconnect();
                 }
-                Thread.sleep(9999); /* 結束子thread */
             } catch (IOException e) {
                 e.printStackTrace();
-            }catch (InterruptedException e){
-                handle_message(msg);
+            } finally {
+
+                /* 處理 message翻譯 */
+                /* https://translate.googleapis.com/translate_a/single?client=gtx&sl={fromCulture}&tl={toCulture}&dt=t&q={text} */
+                /* auto -> 中文 */
+                String translation_url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh_tw&dt=t&q="+msg;
+                try {
+                    /* 連到 Google Translation的 URL */
+                    obj = new URL(translation_url);
+                    HttpURLConnection httpURLConnection = (HttpURLConnection) obj.openConnection();
+                    httpURLConnection.setRequestProperty("User-Agent", "Mozilla/5.0");
+//
+                    /* 讀取得到的資訊 */
+                    BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+                    String inputLine;
+                    StringBuilder stringBuilder = new StringBuilder();
+
+                    /* 得到JSON資訊 */
+                    while((inputLine = in.readLine())!=null){
+                        stringBuilder.append(inputLine);
+                    }
+                    in.close(); /* 關閉 Read */
+
+                    /* 將JSON資訊做處理，並停止Thread */
+                    handle_message(stringBuilder.toString());
+                    Thread.sleep(9999); /* Thread等待9999毫秒 */
+                    Thread.currentThread().interrupt(); /* 發出中斷訊號，通知 currentThread 進行中斷 */
+
+                 } catch (IOException | InterruptedException e) {
+                    System.out.println(e.getMessage());
+                    e.printStackTrace();
+                }
             }
 
-        }
-        if(Thread.currentThread().getName().equals("translation_thread")){
-            System.out.println("執行translation_thread");
-            
 
-        }
+            }
 
-
-    }
-
+    /* 處理翻譯過的 message(包含解析json檔) */
     public void handle_message(String msg){
-        System.out.println("Information= ");
-        System.out.println(msg);
-        Thread translation_thread = new Thread(this);
-        translation_thread.setName("translation_thread");
-        translation_thread.start();
+
+        System.out.println("翻譯字串: ");
+//        System.out.println(msg);
+        try{
+            JSONArray jsonArray = new JSONArray(msg);
+            JSONArray jsonArray2 = (JSONArray) jsonArray.get(0);
+            String result ="";
+            for(int i =0;i < jsonArray2.length();i ++){
+                result += ((JSONArray) jsonArray2.get(i)).get(0).toString();
+            }
+            System.out.println(result);
+        }catch (JSONException e){
+            e.printStackTrace();
+        }
 
 
     }
@@ -485,6 +523,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
 }
+
+
 
 
 
