@@ -17,8 +17,10 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 
+
 import com.beemdevelopment.aegis.R;
-import com.bumptech.glide.load.engine.Resource;
+import com.google.common.net.InternetDomainName;
+
 
 
 import java.io.IOException;
@@ -40,17 +42,15 @@ import org.json.JSONObject;
 
 import java.io.*;
 import java.net.MalformedURLException;
+import java.net.Socket;
+import java.net.SocketException;
 import java.net.URL;
 /* 輸入流 */
 import java.util.ArrayList;
 /* JSON */
 import org.json.*;
-import org.w3c.dom.Document;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 
 public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener{
@@ -67,9 +67,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private AlertDialog whois_message_dialog; /* 搜尋whois dialog */
     private Toast dialog_toast;
 
+
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File Domain_name_txt;
-    boolean SuccessCreate;
+
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
@@ -222,6 +223,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     /* int which = -1 */
                     /* 啟動 whois thread 檢查 */
                     Thread whois_thread = new Thread(this);
+                    whois_thread.setName("whois_thread");
                     whois_thread.start();
                     dialog.dismiss();
                     whois_thread.interrupt();
@@ -331,49 +333,60 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     public void run() {
 
         URL obj = null;
-        int start;
-        String domain_name = "";
-        String host;
-        String msg = null;
         /* 有引用套件，直接使用 WhoisClient */
         WhoisClient whois = new WhoisClient();
-        try {
+        /* 引用 com.google.common.net套件 */
+        InternetDomainName internetDomainName = null;
+        String whois_server = null;
+        String host = null;
+        String TLD = null;
+        String domain_name = null;
+        String msg = null;
 
-            /* 處理 Host name */
-            obj = new URL(URL_text);
-            host = obj.getHost();
-            String[] token = host.split("\\."); /* 將 host name拆分 */
 
-            /* 查詢whois_server.xml 得到 Whois_server */
-            String whois_server = get_whois_server(token[token.length-1]);
-//
-            if(whois_server == null){ /* 若返回的伺服器為空(xml檔案中找不到可以配對的伺服器) */
-                System.out.println("抱歉，沒有適合的伺服器可以提供查詢");
+        if(Thread.currentThread().getName().equals("whois_thread")){
+            try {
+                /* 建立Whois連線 */
+                obj = new URL(URL_text);
+                host = obj.getHost();
+                TLD = host.substring(host.lastIndexOf('.')+1);
+                /* 查詢whois_server.xml 得到 Whois_server */
+                whois_server = get_whois_server(TLD);
+                if (whois_server == null) { /* 若返回的伺服器為空(xml檔案中找不到可以配對的伺服器) */
+                    msg = "Sorry, no match whois server."; /* 設定 msg不為空 */
+                } else {
+                    /* 連接剛剛得到的 whois server找尋資料 */
+                    whois.connect(whois_server);
+                    internetDomainName = InternetDomainName.from(host).topPrivateDomain();
+                    domain_name = internetDomainName.toString(); /* 得到 Domain name */
+                    msg = whois.query(domain_name);
+                    whois.disconnect();
+                }
+                Thread.sleep(9999); /* 結束子thread */
+            } catch (IOException e) {
+                e.printStackTrace();
+            }catch (InterruptedException e){
+                handle_message(msg);
             }
-            else{
-                  /* 連接剛剛得到的 whois server找尋資料 */
-                  System.out.println("whois_server= "+whois_server);
 
-                whois.connect(whois_server);
-                msg = whois.query("google.com.tw");
-//                System.out.println(msg);
-                whois.disconnect();
-            }
-            Thread.sleep(9999);
+        }
+        if(Thread.currentThread().getName().equals("translation_thread")){
+            System.out.println("執行translation_thread");
+            
 
-        } catch (IOException | InterruptedException e) {
-            /* 當執行緒結束會傳遞 msg給 func，並執行set and display */
-            set_and_display_whois_message(msg);
-            e.printStackTrace();
         }
 
 
-
     }
-    /* 當執行緒結束，執行set_and_display whois message dialog */
-    public void set_and_display_whois_message(String msg){
-        System.out.println("set_and_display_whois_message");
-        System.out.println("Whois訊息= "+msg);
+
+    public void handle_message(String msg){
+        System.out.println("Information= ");
+        System.out.println(msg);
+        Thread translation_thread = new Thread(this);
+        translation_thread.setName("translation_thread");
+        translation_thread.start();
+
+
     }
     /* 在 XML 中找 whois server */
     public String get_whois_server(String xdot_text) {
@@ -429,7 +442,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             e.printStackTrace();
         }
 
-//        for(int i=0;i<issuer.size();i++) System.out.println(issuer.get(i)); test
 
 
 
@@ -471,5 +483,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
 
+
 }
+
+
 

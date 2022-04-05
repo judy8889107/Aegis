@@ -99,6 +99,15 @@ android {
             }
         }
     }
+//    Judy:避免NETA-INF出錯
+    packagingOptions {
+        exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/LICENSE.txt'
+        exclude 'META-INF/NOTICE.txt'
+    }
+
 
     compileOptions {
         targetCompatibility 1.8
@@ -123,6 +132,7 @@ protobuf {
 }
 
 dependencies {
+    implementation 'com.google.firebase:firebase-crashlytics-buildtools:2.7.1'
     def androidTestVersion = '1.4.0'
     def cameraxVersion = '1.0.2'
     def glideVersion = '4.12.0'
@@ -180,6 +190,8 @@ dependencies {
     implementation 'commons-net:commons-net:3.3'
 
 
+
+
     androidTestAnnotationProcessor "com.google.dagger:hilt-android-compiler:$hiltVersion"
     androidTestImplementation "com.google.dagger:hilt-android-testing:$hiltVersion"
     androidTestImplementation "androidx.test:core:${androidTestVersion}"
@@ -200,3 +212,5 @@ dependencies {
 
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
 }
+
+
