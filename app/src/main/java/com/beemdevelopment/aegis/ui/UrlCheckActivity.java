@@ -346,9 +346,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String host = null;
         String TLD = null;
         String domain_name = null;
+        String origin_msg = null;
         String msg = null;
-
-
 
 
             try {
@@ -372,6 +371,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 e.printStackTrace();
             } finally {
 
+                /* 將原本訊息備份 */
+                origin_msg = msg;
+                /* 先將需要換行的地方註記 * (將需要換行的地方改成 * )，且將會使翻譯跳脫的字元(#)轉換成 $ */
+                msg = msg.replaceAll("\n","*");
+                msg = msg.replaceAll("#","\\$");
+
                 /* 處理 message翻譯 */
                 /* https://translate.googleapis.com/translate_a/single?client=gtx&sl={fromCulture}&tl={toCulture}&dt=t&q={text} */
                 /* auto -> 中文 */
@@ -392,9 +397,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                         stringBuilder.append(inputLine);
                     }
                     in.close(); /* 關閉 Read */
+                    msg = stringBuilder.toString();
 
-                    /* 將JSON資訊做處理，並停止Thread */
-                    handle_message(stringBuilder.toString());
+                    /* 傳入原始訊息和翻譯過後的訊息，將JSON資訊做處理，並停止Thread */
+                    handle_message(origin_msg,msg);
                     Thread.sleep(9999); /* Thread等待9999毫秒 */
                     Thread.currentThread().interrupt(); /* 發出中斷訊號，通知 currentThread 進行中斷 */
 
@@ -408,19 +414,30 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             }
 
     /* 處理翻譯過的 message(包含解析json檔) */
-    public void handle_message(String msg){
-
-        System.out.println("翻譯字串: ");
-//        System.out.println(msg);
+    public void handle_message(String origin_msg, String msg){
+        JSONArray jsonArray = null;
+        String result = "";
         try{
-            JSONArray jsonArray = new JSONArray(msg);
-            JSONArray jsonArray2 = (JSONArray) jsonArray.get(0);
-            String result ="";
-            for(int i =0;i < jsonArray2.length();i ++){
-                result += ((JSONArray) jsonArray2.get(i)).get(0).toString();
+            jsonArray = (JSONArray) new JSONArray(msg).get(0);
+            for(int i=0;i<jsonArray.length();i++){
+                result += ((JSONArray) jsonArray.get(i)).get(0).toString();
             }
-            System.out.println(result); /* 印出結果字串 */
-        }catch (JSONException e){
+
+            /* 處理字串空白與換行問題 */
+            /* 先將標記的 # 轉回來 */
+            result = result.replace("$","#");
+            String[] token = result.split("\\*");
+            result = "";
+            for(String t:token){
+                result += t.trim()+"\n";
+            }
+            System.out.println(result);
+
+            System.out.println(origin_msg);
+
+
+
+        }catch (JSONException e) {
             e.printStackTrace();
         }
 
