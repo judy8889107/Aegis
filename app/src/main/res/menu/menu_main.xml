@@ -3,15 +3,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.beemdevelopment.aegis.ui.MainActivity">
     <item
+        android:id="@+id/action_2FA"
+        android:title="@string/action_2FA"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_lock"
+        android:icon="@drawable/ic_lock"
+        android:title="@string/lock"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/mi_search"
         android:title="@string/search"
         app:showAsAction="always"
         app:actionViewClass="androidx.appcompat.widget.SearchView"/>
-    <item
-        android:id="@+id/action_lock"
-        android:icon="@drawable/ic_lock"
-        app:showAsAction="ifRoom"
-        android:title="@string/lock"/>
     <item
         android:id="@+id/action_sort"
         android:icon="@drawable/ic_action_sort"

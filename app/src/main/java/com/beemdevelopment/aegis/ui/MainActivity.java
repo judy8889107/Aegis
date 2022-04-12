@@ -608,6 +608,11 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
             case R.id.action_lock:
                 _vaultManager.lock(true);
                 return true;
+            case R.id.action_2FA: {
+                Intent intent = new Intent(this, Intro2FAActivity.class);
+                startActivity(intent);
+                return true;
+            }
             default:
                 if (item.getGroupId() == R.id.action_sort_category) {
                     item.setChecked(true);
