@@ -288,4 +288,8 @@
     <string name="unsafeURL">這個網址可能不安全，請問要將此網址加入安全名單嗎？</string>
     <string name="safeURL">這是安全的網站，您可以放心登錄</string>
     <string name="parseFail">解析失敗：非網址格式，請重新嘗試</string>
+    <string name="intro_2FA">如何使用 2FA</string>
+    <string name="intro_2FA_third">總共可以分成三種方式</string>
+    <string name="intro_2FA_second">按右下角的加號</string>
+    <string name="intro_2FA_fourth">手動設定:先輸入程式名稱及程式內部的金鑰</string>
 </resources>
