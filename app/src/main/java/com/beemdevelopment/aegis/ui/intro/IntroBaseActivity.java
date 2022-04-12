@@ -158,7 +158,7 @@ public abstract class IntroBaseActivity extends AegisActivity implements IntroAc
         _slideIndicator.setSlideCount(_slides.size());
         _slideIndicator.setCurrentSlide(pos);
     }
-
+//
     @NonNull
     public Bundle getState() {
         return _state;
