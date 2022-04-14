@@ -1,8 +1,13 @@
 package com.beemdevelopment.aegis.ui.intro;
 
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
@@ -15,6 +20,9 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.beemdevelopment.aegis.R;
 import com.beemdevelopment.aegis.Theme;
 import com.beemdevelopment.aegis.ui.AegisActivity;
+import com.beemdevelopment.aegis.ui.Intro2FAActivity;
+import com.beemdevelopment.aegis.ui.IntroActivity;
+import com.beemdevelopment.aegis.ui.slides.DoneSlide;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -30,6 +38,7 @@ public abstract class IntroBaseActivity extends AegisActivity implements IntroAc
     private ImageButton _btnPrevious;
     private ImageButton _btnNext;
     private SlideIndicator _slideIndicator;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +64,7 @@ public abstract class IntroBaseActivity extends AegisActivity implements IntroAc
         if (pagerChild instanceof RecyclerView) {
             pagerChild.setOverScrollMode(View.OVER_SCROLL_NEVER);
         }
+
     }
 
     @Override

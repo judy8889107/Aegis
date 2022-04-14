@@ -292,5 +292,4 @@
     <string name="intro_2FA_third">總共可以分成三種方式</string>
     <string name="intro_2FA_second">按右下角的加號</string>
     <string name="intro_2FA_fourth">手動設定:先輸入程式名稱及程式內部的金鑰</string>
-    <string name="action_2FA">2FA使用介紹</string>
 </resources>

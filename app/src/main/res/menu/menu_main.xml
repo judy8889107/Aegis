@@ -4,7 +4,7 @@
     tools:context="com.beemdevelopment.aegis.ui.MainActivity">
     <item
         android:id="@+id/action_2FA"
-        android:title="@string/action_2FA"
+        android:title="@string/intro_2FA"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_lock"
