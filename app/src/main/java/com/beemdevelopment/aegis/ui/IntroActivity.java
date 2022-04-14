@@ -5,8 +5,11 @@ import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_NONE;
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_PASS;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 
 import com.beemdevelopment.aegis.R;
 import com.beemdevelopment.aegis.ThemeMap;
@@ -32,6 +35,7 @@ public class IntroActivity extends IntroBaseActivity {
         addSlide(SecuritySetupSlide.class);
         addSlide(DoneSlide.class);
     }
+
 
     @Override
     protected void onSetTheme() {
@@ -81,4 +85,5 @@ public class IntroActivity extends IntroBaseActivity {
         setResult(RESULT_OK);
         finish();
     }
+
 }
