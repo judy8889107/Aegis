@@ -373,10 +373,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
                 /* 將原本訊息備份 */
                 origin_msg = msg;
+                System.out.println(origin_msg);
                 /* 先將需要換行的地方註記 * (將需要換行的地方改成 * )，且將會使翻譯跳脫的字元(#)轉換成 $ */
                 msg = msg.replaceAll("\n","*");
                 msg = msg.replaceAll("#","\\$");
-
+                msg = msg.replaceAll("%",""); //.nz server
+                msg = msg.replaceAll("_"," "); //.nz server
                 /* 處理 message翻譯 */
                 /* https://translate.googleapis.com/translate_a/single?client=gtx&sl={fromCulture}&tl={toCulture}&dt=t&q={text} */
                 /* auto -> 中文 */
@@ -431,9 +433,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             for(String t:token){
                 result += t.trim()+"\n";
             }
-            System.out.println(result);
+//            System.out.println(result);
 
-            System.out.println(origin_msg);
+//            System.out.println(origin_msg);
 
 
 

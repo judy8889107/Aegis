@@ -14,7 +14,128 @@
         <xdot>bz</xdot>
         <xname>whois2.afilias-grs.net</xname>
     </webserver>
+<!--Judy 新增的伺服器-->
+    <webserver>
+        <xdot>ng</xdot>
+        <xname>whois.nic.net.ng</xname>
+    </webserver>
 
+    <webserver>
+        <xdot>ai</xdot>
+        <xname>whois.nic.ai</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ms</xdot>
+        <xname>whois.nic.ms</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>berlin</xdot>
+        <xname>whois.nic.berlin</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>rs</xdot>
+        <xname>whois.rnids.rs</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>run</xdot>
+        <xname>whois.nic.run</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>saxo</xdot>
+        <xname>whois.nic.saxo</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>me</xdot>
+        <xname>whois.nic.me</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>id</xdot>
+        <xname>whois.id</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>tools</xdot>
+        <xname>whois.nic.tools</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ua</xdot>
+        <xname>whois.ua</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>app</xdot>
+        <xname>whois.nic.google</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>live</xdot>
+        <xname>whois.nic.live</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>shop</xdot>
+        <xname>whois.nic.shop</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>studio</xdot>
+        <xname>whois.nic.studio</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>works</xdot>
+        <xname>whois.nic.works</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>network</xdot>
+        <xname>whois.nic.network</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>gg</xdot>
+        <xname>whois.gg</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>gg</xdot>
+        <xname>whois.gg</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>plus</xdot>
+        <xname>whois.nic.plus</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>ly</xdot>
+        <xname>whois.nic.ly</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>co</xdot>
+        <xname>whois.nic.co</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>bet</xdot>
+        <xname>whois.nic.bet</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>hr</xdot>
+        <xname>whois.dns.hr</xname>
+    </webserver>
+
+    <!--新增的伺服器-->
 
     <webserver>
         <xdot>ws</xdot>
@@ -86,7 +207,7 @@
 
     <webserver>
         <xdot>pro</xdot>
-        <xname>whois.registrypro.pro</xname>
+        <xname>whois.nic.pro</xname>
     </webserver>
 
     <webserver>
@@ -108,6 +229,8 @@
         <xdot>org</xdot>
         <xname>whois.pir.org</xname>
     </webserver>
+
+
 
     <webserver>
         <xdot>no</xdot>
