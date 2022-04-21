@@ -421,7 +421,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     }
-
+    //
     /* information欄位切割 (註：若非英文的information 將不欄位處理，但會進行翻譯)*/
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void splitting_filed(String TLD, String msg){
