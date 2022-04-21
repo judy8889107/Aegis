@@ -41,6 +41,7 @@ import org.apache.commons.net.whois.WhoisClient;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -49,6 +50,7 @@ import java.net.SocketException;
 import java.net.URL;
 /* 輸入流 */
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 /* JSON */
@@ -348,103 +350,190 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String domain_name = null;
         String origin_msg = null;
         String msg = null;
+        //判斷 thread name 執行對應動作
 
-
-            try {
-                /* 建立Whois連線 */
-                obj = new URL(URL_text);
-                host = obj.getHost();
-                TLD = host.substring(host.lastIndexOf('.')+1);
-                /* 查詢whois_server.xml 得到 Whois_server */
-                whois_server = get_whois_server(TLD);
-                if (whois_server == null) { /* 若返回的伺服器為空(xml檔案中找不到可以配對的伺服器) */
-                    msg = "Sorry, no match whois server."; /* 設定 msg不為空 */
-                } else {
-                    /* 連接剛剛得到的 whois server找尋資料 */
-                    whois.connect(whois_server);
-                    internetDomainName = InternetDomainName.from(host).topPrivateDomain();
-                    domain_name = internetDomainName.toString(); /* 得到 Domain name */
-                    msg = whois.query(domain_name);
-                    whois.disconnect();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-
-                /* 將原本訊息備份 */
-                origin_msg = msg;
-                System.out.println(origin_msg);
-                /* 先將需要換行的地方註記 * (將需要換行的地方改成 * )，且將會使翻譯跳脫的字元(#)轉換成 $ */
-                msg = msg.replaceAll("\n","*");
-                msg = msg.replaceAll("#","\\$");
-                msg = msg.replaceAll("%",""); //.nz server
-                msg = msg.replaceAll("_"," "); //.nz server
-                /* 處理 message翻譯 */
-                /* https://translate.googleapis.com/translate_a/single?client=gtx&sl={fromCulture}&tl={toCulture}&dt=t&q={text} */
-                /* auto -> 中文 */
-                String translation_url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh_tw&dt=t&q="+msg;
-                try {
-                    /* 連到 Google Translation的 URL */
-                    obj = new URL(translation_url);
-                    HttpURLConnection httpURLConnection = (HttpURLConnection) obj.openConnection();
-                    httpURLConnection.setRequestProperty("User-Agent", "Mozilla/5.0");
-//
-                    /* 讀取得到的資訊 */
-                    BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
-                    String inputLine;
-                    StringBuilder stringBuilder = new StringBuilder();
-
-                    /* 得到JSON資訊 */
-                    while((inputLine = in.readLine())!=null){
-                        stringBuilder.append(inputLine);
-                    }
-                    in.close(); /* 關閉 Read */
-                    msg = stringBuilder.toString();
-
-                    /* 傳入原始訊息和翻譯過後的訊息，將JSON資訊做處理，並停止Thread */
-                    handle_message(origin_msg,msg);
-                    Thread.sleep(9999); /* Thread等待9999毫秒 */
-                    Thread.currentThread().interrupt(); /* 發出中斷訊號，通知 currentThread 進行中斷 */
-
-                 } catch (IOException | InterruptedException e) {
-                    System.out.println(e.getMessage());
-                    e.printStackTrace();
-                }
+        try {
+            /* 建立Whois連線 */
+            obj = new URL(URL_text);
+            host = obj.getHost();
+            TLD = host.substring(host.lastIndexOf('.')+1);
+            /* 查詢whois_server.xml 得到 Whois_server */
+            whois_server = get_whois_server(TLD);
+            if (whois_server == null) { /* 若返回的伺服器為空(xml檔案中找不到可以配對的伺服器) */
+                msg = "Sorry, no match whois server."; /* 設定 msg不為空 */
+            } else {
+                /* 連接剛剛得到的 whois server找尋資料 */
+                whois.connect(whois_server);
+                internetDomainName = InternetDomainName.from(host).topPrivateDomain();
+                domain_name = internetDomainName.toString(); /* 得到 Domain name */
+                msg = whois.query(domain_name);
+                whois.disconnect();
             }
-
-
-            }
-
-    /* 處理翻譯過的 message(包含解析json檔) */
-    public void handle_message(String origin_msg, String msg){
-        JSONArray jsonArray = null;
-        String result = "";
-        try{
-            jsonArray = (JSONArray) new JSONArray(msg).get(0);
-            for(int i=0;i<jsonArray.length();i++){
-                result += ((JSONArray) jsonArray.get(i)).get(0).toString();
-            }
-
-            /* 處理字串空白與換行問題 */
-            /* 先將標記的 # 轉回來 */
-            result = result.replace("$","#");
-            String[] token = result.split("\\*");
-            result = "";
-            for(String t:token){
-                result += t.trim()+"\n";
-            }
-//            System.out.println(result);
-
-//            System.out.println(origin_msg);
-
-
-
-        }catch (JSONException e) {
+        } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+
+            /* 將原本訊息備份 */
+            origin_msg = msg;
+
+            /* 傳TLD和origin_msg 做欄位切割 */
+            splitting_filed(TLD, msg);
+
+
+            /* 處理 message翻譯 */
+            /* https://translate.googleapis.com/translate_a/single?client=gtx&sl={fromCulture}&tl={toCulture}&dt=t&q={text} */
+            /* auto -> 中文 */
+//            String translation_url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh_tw&dt=t&q="+msg;
+//            try {
+//                /* 連到 Google Translation的 URL */
+//                obj = new URL(translation_url);
+//                HttpURLConnection httpURLConnection = (HttpURLConnection) obj.openConnection();
+//                httpURLConnection.setRequestProperty("User-Agent", "Mozilla/5.0");
+////
+//                /* 讀取得到的資訊 */
+//                BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+//                String inputLine;
+//                StringBuilder stringBuilder = new StringBuilder();
+//
+//                /* 得到JSON資訊 */
+//                while((inputLine = in.readLine())!=null){
+//                    stringBuilder.append(inputLine);
+//                }
+//                in.close(); /* 關閉 Read */
+//                msg = stringBuilder.toString();
+//
+//                /* 傳入原始訊息和翻譯過後的訊息，將JSON資訊做處理，並停止Thread */
+//                handle_message(origin_msg,msg);
+//                Thread.sleep(9999); /* Thread等待9999毫秒 */
+//                Thread.currentThread().interrupt(); /* 發出中斷訊號，通知 currentThread 進行中斷 */
+//
+//            } catch (IOException | InterruptedException e) {
+//                System.out.println(e.getMessage());
+//                e.printStackTrace();
+//            }
+
         }
 
 
+
+
+
+
+
     }
+
+    /* information欄位切割 (註：若非英文的information 將不欄位處理，但會進行翻譯)*/
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public void splitting_filed(String TLD, String msg){
+
+//        System.out.println("原始訊息:\n"+msg+"\n-------------------------------");
+
+
+        /* 先將可以處理的大致處理 */
+        msg = msg.replaceAll("_"," ");
+        msg = msg.replaceAll("\\.{2,}",""); //匹配一長串..... .no TLD
+        msg = msg.replaceAll("\r",""); //把 \r置換(\r是將光標移動到行首)
+//        System.out.println("\n\nReplace過後:\n"+msg+"\n----------------------------");
+
+        /* 分割字串 */
+//        System.out.println("\n\n=================================================================================\n");
+
+        String[] token = msg.split("\n");
+        //TLD 為.pl的另外處理
+        if(TLD.equals("pl")){
+            //處理 REGISTRAR field
+            for(int i=0;i<token.length;i++){
+                //找後面沒有跟任何字串的Tag
+                if(token[i].matches(".*[:]$")){
+                    System.out.println("標籤:"+token[i]);
+                    int j = i+1;
+                    if(j>= token.length) break;
+                    if(!token[j].equals("")) token[i] += "\n";
+                    else continue;
+                    while(!token[j].equals("")){
+                        token[i] += token[j]+"\n";
+                        token[j] = "";
+                        if(j == token.length -1) break;
+                        else j++;
+                    }
+                }
+            }
+        }
+        //TLD為 .ua的另外處理
+        if(TLD.equals("ua")) {
+            for(int i=0; i<token.length;i++){
+                //移除 % 開頭且非 :結尾的字串及只有%開頭的字串
+                if(token[i].matches("^%.*[^:]$|%")){
+                    token[i] = "";
+                }
+            }
+            //移除空字串
+            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
+            arrayList.removeIf(item -> item.equals(""));
+            token = arrayList.toArray(new String[0]);
+            //開始處理field
+            for(int i=0;i<token.length;i++){
+                //判斷標籤，若符合 % 開頭且 : 結尾的字串就是Tag
+                if(token[i].matches("^%.*[:]$")){
+                    System.out.println("標籤:"+token[i]);
+                    int j = i+1;
+                    if(j >= token.length) break; //若超過index就break
+//                    //若字串符合開頭非 % 開頭的字串
+                    if(token[j].matches("^[^%].*")) token[i] += "\n";
+                    else continue;
+                    while(token[j].matches("^[^%].*")){
+                        token[i] += token[j]+"\n";
+                        token[j] = "";
+                        if(j == token.length-1 )break; //不超過index(因為.ua底下不會再有其他說明等等，所以避免陷入無限迴圈)
+                        else j++;
+                    }
+                }
+            }
+
+
+        }
+        else{
+            for(int i=0;i<token.length;i++){
+                /* 把前面有 #和 % 的字串清空，或單一開頭為 %、# (多餘字串)*/
+                if(token[i].matches("^%.*") || token[i].matches("^#.*")){
+                    token[i] = "";
+                }
+
+            }
+            //移除空字串
+            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
+            arrayList.removeIf(item -> item.equals(""));
+            token = arrayList.toArray(new String[0]);
+            for(int i=0;i< token.length;i++){
+                /* 先找標籤，並判斷標籤後的字串是否前面有無數空格 */
+                if(token[i].matches(".+:.+|.+:")){ //Tag後面有無東西(.pl TLD Tag後面有東西)
+                    int j = i+1; // next index
+                    if(j >= token.length) break; // 判斷有無超過index
+                    //判斷是否需要串接 前面有空格且結尾不為:的字串
+                    if(token[j].matches("\\s{2,}.+[^:]$")) token[i]+="\n";
+                    else continue;
+                    while(token[j].matches("\\s{2,}.+[^:]$")){ // 匹配前面多個空格(\\s{2,}兩個以上空格，多個可視字元.+)
+                        token[i] += token[j]+"\n";
+                        token[j] = "";
+                        if(j == token.length-1 )break; //不超過index
+                        else j++;
+                    }
+                }
+            }
+        }
+
+        //移除所有空字串
+        ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
+        arrayList.removeIf(item -> item.equals(""));
+////        arrayList.removeAll(Arrays.asList("%",null));
+////        //印出所有 field
+        arrayList.forEach(a -> System.out.println("-----------------------\n"+a));
+
+
+
+    }
+
+
     /* 在 XML 中找 whois server */
     public String get_whois_server(String xdot_text) {
 
