@@ -439,13 +439,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //        System.out.println("\n\n=================================================================================\n");
 
         String[] token = msg.split("\n");
-        //TLD 為.pl的另外處理
+        //TLD 為.pl的另外處理，但.pl的REGISTRAR 還要再處理其他前面有空白的欄位。所以會在下面 if判斷.ua錯誤，執行 else再把其他欄位處理好
         if(TLD.equals("pl")){
             //處理 REGISTRAR field
             for(int i=0;i<token.length;i++){
                 //找後面沒有跟任何字串的Tag
                 if(token[i].matches(".*[:]$")){
-                    System.out.println("標籤:"+token[i]);
                     int j = i+1;
                     if(j>= token.length) break;
                     if(!token[j].equals("")) token[i] += "\n";
@@ -460,12 +459,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             }
         }
         //TLD為 .ua的另外處理
-        if(TLD.equals("ua")) {
+        if(TLD.matches("ua")) {
             for(int i=0; i<token.length;i++){
                 //移除 % 開頭且非 :結尾的字串及只有%開頭的字串
                 if(token[i].matches("^%.*[^:]$|%")){
                     token[i] = "";
                 }
+
             }
             //移除空字串
             ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
@@ -475,7 +475,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             for(int i=0;i<token.length;i++){
                 //判斷標籤，若符合 % 開頭且 : 結尾的字串就是Tag
                 if(token[i].matches("^%.*[:]$")){
-                    System.out.println("標籤:"+token[i]);
+                    //把標籤前的 %和空白移除
+                    token[i] = token[i].replaceAll("%\\s*","");
                     int j = i+1;
                     if(j >= token.length) break; //若超過index就break
 //                    //若字串符合開頭非 % 開頭的字串
@@ -492,18 +493,30 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
         }
+        //針對.gov, .net, .cc做特殊處理(不需要做串接)
+        else if(TLD.matches("gov|net|cc|tv|com")){
+            /* 只把 % 開頭的字串移除 */
+            for(int i=0;i<token.length;i++){
+                token[i] = token[i].trim(); //去除字串頭尾空白
+                if(token[i].matches("^%.*")){
+                    token[i] = "";
+                }
+            }
+        }
+        //.pl 處理完後會跳至這個區塊接續處理
+        //處理非例外TLD的字串
         else{
             for(int i=0;i<token.length;i++){
                 /* 把前面有 #和 % 的字串清空，或單一開頭為 %、# (多餘字串)*/
                 if(token[i].matches("^%.*") || token[i].matches("^#.*")){
                     token[i] = "";
                 }
-
             }
             //移除空字串
             ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
             arrayList.removeIf(item -> item.equals(""));
             token = arrayList.toArray(new String[0]);
+            //串接
             for(int i=0;i< token.length;i++){
                 /* 先找標籤，並判斷標籤後的字串是否前面有無數空格 */
                 if(token[i].matches(".+:.+|.+:")){ //Tag後面有無東西(.pl TLD Tag後面有東西)
@@ -522,12 +535,50 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             }
         }
 
+        //將空白標籤刪除，並將頭尾空白去除
+        for(int i=0;i<token.length;i++){
+            token[i] = token[i].trim();
+            //移除空白標籤和不含標籤資訊
+            if(token[i].matches(".*[:]$") || !token[i].contains(":")){
+                token[i] = "";
+            }
+        }
         //移除所有空字串
         ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
         arrayList.removeIf(item -> item.equals(""));
-////        arrayList.removeAll(Arrays.asList("%",null));
-////        //印出所有 field
-        arrayList.forEach(a -> System.out.println("-----------------------\n"+a));
+        token = arrayList.toArray(new String[0]);
+
+        //印出所有field
+//        arrayList.forEach(a -> System.out.println("-----------------------\n"+a));
+
+        //測試，列印標籤用以對照用
+        System.out.println("列出去除空白的所有標籤：");
+        for(int i=0;i<token.length;i++){
+            String tag = token[i].substring(0,token[i].indexOf(':'));
+            tag = tag.replaceAll("\\s+",""); //把所有空白置換掉
+            tag = tag.replaceAll("-",""); //把-置換掉
+            System.out.println(tag);
+        }
+        System.out.println("\n-------------------------------------------------");
+        //抓取關鍵字並印出
+        for(int i=0;i<token.length;i++){
+            String tag = token[i].substring(0,token[i].indexOf(':'));
+            tag = tag.replaceAll("\\s+",""); //把所有空白置換掉
+            tag = tag.replaceAll("-",""); //把-置換掉
+            if(tag.matches("(?i)domain(name)*")){
+                System.out.println(token[i]);
+            }
+            if(tag.matches("(?i)(sponsoring)*registrar(url|name|ianaid|handle|organization)*")){
+                System.out.println(token[i]);
+            }
+            if(tag.matches("(?i)(registrant|owner)(name)*")){
+                System.out.println(token[i]);
+            }
+
+
+        }
+
+
 
 
 
