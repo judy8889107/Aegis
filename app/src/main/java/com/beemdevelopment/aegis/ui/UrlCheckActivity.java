@@ -426,7 +426,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void splitting_filed(String TLD, String msg){
 
-//        System.out.println("原始訊息:\n"+msg+"\n-------------------------------");
+        System.out.println("原始訊息:\n"+msg+"\n-------------------------------");
 
 
         /* 先將可以處理的大致處理 */
@@ -503,6 +503,34 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 }
             }
         }
+        //對 .br 做特殊串接處理
+        else if(TLD.matches("br")){
+            //先清除前面有 %的字串
+            for(int i=0;i< token.length;i++){
+                if(token[i].matches("^%.*")){
+                    token[i] = "";
+                }
+            }
+            //清除空字串
+            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
+            arrayList.removeIf(item -> item.equals(""));
+            token = arrayList.toArray(new String[0]);
+            //字串串接
+            for(int i=0;i<token.length;i++){
+                if(token[i].matches("nic-hdl-br.*")){
+                    int j = i+1;
+                    if(j >= token.length) break;
+                    if(!token[j].matches("nic-hdl-br.*")) token[i] += "\n";
+                    while(!token[j].matches("nic-hdl-br.*")){
+                        token[i] += token[j] + "\n";
+                        token[j] = "";
+                        if(j == token.length-1) break;
+                        else j++;
+                    }
+
+                }
+            }
+        }
         //.pl 處理完後會跳至這個區塊接續處理
         //處理非例外TLD的字串
         else{
@@ -523,9 +551,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     int j = i+1; // next index
                     if(j >= token.length) break; // 判斷有無超過index
                     //判斷是否需要串接 前面有空格且結尾不為:的字串
-                    if(token[j].matches("\\s{2,}.+[^:]$")) token[i]+="\n";
+                    if(token[j].matches("\\s{2,}.+[^:)]$")) token[i]+="\n";
                     else continue;
-                    while(token[j].matches("\\s{2,}.+[^:]$")){ // 匹配前面多個空格(\\s{2,}兩個以上空格，多個可視字元.+)
+                    while(token[j].matches("\\s{2,}.+[^:)]$")){ // 匹配前面多個空格(\\s{2,}兩個以上空格，多個可視字元.+)
                         token[i] += token[j]+"\n";
                         token[j] = "";
                         if(j == token.length-1 )break; //不超過index
@@ -549,7 +577,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         token = arrayList.toArray(new String[0]);
 
         //印出所有field
-//        arrayList.forEach(a -> System.out.println("-----------------------\n"+a));
+        arrayList.forEach(a -> System.out.println("-----------------------\n"+a));
 
         //測試，列印標籤用以對照用
         System.out.println("列出去除空白的所有標籤：");
@@ -560,7 +588,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             System.out.println(tag);
         }
         System.out.println("\n-------------------------------------------------");
+
         //抓取關鍵字並印出
+        String TLD_id = "(sponsoring)*"; //TLD為.id的特殊開頭
+        String registrar_parameter = "(URL|Organization|City|(State//)*Province|Phone|Email|Country|Handle)*";
+        String registrant_parameter = "(Name|Street|City|(State//)*Province|Country|Phone)*";
+        String ua_parameter = "(Registrar|URL|Organization|City|(State//)*Province|Phone|Email|Country|Handle|Address|Phone)";
+
         for(int i=0;i<token.length;i++){
             String tag = token[i].substring(0,token[i].indexOf(':'));
             tag = tag.replaceAll("\\s+",""); //把所有空白置換掉
@@ -568,12 +602,53 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             if(tag.matches("(?i)domain(name)*")){
                 System.out.println(token[i]);
             }
-            if(tag.matches("(?i)(sponsoring)*registrar(url|name|ianaid|handle|organization)*")){
+            //Registrar
+            if(tag.matches("(?i)"+TLD_id+"registrar" + registrar_parameter)|| tag.matches("(?i)Owner")){
+                //對.ua的Registrar做特別處理
+                if(TLD.matches("ua")){
+                    String[] temp = token[i].split("\n");
+                    System.out.println(temp[0]); //印出Title(主Tag)
+                    for(int j=1;j<temp.length;j++){
+                        String temp_tag = temp[j].substring(0,temp[j].indexOf(':'));
+                        if(temp_tag.matches("(?i)"+ua_parameter)){
+                            System.out.println("\t\t"+temp[j]);
+                        }
+                    }
+                }
+                else System.out.println(token[i]);
+            }
+            //Registrant
+            if(tag.matches("(?i)registrant" + registrant_parameter)){
+                //對.ua的Registrant做特別處理
+                if(TLD.matches("ua")){
+                    String[] temp = token[i].split("\n");
+                    System.out.println(temp[0]); //印出Title(主Tag)
+                    for(int j=1;j<temp.length;j++){
+                        String temp_tag = temp[j].substring(0,temp[j].indexOf(':'));
+                        if(temp_tag.matches("(?i)"+ua_parameter)){
+                            System.out.println("\t\t"+temp[j]);
+                        }
+                    }
+                }
+                else System.out.println(token[i]);
+            }
+            //Updated Date
+            if(tag.matches("(?i).*Updated.*") || tag.matches("(?i).*Modifi(ed|cation).*")||
+               tag.matches("(?i).*Changed.*")|| tag.matches("(?i)RelevantDates")){
                 System.out.println(token[i]);
             }
-            if(tag.matches("(?i)(registrant|owner)(name)*")){
+            //Creation Date
+            if(tag.matches("(?i).*Creation.*") || tag.matches("(?i).*Created.*")||
+               tag.matches("(?i)RegistrationDate")){
                 System.out.println(token[i]);
             }
+            //Expiry Date
+            if(tag.matches("(?i).*Expir(y|es|ation).*") || tag.matches("(?i).*DateRegistered.*") ||
+               tag.matches("(?i)PaidTill")){
+                System.out.println(token[i]);
+            }
+
+
 
 
         }
