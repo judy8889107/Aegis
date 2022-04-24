@@ -15,9 +15,14 @@ import com.beemdevelopment.aegis.ui.intro.IntroBaseActivity;
 import com.beemdevelopment.aegis.ui.intro.SlideFragment;
 import com.beemdevelopment.aegis.ui.slides.DoneSlide;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_first;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_five;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_four;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_fourth;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_one;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_second;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_third;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_three;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_two;
 import com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide;
 import com.beemdevelopment.aegis.ui.slides.SecuritySetupSlide;
 import com.beemdevelopment.aegis.ui.slides.WelcomeSlide;
@@ -34,6 +39,11 @@ public class Intro2FAActivity extends IntroBaseActivity {
         addSlide(Intro2FA_first.class);
         addSlide(Intro2FA_second.class);
         addSlide(Intro2FA_third.class);
+        addSlide(Intro2FA_one.class);
+        addSlide(Intro2FA_two.class);
+        addSlide(Intro2FA_three.class);
+        addSlide(Intro2FA_four.class);
+        addSlide(Intro2FA_five.class);
         addSlide(Intro2FA_fourth.class);
     }
 //呼叫按鈕activity_intro
