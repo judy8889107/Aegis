@@ -401,4 +401,10 @@
     <string name="intro_2FA_third">There are three ways in total</string>
     <string name="intro_2FA_second">Press the plus sign in the lower right corner</string>
     <string name="intro_2FA_fourth">Manual setting: first enter the program name and the key inside the program</string>
+    <string name="intro_2FA_three">Step 3 Find Password and Account Security</string>
+    <string name="intro_2FA_four">Step 4 Click Use Two-Factor Authentication</string>
+    <string name="intro_2FA_five">The QRcode above can be scanned</string>
+    <string name="intro_2FA_two">Step 2 Find Settings in Settings and Privacy</string>
+    <string name="intro_2FA_five_2">Key can be entered manually</string>
+    <string name="intro_2FA_one">In the next step we will describe how to obtain the key and QR code. Step 1: Press the upper right corner</string>
 </resources>
