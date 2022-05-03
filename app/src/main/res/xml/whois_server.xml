@@ -16,6 +16,16 @@
     </webserver>
 <!--Judy 新增的伺服器-->
     <webserver>
+        <xdot>club</xdot>
+        <xname>whois.nic.club</xname>
+    </webserver>
+
+    <webserver>
+        <xdot>xyz</xdot>
+        <xname>whois.nic.xyz</xname>
+    </webserver>
+
+    <webserver>
         <xdot>ng</xdot>
         <xname>whois.nic.net.ng</xname>
     </webserver>
