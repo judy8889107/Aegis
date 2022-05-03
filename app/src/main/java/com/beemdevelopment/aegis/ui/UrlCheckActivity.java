@@ -5,6 +5,7 @@ package com.beemdevelopment.aegis.ui;
 import static android.content.DialogInterface.BUTTON_NEGATIVE;
 import static android.content.DialogInterface.BUTTON_POSITIVE;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -14,13 +15,17 @@ import android.content.res.XmlResourceParser;
 import android.os.Build;
 import android.os.Bundle;
 
+import android.os.StrictMode;
 import android.provider.Settings;
 import android.view.View;
 
 
 import com.beemdevelopment.aegis.R;
-import com.google.common.net.InternetDomainName;
 
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.google.common.net.InternetDomainName;
+import com.google.firebase.crashlytics.buildtools.api.net.proxy.Constants;
+import com.google.zxing.common.StringUtils;
 
 
 import java.io.IOException;
@@ -52,15 +57,18 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 /* JSON */
 import org.json.*;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 /* google translation */
 
-
+@SuppressLint("SetJavaScriptEnabled")
 public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener{
     /* 變數宣告 */
     EditText url_input;
@@ -336,10 +344,17 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 whois search */
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void run() {
 
-        URL obj = null;
+
+
+        /* 釣魚網站網址檢查並解析結果 */
+        String ScamAdviser = "https://www.scamadviser.com/check-website/";
+
+        /* Whois 參數 */
+        URL url_obj = null;
         /* 有引用套件，直接使用 WhoisClient */
         WhoisClient whois = new WhoisClient();
         /* 引用 com.google.common.net套件 */
@@ -353,9 +368,37 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         //判斷 thread name 執行對應動作
 
         try {
-            /* 建立Whois連線 */
-            obj = new URL(URL_text);
-            host = obj.getHost();
+
+            url_obj = new URL(URL_text);
+            host = url_obj.getHost(); //取得 host
+            ScamAdviser += URL_text.replaceAll("http(s?)://(www\\.)?|(/)$","").toLowerCase();
+            System.out.println("ScamAdviser網站="+ScamAdviser);
+            url_obj = new URL(ScamAdviser);
+
+
+            //WebClient
+
+            WebClient webClient = new WebClient();
+            System.out.println("成功建立webclient");
+//            webClient.getOptions().setCssEnabled(false);
+//            webClient.getOptions().setJavaScriptEnabled(true);
+//            webClient.getOptions().setThrowExceptionOnScriptError(false);
+//            HtmlPage rootPage = webClient.getPage("https://www.scamadviser.com/zh/check-website/google.com.tw/webhp?hl=zh-tw");
+//            //设置一个运行JavaScript的时间
+//            webClient.waitForBackgroundJavaScript(6000);
+//            html = rootPage.asXml();
+//            Document doc = Jsoup.parse(html);
+//            webClient.close();
+//            //WebClient
+//            System.out.println("印出doc內容：");
+//            System.out.println(doc.toString());
+
+
+
+
+        /* 建立Whois連線 */
+
+            domain_name = InternetDomainName.from(host).topPrivateDomain().toString(); /* 得到 Domain name */
             TLD = host.substring(host.lastIndexOf('.')+1);
             /* 查詢whois_server.xml 得到 Whois_server */
             whois_server = get_whois_server(TLD);
@@ -364,20 +407,20 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             } else {
                 /* 連接剛剛得到的 whois server找尋資料 */
                 whois.connect(whois_server);
-                internetDomainName = InternetDomainName.from(host).topPrivateDomain();
-                domain_name = internetDomainName.toString(); /* 得到 Domain name */
                 msg = whois.query(domain_name);
                 whois.disconnect();
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (NullPointerException e){
+          System.out.println(e.getMessage());
         } finally {
 
             /* 將原本訊息備份 */
             origin_msg = msg;
 
             /* 傳TLD和origin_msg 做欄位切割 */
-            splitting_filed(TLD, msg);
+//            splitting_filed(TLD, msg);  Judy 等等恢復註解
 
 
             /* 處理 message翻譯 */
@@ -426,7 +469,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void splitting_filed(String TLD, String msg){
 
-        System.out.println("原始訊息:\n"+msg+"\n-------------------------------");
+        System.out.println("############################################\n原始訊息:\n"+msg);
 
 
         /* 先將可以處理的大致處理 */
@@ -577,17 +620,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         token = arrayList.toArray(new String[0]);
 
         //印出所有field
+        System.out.println("\n########################################################");
+        System.out.println("Field切割狀態:");
         arrayList.forEach(a -> System.out.println("-----------------------\n"+a));
 
-        //測試，列印標籤用以對照用
-        System.out.println("列出去除空白的所有標籤：");
-        for(int i=0;i<token.length;i++){
-            String tag = token[i].substring(0,token[i].indexOf(':'));
-            tag = tag.replaceAll("\\s+",""); //把所有空白置換掉
-            tag = tag.replaceAll("-",""); //把-置換掉
-            System.out.println(tag);
-        }
-        System.out.println("\n-------------------------------------------------");
+//        //測試，列印標籤用以對照用
+//        System.out.println("列出去除空白的所有標籤：");
+//        for(int i=0;i<token.length;i++){
+//            String tag = token[i].substring(0,token[i].indexOf(':'));
+//            tag = tag.replaceAll("\\s+",""); //把所有空白置換掉
+//            tag = tag.replaceAll("-",""); //把-置換掉
+//            System.out.println(tag);
+//        }
+        System.out.println("\n########################################\n回傳結果：\n");
 
         //抓取關鍵字並印出
         String TLD_id = "(sponsoring)*"; //TLD為.id的特殊開頭
@@ -639,7 +684,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             }
             //Creation Date
             if(tag.matches("(?i).*Creation.*") || tag.matches("(?i).*Created.*")||
-               tag.matches("(?i)RegistrationDate")){
+               tag.matches("(?i)Registration(Date|Time)")){
                 System.out.println(token[i]);
             }
             //Expiry Date
