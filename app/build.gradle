@@ -99,8 +99,8 @@ android {
             }
         }
     }
-//    Judy:避免NETA-INF出錯
-    packagingOptions {
+//    Judy:避免META-INF出錯
+    packagingOptions{
         exclude 'META-INF/DEPENDENCIES'
         exclude 'META-INF/NOTICE'
         exclude 'META-INF/LICENSE'
@@ -192,8 +192,10 @@ dependencies {
     implementation 'commons-net:commons-net:3.3'
     /* 導入JSoup解析 html */
     implementation 'org.jsoup:jsoup:1.11.3'
-    /* HtmlUnit做動態爬蟲 */
-    implementation 'net.sourceforge.htmlunit:htmlunit:2.61.0'
+    /* Add SafetyNet dependency */
+    implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
+
+
 
 
 
@@ -219,5 +221,7 @@ dependencies {
 
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
 }
+
+
 
 

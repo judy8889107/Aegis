@@ -6,31 +6,40 @@ import static android.content.DialogInterface.BUTTON_NEGATIVE;
 import static android.content.DialogInterface.BUTTON_POSITIVE;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 
+import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.res.XmlResourceParser;
 import android.os.Build;
 import android.os.Bundle;
 
-import android.os.StrictMode;
-import android.provider.Settings;
+
 import android.view.View;
 
 
 import com.beemdevelopment.aegis.R;
 
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.google.common.net.InternetDomainName;
-import com.google.firebase.crashlytics.buildtools.api.net.proxy.Constants;
-import com.google.zxing.common.StringUtils;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.api.GoogleApi;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.safetynet.SafetyNet;
+import com.google.android.gms.safetynet.SafetyNetApi;
+import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
 
 import android.view.inputmethod.InputMethodManager;
+
 import android.widget.Button;
 /* 使用EditText */
 import android.widget.EditText;
@@ -40,6 +49,8 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 /* URL lib */
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import org.apache.commons.net.whois.WhoisClient;
@@ -54,6 +65,8 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.URL;
 /* 輸入流 */
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -66,10 +79,10 @@ import org.jsoup.nodes.Document;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-/* google translation */
 
-@SuppressLint("SetJavaScriptEnabled")
-public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener{
+
+
+public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener,GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener{
     /* 變數宣告 */
     EditText url_input;
     Button send_button;
@@ -82,6 +95,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private AlertDialog whois_search_dialog; /* 搜尋whois dialog */
     private AlertDialog whois_message_dialog; /* 搜尋whois dialog */
     private Toast dialog_toast;
+    private GoogleApiClient mGoogleApiClient; /* ( GoogleApiClient已經棄用了) */
 
 
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
@@ -90,6 +104,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
+
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
@@ -129,9 +144,42 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //            System.out.println(file); test
 
 
+        //建立GoogleAPI物件
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(SafetyNet.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+        System.out.println("成功建立GoogleAPIClient物件");
+        //產生 nonce(至少16 bytes的 nonce)
+        byte[] nonce = generateNonce();
+        String api_key = getString(R.string.safety_net_api_key);
+        System.out.println("api_key:"+api_key);
+
+
+
 
 
     }
+
+    //生成 nonce
+    private static byte[] generateNonce(){
+        byte[] nonce = new byte[16];
+        //SecureRandom默認用 SHA1PRNG生成隨機數，占用較少資源 (內置兩種隨機數字算法: NativePRNG 和 SHA1PRNG)
+        new SecureRandom().nextBytes(nonce);
+
+        // test -- 印出 nonce
+        System.out.println("印出nonce");
+        StringBuilder result = new StringBuilder();
+        for (byte temp : nonce) {
+            result.append(String.format("%02x", temp));
+        }
+        System.out.println(result.toString());
+        // test
+        return nonce;
+
+    }
+
 
     /* 初始化 設定所有參數等等 */
     public void initialize(){
@@ -353,6 +401,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         /* 釣魚網站網址檢查並解析結果 */
         String ScamAdviser = "https://www.scamadviser.com/check-website/";
 
+
         /* Whois 參數 */
         URL url_obj = null;
         /* 有引用套件，直接使用 WhoisClient */
@@ -376,22 +425,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             url_obj = new URL(ScamAdviser);
 
 
-            //WebClient
+            //Judy
+            //Google Safe Browsing 确保用户设备上安装了正确的 Google Play 服务版本
+            if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this.getApplicationContext())
+                    == ConnectionResult.SUCCESS) {
+                System.out.println("确保用户设备上安装了正确的 Google Play 服务版本：OK");
+                // The SafetyNet Attestation API is available.
+            } else {
+                System.out.println("确保用户设备上安装了正确的 Google Play 服务版本：No");
+                // Prompt user to update Google Play services.
+            }
 
-            WebClient webClient = new WebClient();
-            System.out.println("成功建立webclient");
-//            webClient.getOptions().setCssEnabled(false);
-//            webClient.getOptions().setJavaScriptEnabled(true);
-//            webClient.getOptions().setThrowExceptionOnScriptError(false);
-//            HtmlPage rootPage = webClient.getPage("https://www.scamadviser.com/zh/check-website/google.com.tw/webhp?hl=zh-tw");
-//            //设置一个运行JavaScript的时间
-//            webClient.waitForBackgroundJavaScript(6000);
-//            html = rootPage.asXml();
-//            Document doc = Jsoup.parse(html);
-//            webClient.close();
-//            //WebClient
-//            System.out.println("印出doc內容：");
-//            System.out.println(doc.toString());
+            //Judy 獲取nonce
+
 
 
 
@@ -799,8 +845,22 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
+    // 實作 GoogleApiClient.ConnectionCallbacks,
+    // GoogleApiClient.OnConnectionFailedListener
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
 
+    }
 
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
+    }
 }
 
 
