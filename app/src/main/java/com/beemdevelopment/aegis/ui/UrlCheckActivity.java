@@ -20,6 +20,7 @@ import android.os.Build;
 import android.os.Bundle;
 
 
+import android.util.Log;
 import android.view.View;
 
 
@@ -28,12 +29,16 @@ import com.beemdevelopment.aegis.R;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.GoogleApi;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.safetynet.SafetyNet;
 import com.google.android.gms.safetynet.SafetyNetApi;
+import com.google.android.gms.safetynet.SafetyNetClient;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
@@ -96,8 +101,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private AlertDialog whois_message_dialog; /* 搜尋whois dialog */
     private Toast dialog_toast;
     private GoogleApiClient mGoogleApiClient; /* ( GoogleApiClient已經棄用了) */
-
-
+    private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File Domain_name_txt;
 
@@ -121,17 +125,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         this.setContentView(R.layout.activity_url_check);
         this.setSupportActionBar(findViewById(R.id.toolbar));
 
-        /* 設定變數 */
-        url_input = findViewById(R.id.url_input);
-        send_button = findViewById(R.id.send_button);
-        clear_button = findViewById(R.id.clear_button);
-        scan_qrcode_button = findViewById(R.id.scan_qrcode_button);
 
-
-        /* 監聽器設定 */
-        send_button.setOnClickListener(this);
-        clear_button.setOnClickListener(this);
-        scan_qrcode_button.setOnClickListener(this);
 
         /* 初始化 */
         initialize();
@@ -144,18 +138,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //            System.out.println(file); test
 
 
-        //建立GoogleAPI物件
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(SafetyNet.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
-        System.out.println("成功建立GoogleAPIClient物件");
-        //產生 nonce(至少16 bytes的 nonce)
-        byte[] nonce = generateNonce();
-        String api_key = getString(R.string.safety_net_api_key);
-        System.out.println("api_key:"+api_key);
-
 
 
 
@@ -164,17 +146,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     //生成 nonce
     private static byte[] generateNonce(){
-        byte[] nonce = new byte[16];
+        //生成隨機長度 範圍: 16~1024 (max - min) + min
+        int nonce_length = new SecureRandom().nextInt(1024 - 16) + 16;
+        byte[] nonce = new byte[nonce_length];
         //SecureRandom默認用 SHA1PRNG生成隨機數，占用較少資源 (內置兩種隨機數字算法: NativePRNG 和 SHA1PRNG)
         new SecureRandom().nextBytes(nonce);
 
         // test -- 印出 nonce
-        System.out.println("印出nonce");
         StringBuilder result = new StringBuilder();
         for (byte temp : nonce) {
             result.append(String.format("%02x", temp));
         }
-        System.out.println(result.toString());
+        System.out.println("印出nonce長度:"+nonce_length);
+        System.out.println("印出nonce: "+result.toString());
         // test
         return nonce;
 
@@ -183,6 +167,16 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     /* 初始化 設定所有參數等等 */
     public void initialize(){
+        /* 設定參數 */
+        url_input = findViewById(R.id.url_input);
+        send_button = findViewById(R.id.send_button);
+        clear_button = findViewById(R.id.clear_button);
+        scan_qrcode_button = findViewById(R.id.scan_qrcode_button);
+        api_key = getString(R.string.safety_net_api_key);
+        /* 監聽器設定 */
+        send_button.setOnClickListener(this);
+        clear_button.setOnClickListener(this);
+        scan_qrcode_button.setOnClickListener(this);
         /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
         Create_issuer_arrayList();
 
@@ -193,6 +187,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         setAlertDialogToast();
         /* 建立所有 dialog */
         buildAllDialog();
+
 
     }
 
@@ -427,22 +422,56 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
             //Judy
             //Google Safe Browsing 确保用户设备上安装了正确的 Google Play 服务版本
-            if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this.getApplicationContext())
-                    == ConnectionResult.SUCCESS) {
-                System.out.println("确保用户设备上安装了正确的 Google Play 服务版本：OK");
-                // The SafetyNet Attestation API is available.
-            } else {
-                System.out.println("确保用户设备上安装了正确的 Google Play 服务版本：No");
-                // Prompt user to update Google Play services.
-            }
+//            if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this.getApplicationContext())
+//                    == ConnectionResult.SUCCESS) {
+//                System.out.println("确保用户设备上安装了正确的 Google Play 服务版本：OK");
+//                // The SafetyNet Attestation API is available.
+//            } else {
+//                System.out.println("确保用户设备上安装了正确的 Google Play 服务版本：No");
+//                // Prompt user to update Google Play services.
+//            }
+            System.out.println("API KEY為: "+api_key);
+            System.out.println("嘗試發出SafetyNet證明請求");
 
-            //Judy 獲取nonce
+            //Use SafetyNet
+            SafetyNet.getClient(this).attest(generateNonce(), api_key)
+                    .addOnSuccessListener(this,
+                            new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
+                                @Override
+                                public void onSuccess(SafetyNetApi.AttestationResponse response) {
+                                    // Indicates communication with the service was successful.
+                                    System.out.println("成功取得服務，印出回應: ");
+                                    // Use response.getJwsResult() to get the result data.
+                                    System.out.println(response.getJwsResult());
+                                }
+                            })
+                    .addOnFailureListener(this, new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            System.out.println("進入FailureListener");
+                            // An error occurred while communicating with the service.
+                            if (e instanceof ApiException) {
+                                // An error with the Google Play services API contains some
+                                // additional details.
+                                ApiException apiException = (ApiException) e;
+                                System.out.println("失敗，印出回應代碼: ");
+                                System.out.println(apiException.getStatus());
+                                // You can retrieve the status code using the
+                                // apiException.getStatusCode() method.
+                            } else {
+                                // A different, unknown type of error occurred.
+                                System.out.println("其他失敗: ");
+                                System.out.println(e.getMessage());
+                            }
+                        }
+                    });
 
 
 
 
 
-        /* 建立Whois連線 */
+
+            /* 建立Whois連線 */
 
             domain_name = InternetDomainName.from(host).topPrivateDomain().toString(); /* 得到 Domain name */
             TLD = host.substring(host.lastIndexOf('.')+1);
