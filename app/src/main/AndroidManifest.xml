@@ -86,9 +86,11 @@
         <activity
             android:name=".ui.IntroActivity"
             android:screenOrientation="portrait" />
+        <!-- Y: 新增Intro2FAActivity -->
         <activity
             android:name=".ui.Intro2FAActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"/>
+
         <activity
             android:name=".ui.AuthActivity" />
         <activity

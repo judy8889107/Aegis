@@ -25,7 +25,7 @@ import com.beemdevelopment.aegis.vault.VaultRepositoryException;
 import com.beemdevelopment.aegis.vault.slots.BiometricSlot;
 import com.beemdevelopment.aegis.vault.slots.PasswordSlot;
 
-public class IntroActivity extends IntroBaseActivity {
+public class IntroActivity extends IntroBaseActivity  {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,8 +34,8 @@ public class IntroActivity extends IntroBaseActivity {
         addSlide(SecurityPickerSlide.class);
         addSlide(SecuritySetupSlide.class);
         addSlide(DoneSlide.class);
-    }
 
+    }
 
     @Override
     protected void onSetTheme() {
