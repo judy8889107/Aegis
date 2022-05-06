@@ -402,4 +402,5 @@
     <string name="intro_2FA_second">Press the plus sign in the lower right corner</string>
     <string name="intro_2FA_fourth">Manual setting: first enter the program name and the key inside the program</string>
     <string name="action_2FA">Introduction to using 2FA</string>
+    <string name="safety_net_api_key">AIzaSyBuRaWOka8h1rdOT8CMFc9tOgEzheX08Vs</string>
 </resources>

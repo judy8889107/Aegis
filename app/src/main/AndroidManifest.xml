@@ -79,7 +79,7 @@
             android:label="@string/title_activity_scan_qr"
             android:screenOrientation="portrait" />
 
-        <!-- J: 新增UrlCheckActivity -->
+        <!-- J: 新增UrlCheckActivity，且新增 meta-data -->
         <activity
             android:name=".ui.UrlCheckActivity"
             android:label="@string/url_check" />
@@ -124,8 +124,6 @@
         </provider>
 
         <meta-data android:name="android.webkit.WebView.MetricsOptOut" android:value="true" />
-        <!--Judy: 所有 WebView 對象都選擇停用安全瀏覽檢查-->
-        <meta-data android:name="android.webkit.WebView.EnableSafeBrowsing" android:value="true" />
     </application>
 
     <queries>
