@@ -79,7 +79,7 @@
             android:label="@string/title_activity_scan_qr"
             android:screenOrientation="portrait" />
 
-        <!-- J: 新增UrlCheckActivity -->
+        <!-- J: 新增UrlCheckActivity，且新增 meta-data -->
         <activity
             android:name=".ui.UrlCheckActivity"
             android:label="@string/url_check" />
