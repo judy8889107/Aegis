@@ -135,7 +135,6 @@ dependencies {
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:2.7.1'
 
 
-
     def androidTestVersion = '1.4.0'
     def cameraxVersion = '1.0.2'
     def glideVersion = '4.12.0'
@@ -192,6 +191,8 @@ dependencies {
     implementation 'commons-net:commons-net:3.3'
     /* 導入JSoup解析 html */
     implementation 'org.jsoup:jsoup:1.11.3'
+    /* 簡體轉繁體工具 */
+    implementation files('libs\\ZHConverter.jar')
     /* Add SafetyNet dependency */
     implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
 

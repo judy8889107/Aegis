@@ -5,16 +5,11 @@ package com.beemdevelopment.aegis.ui;
 import static android.content.DialogInterface.BUTTON_NEGATIVE;
 import static android.content.DialogInterface.BUTTON_POSITIVE;
 
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 
-import android.content.pm.ActivityInfo;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.content.res.XmlResourceParser;
 import android.os.Build;
 import android.os.Bundle;
@@ -28,17 +23,15 @@ import com.beemdevelopment.aegis.R;
 
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.common.api.GoogleApi;
+import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
+import com.google.android.gms.safetynet.SafeBrowsingThreat;
 import com.google.android.gms.safetynet.SafetyNet;
 import com.google.android.gms.safetynet.SafetyNetApi;
-import com.google.android.gms.safetynet.SafetyNetClient;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Tasks;
 import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
@@ -54,40 +47,41 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 /* URL lib */
+import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import org.apache.commons.net.whois.WhoisClient;
+
 import org.json.JSONObject;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
-import java.net.Socket;
-import java.net.SocketException;
 import java.net.URL;
 /* 輸入流 */
-import java.security.NoSuchAlgorithmException;
+import java.net.URLEncoder;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 /* JSON */
 import org.json.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 
 
 
-public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener,GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener{
+public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener{
     /* 變數宣告 */
     EditText url_input;
     Button send_button;
@@ -172,7 +166,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         send_button = findViewById(R.id.send_button);
         clear_button = findViewById(R.id.clear_button);
         scan_qrcode_button = findViewById(R.id.scan_qrcode_button);
-        api_key = getString(R.string.safety_net_api_key);
         /* 監聽器設定 */
         send_button.setOnClickListener(this);
         clear_button.setOnClickListener(this);
@@ -199,7 +192,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 /* 按下send_button就隱藏鍵盤 */
                 InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(send_button.getWindowToken(), 0);
-                URL_text = url_input.getText().toString();
+                URL_text = url_input.getText().toString().trim();
                 /* 執行 URL check */
                 UrlCheck();
                 break;
@@ -385,6 +378,59 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
 
+    // 處理並回傳整個網頁訊息
+    public static String return_website_information(InputStream inputStream) throws IOException {
+        String result = null;
+        StringBuilder sb = new StringBuilder();
+        String line;
+        BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+        while ((line = br.readLine()) != null) {
+            sb.append(line);
+        }
+        result = sb.toString();
+        return result;
+    }
+
+    //IP2WHOIS 使用
+    public Map<String, String> getIP2WHOIS(String URL_text) throws IOException {
+
+        Map<String, String> data_map = new LinkedHashMap<String, String>();
+
+        String result = null;
+        String key = "TZ6JJY5XVPJH5TOI6R2KQIVD9Y9IB2UX"; //My api key
+        Hashtable<String, String> data = new Hashtable<String, String>();
+        String domain = InternetDomainName.from(new URL(URL_text).getHost()).topDomainUnderRegistrySuffix().toString(); /* 得到 Domain name */
+        data.put("domain", domain);
+        data.put("format", "xml");
+        String datastr = "";
+        for (Map.Entry<String,String> entry : data.entrySet()) {
+            datastr += "&" + entry.getKey() + "=" + URLEncoder.encode(entry.getValue(), "UTF-8");
+        }
+        //建立連線
+        URL url = new URL("https://api.ip2whois.com/v2?key=" + key + datastr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Accept", "application/json");
+
+        if (conn.getResponseCode() != 200) {
+            throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
+        }
+        result = return_website_information(conn.getInputStream());
+        conn.disconnect();
+
+        Document doc = Jsoup.parse(result);
+        String[] tag = {"domain","create_date","update_date","expire_date","domain_age", "error_code"};
+        for (String s : tag) {
+            Element element = doc.getElementsByTag(s).first();
+            String element_str = (element == null) ? null : element.text();  //判斷式 ？ 若判斷為真執行區塊 ： 若判斷為假執行區塊
+            data_map.put(s, element_str);
+
+        }
+
+        return data_map;
+    }
+
+
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 whois search */
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -392,9 +438,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     public void run() {
 
 
-
-        /* 釣魚網站網址檢查並解析結果 */
-        String ScamAdviser = "https://www.scamadviser.com/check-website/";
+        //IP2WHOIS API Data
+        Map<String, String> IP2WHOIS_data = null;
 
 
         /* Whois 參數 */
@@ -412,12 +457,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         //判斷 thread name 執行對應動作
 
         try {
-
-            url_obj = new URL(URL_text);
-            host = url_obj.getHost(); //取得 host
-            ScamAdviser += URL_text.replaceAll("http(s?)://(www\\.)?|(/)$","").toLowerCase();
-            System.out.println("ScamAdviser網站="+ScamAdviser);
-            url_obj = new URL(ScamAdviser);
+            // Judy註解需要解封，因為使用次數(2022/5/9)
+//            IP2WHOIS_data = getIP2WHOIS(URL_text);
+//            System.out.println("data_map內容:");
+//            System.out.println(IP2WHOIS_data);
 
 
             //Judy
@@ -430,42 +473,57 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //                System.out.println("确保用户设备上安装了正确的 Google Play 服务版本：No");
 //                // Prompt user to update Google Play services.
 //            }
-            System.out.println("API KEY為: "+api_key);
+//
             System.out.println("嘗試發出SafetyNet證明請求");
 
             //Use SafetyNet
-            SafetyNet.getClient(this).attest(generateNonce(), api_key)
+            System.out.println("要檢查的網址為：");
+            System.out.println(URL_text);
+            SafetyNet.getClient(this).lookupUri(URL_text, "AIzaSyAK5QxYVa3JZ4pXc9GbgzJ0bp4VkEZeQtU",
+                    SafeBrowsingThreat.TYPE_POTENTIALLY_HARMFUL_APPLICATION,
+                    SafeBrowsingThreat.TYPE_SOCIAL_ENGINEERING)
                     .addOnSuccessListener(this,
-                            new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
+                            new OnSuccessListener<SafetyNetApi.SafeBrowsingResponse>() {
                                 @Override
-                                public void onSuccess(SafetyNetApi.AttestationResponse response) {
+                                public void onSuccess(SafetyNetApi.SafeBrowsingResponse sbResponse) {
                                     // Indicates communication with the service was successful.
-                                    System.out.println("成功取得服務，印出回應: ");
-                                    // Use response.getJwsResult() to get the result data.
-                                    System.out.println(response.getJwsResult());
+                                    // Identify any detected threats.
+                                    System.out.println("SafetyNet響應成功");
+                                    if (sbResponse.getDetectedThreats().isEmpty()) {
+                                        // No threats found.
+                                        System.out.println("此網站沒有找到任何威脅");
+                                    } else {
+                                        // Threats found!
+                                        System.out.println("此網站威脅被找到了!!");
+                                    }
                                 }
                             })
                     .addOnFailureListener(this, new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
-                            System.out.println("進入FailureListener");
+                            System.out.println("取得服務失敗");
                             // An error occurred while communicating with the service.
                             if (e instanceof ApiException) {
-                                // An error with the Google Play services API contains some
+                                System.out.println("Google Paly Service的API出現error");
+                                // An error with the Google Play Services API contains some
                                 // additional details.
                                 ApiException apiException = (ApiException) e;
-                                System.out.println("失敗，印出回應代碼: ");
-                                System.out.println(apiException.getStatus());
-                                // You can retrieve the status code using the
-                                // apiException.getStatusCode() method.
+                                System.out.println(CommonStatusCodes
+                                        .getStatusCodeString(apiException.getStatusCode()));
+                                System.out.println(e.getMessage());
+
+                                // Note: If the status code, apiException.getStatusCode(),
+                                // is SafetyNetstatusCode.SAFE_BROWSING_API_NOT_INITIALIZED,
+                                // you need to call initSafeBrowsing(). It means either you
+                                // haven't called initSafeBrowsing() before or that it needs
+                                // to be called again due to an internal error.
                             } else {
+                                System.out.println("其他error");
                                 // A different, unknown type of error occurred.
-                                System.out.println("其他失敗: ");
                                 System.out.println(e.getMessage());
                             }
                         }
                     });
-
 
 
 
@@ -539,7 +597,11 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     }
-    //
+
+
+
+
+
     /* information欄位切割 (註：若非英文的information 將不欄位處理，但會進行翻譯)*/
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void splitting_filed(String TLD, String msg){
@@ -874,22 +936,32 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    // 實作 GoogleApiClient.ConnectionCallbacks,
-    // GoogleApiClient.OnConnectionFailedListener
+    @CallSuper
     @Override
-    public void onConnected(@Nullable Bundle bundle) {
+    protected void onResume() {
+        super.onResume();
+        _vaultManager.setBlockAutoLock(false);
+        System.out.println("Override onResume方法");
+        System.out.println("建立新的Thread");
+        Thread thread = new Thread(){
+            public void run(){
+                System.out.println("啟動新的線程");
+                try {
+                    System.out.println("初始化API");
+                    Tasks.await(SafetyNet.getClient(getApplicationContext()).initSafeBrowsing());
+                } catch (ExecutionException e) {
+                    System.out.println(e.getMessage());
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    System.out.println(e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        };
+        thread.start();
 
     }
 
-    @Override
-    public void onConnectionSuspended(int i) {
-
-    }
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
-    }
 }
 
 
