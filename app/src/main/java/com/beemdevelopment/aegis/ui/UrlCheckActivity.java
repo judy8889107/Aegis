@@ -63,6 +63,7 @@ import java.net.ProtocolException;
 import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,7 +79,11 @@ import org.jsoup.nodes.Element;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 
 public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener{
@@ -431,6 +436,33 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
 
+    //virustotal 使用
+    public void getVirusTotal(String URL_text) throws IOException {
+        OkHttpClient client = new OkHttpClient();
+
+        MediaType mediaType = MediaType.parse("application/x-www-form-urlencoded");
+        RequestBody body = RequestBody.create(mediaType, "url=http%3A%2F%2Fonline-podpora.cc%2F");
+        Request request = new Request.Builder()
+                .url("https://www.virustotal.com/api/v3/urls")
+                .post(body)
+                .addHeader("Accept", "application/json")
+                .addHeader("x-apikey", "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714")
+                .addHeader("Content-Type", "application/x-www-form-urlencoded")
+                .build();
+
+        Response response = client.newCall(request).execute();
+        if(response.isSuccessful()){
+            System.out.println("請求成功");
+            System.out.println(response.body().string());
+        }else System.out.println("請求失敗");
+
+
+
+
+    }
+
+
+
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 whois search */
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -462,22 +494,16 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //            System.out.println("data_map內容:");
 //            System.out.println(IP2WHOIS_data);
 
+           //virustotal api
+            getVirusTotal(URL_text);
 
-            //Judy
-            //Google Safe Browsing 确保用户设备上安装了正确的 Google Play 服务版本
-//            if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this.getApplicationContext())
-//                    == ConnectionResult.SUCCESS) {
-//                System.out.println("确保用户设备上安装了正确的 Google Play 服务版本：OK");
-//                // The SafetyNet Attestation API is available.
-//            } else {
-//                System.out.println("确保用户设备上安装了正确的 Google Play 服务版本：No");
-//                // Prompt user to update Google Play services.
-//            }
-//
+
+
             System.out.println("嘗試發出SafetyNet證明請求");
-
+            //初始化SafeNet API
+            Tasks.await(SafetyNet.getClient(this).initSafeBrowsing());
             //Use SafetyNet
-            System.out.println("要檢查的網址為：");
+            System.out.println("想檢查的URL:");
             System.out.println(URL_text);
             SafetyNet.getClient(this).lookupUri(URL_text, "AIzaSyAK5QxYVa3JZ4pXc9GbgzJ0bp4VkEZeQtU",
                     SafeBrowsingThreat.TYPE_POTENTIALLY_HARMFUL_APPLICATION,
@@ -491,10 +517,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                                     System.out.println("SafetyNet響應成功");
                                     if (sbResponse.getDetectedThreats().isEmpty()) {
                                         // No threats found.
-                                        System.out.println("此網站沒有找到任何威脅");
+                                        System.out.println(sbResponse.getDetectedThreats());
+                                        System.out.println(sbResponse.getState());
+                                        System.out.println("沒有檢查到任何威脅");
                                     } else {
                                         // Threats found!
-                                        System.out.println("此網站威脅被找到了!!");
+                                        System.out.println("檢查到威脅!!!");
                                     }
                                 }
                             })
@@ -504,7 +532,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                             System.out.println("取得服務失敗");
                             // An error occurred while communicating with the service.
                             if (e instanceof ApiException) {
-                                System.out.println("Google Paly Service的API出現error");
+                                System.out.println("Google Play Service的API出現error");
                                 // An error with the Google Play Services API contains some
                                 // additional details.
                                 ApiException apiException = (ApiException) e;
@@ -518,7 +546,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                                 // haven't called initSafeBrowsing() before or that it needs
                                 // to be called again due to an internal error.
                             } else {
-                                System.out.println("其他error");
+                                System.out.println("其他 error:");
                                 // A different, unknown type of error occurred.
                                 System.out.println(e.getMessage());
                             }
@@ -547,6 +575,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             e.printStackTrace();
         } catch (NullPointerException e){
           System.out.println(e.getMessage());
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         } finally {
 
             /* 將原本訊息備份 */
@@ -936,31 +968,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    @CallSuper
-    @Override
-    protected void onResume() {
-        super.onResume();
-        _vaultManager.setBlockAutoLock(false);
-        System.out.println("Override onResume方法");
-        System.out.println("建立新的Thread");
-        Thread thread = new Thread(){
-            public void run(){
-                System.out.println("啟動新的線程");
-                try {
-                    System.out.println("初始化API");
-                    Tasks.await(SafetyNet.getClient(getApplicationContext()).initSafeBrowsing());
-                } catch (ExecutionException e) {
-                    System.out.println(e.getMessage());
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
-                    System.out.println(e.getMessage());
-                    e.printStackTrace();
-                }
-            }
-        };
-        thread.start();
 
-    }
 
 }
 
