@@ -54,7 +54,7 @@ import androidx.annotation.RequiresApi;
 
 import org.apache.commons.net.whois.WhoisClient;
 
-import org.json.JSONObject;
+
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -68,17 +68,23 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 /* JSON */
-import org.json.*;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -384,7 +390,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     // 處理並回傳整個網頁訊息
-    public static String return_website_information(InputStream inputStream) throws IOException {
+    public static String getData(InputStream inputStream) throws IOException {
         String result = null;
         StringBuilder sb = new StringBuilder();
         String line;
@@ -420,7 +426,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         if (conn.getResponseCode() != 200) {
             throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
         }
-        result = return_website_information(conn.getInputStream());
+        result = getData(conn.getInputStream());
         conn.disconnect();
 
         Document doc = Jsoup.parse(result);
@@ -436,32 +442,71 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
 
-    //virustotal 使用
-    public void getVirusTotal(String URL_text) throws IOException {
-        OkHttpClient client = new OkHttpClient();
+    //VirusTotal返回結果
+    public Map<String,Integer> getAalysisResult(String URL_text) throws JSONException, IOException, InterruptedException {
+        String analysisID = getAnalysisID(URL_text);
+        String x_apikey = "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714";
+        String status = null;
+        JSONObject jsonObject = null;
+        Map<String, Integer> data_map = new LinkedHashMap<>();
 
-        MediaType mediaType = MediaType.parse("application/x-www-form-urlencoded");
-        RequestBody body = RequestBody.create(mediaType, "url=http%3A%2F%2Fonline-podpora.cc%2F");
-        Request request = new Request.Builder()
-                .url("https://www.virustotal.com/api/v3/urls")
-                .post(body)
-                .addHeader("Accept", "application/json")
-                .addHeader("x-apikey", "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714")
-                .addHeader("Content-Type", "application/x-www-form-urlencoded")
-                .build();
+        //建立連線
+        HttpURLConnection connection = (HttpURLConnection) new URL("https://www.virustotal.com/api/v3/analyses/"+analysisID).openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Accept", "application/json");
+        connection.setRequestProperty("x-apikey", x_apikey);
+        System.out.println("建立連線");
+        connection.connect();
+        if(200 == connection.getResponseCode()){
+            String result = getData(connection.getInputStream());
+            jsonObject = new JSONObject(result).getJSONObject("data").getJSONObject("attributes");
+            status = jsonObject.getString("status");
+            data_map.put("status",status.equals("completed")? 1 : 0); //若 complete status=1, 其他則 status = 0
+            //放入鍵和鍵值
+            jsonObject = jsonObject.getJSONObject("stats");
+            Iterator<String> iterator = jsonObject.keys();
+            while(iterator.hasNext()){
+                String key = iterator.next();
+                data_map.put(key,jsonObject.getInt(key));
+            }
+        }else System.out.println(getData(connection.getErrorStream()));
 
-        Response response = client.newCall(request).execute();
-        if(response.isSuccessful()){
-            System.out.println("請求成功");
-            System.out.println(response.body().string());
-        }else System.out.println("請求失敗");
+        connection.disconnect();
+        return data_map;
+    }
+    //VirusTotal得到分析ID
+    public String getAnalysisID(String URL_text) throws IOException, JSONException {
+        String x_apikey = "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714";
+        String analysisID = null;
+        HttpURLConnection connection = (HttpURLConnection) new URL("https://www.virustotal.com/api/v3/urls").openConnection();
+        connection.setDoOutput(true);
+        connection.setDoInput(true);
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Accept", "application/json");
+        connection.setRequestProperty("x-apikey", x_apikey);
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        connection.setUseCaches(false);
+        //需要先寫入流再做connection
+        DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
+        String parameter = "url="+URLEncoder.encode(URL_text,"UTF-8");
+        outputStream.write(parameter.getBytes(StandardCharsets.UTF_8));
+        connection.connect();
+        if(200 == connection.getResponseCode()){
+            String result = getData(connection.getInputStream());
+            analysisID = new JSONObject(result).getJSONObject("data").getString("id");
+        }else{
+            System.out.println(getData(connection.getErrorStream()));
 
-
-
-
+        }
+        outputStream.close(); //關閉寫入流
+        connection.disconnect(); //關閉連接
+        return analysisID;
     }
 
+    //其他Phishing API
+    public void getPhishTank(String URL_text) throws IOException {
 
+    }
 
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 whois search */
@@ -472,7 +517,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
         //IP2WHOIS API Data
         Map<String, String> IP2WHOIS_data = null;
-
+        Map<String, Integer> Virus_data = null;
 
         /* Whois 參數 */
         URL url_obj = null;
@@ -489,69 +534,82 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         //判斷 thread name 執行對應動作
 
         try {
-            // Judy註解需要解封，因為使用次數(2022/5/9)
+            // IP2WHOIS 使用
 //            IP2WHOIS_data = getIP2WHOIS(URL_text);
 //            System.out.println("data_map內容:");
 //            System.out.println(IP2WHOIS_data);
 
-           //virustotal api
-            getVirusTotal(URL_text);
+            //VirusTotal 使用
+//            System.out.println("要檢查的網址:");
+//            System.out.println(URL_text);
+//            Map<String, Integer> data_map = getAalysisResult(URL_text);
+//            if(data_map.get("status") == 0){
+//                System.out.println("請求尚在排隊處理中，請重新嘗試");
+//                System.out.println(data_map);
+//            }
+//            else{
+//                System.out.println("請求處理完畢，印出結果:");
+//                System.out.println(data_map);
+//            }
+
+            //PhishTank 使用
+            getPhishTank(URL_text);
 
 
 
-            System.out.println("嘗試發出SafetyNet證明請求");
-            //初始化SafeNet API
-            Tasks.await(SafetyNet.getClient(this).initSafeBrowsing());
-            //Use SafetyNet
-            System.out.println("想檢查的URL:");
-            System.out.println(URL_text);
-            SafetyNet.getClient(this).lookupUri(URL_text, "AIzaSyAK5QxYVa3JZ4pXc9GbgzJ0bp4VkEZeQtU",
-                    SafeBrowsingThreat.TYPE_POTENTIALLY_HARMFUL_APPLICATION,
-                    SafeBrowsingThreat.TYPE_SOCIAL_ENGINEERING)
-                    .addOnSuccessListener(this,
-                            new OnSuccessListener<SafetyNetApi.SafeBrowsingResponse>() {
-                                @Override
-                                public void onSuccess(SafetyNetApi.SafeBrowsingResponse sbResponse) {
-                                    // Indicates communication with the service was successful.
-                                    // Identify any detected threats.
-                                    System.out.println("SafetyNet響應成功");
-                                    if (sbResponse.getDetectedThreats().isEmpty()) {
-                                        // No threats found.
-                                        System.out.println(sbResponse.getDetectedThreats());
-                                        System.out.println(sbResponse.getState());
-                                        System.out.println("沒有檢查到任何威脅");
-                                    } else {
-                                        // Threats found!
-                                        System.out.println("檢查到威脅!!!");
-                                    }
-                                }
-                            })
-                    .addOnFailureListener(this, new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            System.out.println("取得服務失敗");
-                            // An error occurred while communicating with the service.
-                            if (e instanceof ApiException) {
-                                System.out.println("Google Play Service的API出現error");
-                                // An error with the Google Play Services API contains some
-                                // additional details.
-                                ApiException apiException = (ApiException) e;
-                                System.out.println(CommonStatusCodes
-                                        .getStatusCodeString(apiException.getStatusCode()));
-                                System.out.println(e.getMessage());
-
-                                // Note: If the status code, apiException.getStatusCode(),
-                                // is SafetyNetstatusCode.SAFE_BROWSING_API_NOT_INITIALIZED,
-                                // you need to call initSafeBrowsing(). It means either you
-                                // haven't called initSafeBrowsing() before or that it needs
-                                // to be called again due to an internal error.
-                            } else {
-                                System.out.println("其他 error:");
-                                // A different, unknown type of error occurred.
-                                System.out.println(e.getMessage());
-                            }
-                        }
-                    });
+//            System.out.println("嘗試發出SafetyNet證明請求");
+//            //初始化SafeNet API
+//            Tasks.await(SafetyNet.getClient(this).initSafeBrowsing());
+//            //Use SafetyNet
+//            System.out.println("想檢查的URL:");
+//            System.out.println(URL_text);
+//            SafetyNet.getClient(this).lookupUri(URL_text, "AIzaSyAK5QxYVa3JZ4pXc9GbgzJ0bp4VkEZeQtU",
+//                    SafeBrowsingThreat.TYPE_POTENTIALLY_HARMFUL_APPLICATION,
+//                    SafeBrowsingThreat.TYPE_SOCIAL_ENGINEERING)
+//                    .addOnSuccessListener(this,
+//                            new OnSuccessListener<SafetyNetApi.SafeBrowsingResponse>() {
+//                                @Override
+//                                public void onSuccess(SafetyNetApi.SafeBrowsingResponse sbResponse) {
+//                                    // Indicates communication with the service was successful.
+//                                    // Identify any detected threats.
+//                                    System.out.println("SafetyNet響應成功");
+//                                    if (sbResponse.getDetectedThreats().isEmpty()) {
+//                                        // No threats found.
+//                                        System.out.println(sbResponse.getDetectedThreats());
+//                                        System.out.println(sbResponse.getState());
+//                                        System.out.println("沒有檢查到任何威脅");
+//                                    } else {
+//                                        // Threats found!
+//                                        System.out.println("檢查到威脅!!!");
+//                                    }
+//                                }
+//                            })
+//                    .addOnFailureListener(this, new OnFailureListener() {
+//                        @Override
+//                        public void onFailure(@NonNull Exception e) {
+//                            System.out.println("取得服務失敗");
+//                            // An error occurred while communicating with the service.
+//                            if (e instanceof ApiException) {
+//                                System.out.println("Google Play Service的API出現error");
+//                                // An error with the Google Play Services API contains some
+//                                // additional details.
+//                                ApiException apiException = (ApiException) e;
+//                                System.out.println(CommonStatusCodes
+//                                        .getStatusCodeString(apiException.getStatusCode()));
+//                                System.out.println(e.getMessage());
+//
+//                                // Note: If the status code, apiException.getStatusCode(),
+//                                // is SafetyNetstatusCode.SAFE_BROWSING_API_NOT_INITIALIZED,
+//                                // you need to call initSafeBrowsing(). It means either you
+//                                // haven't called initSafeBrowsing() before or that it needs
+//                                // to be called again due to an internal error.
+//                            } else {
+//                                System.out.println("其他 error:");
+//                                // A different, unknown type of error occurred.
+//                                System.out.println(e.getMessage());
+//                            }
+//                        }
+//                    });
 
 
 
@@ -575,10 +633,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             e.printStackTrace();
         } catch (NullPointerException e){
           System.out.println(e.getMessage());
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         } finally {
 
             /* 將原本訊息備份 */
