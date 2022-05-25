@@ -15,23 +15,13 @@ import android.os.Build;
 import android.os.Bundle;
 
 
-import android.util.Log;
 import android.view.View;
 
 
 import com.beemdevelopment.aegis.R;
 
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.safetynet.SafeBrowsingThreat;
-import com.google.android.gms.safetynet.SafetyNet;
-import com.google.android.gms.safetynet.SafetyNetApi;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Tasks;
 import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
@@ -47,9 +37,6 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 /* URL lib */
-import androidx.annotation.CallSuper;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import org.apache.commons.net.whois.WhoisClient;
@@ -59,7 +46,6 @@ import org.apache.commons.net.whois.WhoisClient;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
@@ -70,8 +56,9 @@ import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 /* JSON */
 
 import org.json.JSONArray;
@@ -83,16 +70,8 @@ import org.jsoup.nodes.Element;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
-
-public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener{
+public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener {
     /* 變數宣告 */
     EditText url_input;
     Button send_button;
@@ -260,7 +239,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         whois_message_builder.setTitle("網站資訊");
         /* 設定按鈕監聽器 */
         whois_message_builder.setPositiveButton(R.string.yes,this);
-        whois_message_builder.setNegativeButton(R.string.no, this);
+//        whois_message_builder.setNegativeButton(R.string.no, this);
         whois_message_dialog = whois_message_builder.create();
         whois_message_dialog.dismiss();
 
@@ -289,6 +268,15 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     whois_thread.setName("whois_thread");
                     whois_thread.start();
                     dialog.dismiss();
+                    //使當前thread進入等待，等待 whois thread完成
+                    try {
+                        whois_thread.join();
+
+                    }
+                    catch(InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    whois_message_dialog.show();
                     break;
                 case BUTTON_NEGATIVE:
                     /* int which = -2 */
@@ -306,10 +294,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 case BUTTON_POSITIVE:
                     /* int which = -1 */
                     dialog.dismiss();
-                    break;
-                case BUTTON_NEGATIVE:
-                    /* int which = -2 */
-                    dialog.dismiss();
+                    alert_dialog.setMessage(URL_text+"\n"+getResources().getString(R.string.unsafeURL));
+                    alert_dialog.show();
                     break;
             }
         }
@@ -327,6 +313,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 case BUTTON_NEGATIVE:
                     /* int which = -2 */
                     dialog.dismiss();
+                    dialog_toast.setText("不添加此網址到安全名單中"); /* 此網址不會添加到安全名單 */
+                    dialog_toast.show();
                     break;
             }
         }
@@ -389,7 +377,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
 
-    // 處理並回傳整個網頁訊息
+    // 輸入inputstream，串接回傳資訊
     public static String getData(InputStream inputStream) throws IOException {
         String result = null;
         StringBuilder sb = new StringBuilder();
@@ -503,8 +491,43 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         return analysisID;
     }
 
-    //其他Phishing API
-    public void getPhishTank(String URL_text) throws IOException {
+    //IPQualityScore API
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public Map<String,String> getIPQualityScore(String URL_text) throws IOException, JSONException {
+        String result = null;
+        Map<String, String> data_map = new LinkedHashMap<>(); //存對應的鍵值
+        JSONObject jsonObject = null;
+        String IPQualityScore = "https://ipqualityscore.com/api/json/url/mMdf76Tro3JGHcC3Cmv9WPGu14C56Rpm/";
+        String encodedURL = URLEncoder.encode(URL_text,"UTF-8");
+        URL url = new URL(IPQualityScore+encodedURL);
+
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Accept", "application/json");
+
+        if (connection.getResponseCode() == 200) {
+            result = getData(connection.getInputStream());
+            connection.disconnect();
+            jsonObject = new JSONObject(result);
+            //取出要的資料
+            String[] key = {"success","unsafe","domain","parking","spamming","malware","phishing","suspicious","adult","risk_score","category"};
+            //若狀態為成功才放入相對應鍵值
+            if(jsonObject.getString("success").equals("true")){
+                //放入鍵值
+                for(int i=0;i<key.length;i++){
+                    String value = jsonObject.getString(key[i]);
+                    if(value.matches("true|false"))
+                        value = value.equals("true")? "yes":"no";
+                    data_map.put(key[i],value);
+                }
+
+            }
+            else data_map.put(key[0],jsonObject.getString(key[0])); //狀態失敗則放success = false
+
+
+        }else System.out.println(getData(connection.getErrorStream())); //印出失敗資訊
+
+        return data_map;
 
     }
 
@@ -518,7 +541,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         //IP2WHOIS API Data
         Map<String, String> IP2WHOIS_data = null;
         Map<String, Integer> Virus_data = null;
-
+        Map<String, String> IPQualityScore_data = null;
+        String message = null;
+        String title = null;
         /* Whois 參數 */
         URL url_obj = null;
         /* 有引用套件，直接使用 WhoisClient */
@@ -539,7 +564,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //            System.out.println("data_map內容:");
 //            System.out.println(IP2WHOIS_data);
 
-            //VirusTotal 使用
+//            VirusTotal 使用
 //            System.out.println("要檢查的網址:");
 //            System.out.println(URL_text);
 //            Map<String, Integer> data_map = getAalysisResult(URL_text);
@@ -552,8 +577,61 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //                System.out.println(data_map);
 //            }
 
-            //PhishTank 使用
-            getPhishTank(URL_text);
+            //IPQualityScore使用
+            //IPQualityScore使用
+            IPQualityScore_data = getIPQualityScore(URL_text);
+            System.out.println("逐行印出原始訊息:");
+            IPQualityScore_data.entrySet().forEach(entry->{
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            });
+            System.out.println("------------------------------------------");
+            //設定輸出訊息
+            if(IPQualityScore_data.get("success").equals("false")){
+                message = "服務取得失敗，請求檢查網址次數已達上限";
+            }
+            else{
+                String[] key = null;
+                //設定 key值
+                if(Locale.getDefault().getDisplayLanguage().equals("中文")){
+                    key = new String[]{"網站風險分數", "是否為不安全的網站", "域名",
+                            "網站是否有域名停留", "網站是否濫發垃圾郵件", "網站是否含惡意軟體",
+                            "網站是否為釣魚網站", "網站是否可疑", "網站是否含成人內容", "網站分類"};
+
+                }else{
+                    key = new String[]{"Risk Score", "Unsafe Website", "Domain Name",
+                            "Website has a domain name suspension", "Website is spamming",
+                            "Website contains malware", "Website is a Phishing Website",
+                            "Website is Suspicious", "Website contains Adult Content", "Website Category"};
+
+                }
+                //拼接 &&設定 Dialog title和 message
+                StringBuilder sb = new StringBuilder();
+                Iterator<Map.Entry<String, String>> iterator = IPQualityScore_data.entrySet().iterator();
+                int index = 1;
+                title = key[0]+" "+IPQualityScore_data.get("risk_score");
+//                    sb.append(chinese_key[0]+": "+IPQualityScore_data.get("risk_score")+"\n");
+                while(iterator.hasNext()){
+                    Map.Entry<String, String> entry = iterator.next();
+                    String entryKey = entry.getKey();
+                    String value = entry.getValue();
+                    if(entryKey.matches("success|risk_score")) continue;
+                    if(value.matches("yes|no"))
+                        value =value.matches("yes")? "是":"否";
+                    sb.append(key[index]+": "+value+"\n");
+                    index++;
+                }
+                message = sb.toString();
+                System.out.println("後臺測試用:\n"+title+"\n"+message);
+
+                whois_message_dialog.setTitle(title);
+                whois_message_dialog.setMessage(message);
+                Thread.currentThread().interrupted(); //中斷執行緒
+
+            }
+
+
+
+
 
 
 
@@ -617,62 +695,61 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
             /* 建立Whois連線 */
 
-            domain_name = InternetDomainName.from(host).topPrivateDomain().toString(); /* 得到 Domain name */
-            TLD = host.substring(host.lastIndexOf('.')+1);
-            /* 查詢whois_server.xml 得到 Whois_server */
-            whois_server = get_whois_server(TLD);
-            if (whois_server == null) { /* 若返回的伺服器為空(xml檔案中找不到可以配對的伺服器) */
-                msg = "Sorry, no match whois server."; /* 設定 msg不為空 */
-            } else {
-                /* 連接剛剛得到的 whois server找尋資料 */
-                whois.connect(whois_server);
-                msg = whois.query(domain_name);
-                whois.disconnect();
-            }
+//            domain_name = InternetDomainName.from(host).topPrivateDomain().toString(); /* 得到 Domain name */
+//            TLD = host.substring(host.lastIndexOf('.')+1);
+//            /* 查詢whois_server.xml 得到 Whois_server */
+//            whois_server = get_whois_server(TLD);
+//            if (whois_server == null) { /* 若返回的伺服器為空(xml檔案中找不到可以配對的伺服器) */
+//                msg = "Sorry, no match whois server."; /* 設定 msg不為空 */
+//            } else {
+//                /* 連接剛剛得到的 whois server找尋資料 */
+//                whois.connect(whois_server);
+//                msg = whois.query(domain_name);
+//                whois.disconnect();
+//            }
         } catch (IOException e) {
             e.printStackTrace();
         } catch (NullPointerException e){
           System.out.println(e.getMessage());
+        } catch (JSONException e) {
+            e.printStackTrace();
         } finally {
 
-            /* 將原本訊息備份 */
-            origin_msg = msg;
-
-            /* 傳TLD和origin_msg 做欄位切割 */
-//            splitting_filed(TLD, msg);  Judy 等等恢復註解
-
-
-            /* 處理 message翻譯 */
-            /* https://translate.googleapis.com/translate_a/single?client=gtx&sl={fromCulture}&tl={toCulture}&dt=t&q={text} */
-            /* auto -> 中文 */
-//            String translation_url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh_tw&dt=t&q="+msg;
-//            try {
-//                /* 連到 Google Translation的 URL */
-//                obj = new URL(translation_url);
-//                HttpURLConnection httpURLConnection = (HttpURLConnection) obj.openConnection();
-//                httpURLConnection.setRequestProperty("User-Agent", "Mozilla/5.0");
+//            /* 將原本訊息備份 */
+////            origin_msg = msg;
+//            /* 傳TLD和origin_msg 做欄位切割 */
+////            splitting_filed(TLD, msg);  Judy 等等恢復註解
+//            /* 處理 message翻譯 */
+//            /* https://translate.googleapis.com/translate_a/single?client=gtx&sl={fromCulture}&tl={toCulture}&dt=t&q={text} */
+//            /* auto -> 中文 */
+////            String translation_url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh_tw&dt=t&q="+msg;
+////            try {
+////                /* 連到 Google Translation的 URL */
+////                obj = new URL(translation_url);
+////                HttpURLConnection httpURLConnection = (HttpURLConnection) obj.openConnection();
+////                httpURLConnection.setRequestProperty("User-Agent", "Mozilla/5.0");
+//////
+////                /* 讀取得到的資訊 */
+////                BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+////                String inputLine;
+////                StringBuilder stringBuilder = new StringBuilder();
 ////
-//                /* 讀取得到的資訊 */
-//                BufferedReader in = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
-//                String inputLine;
-//                StringBuilder stringBuilder = new StringBuilder();
-//
-//                /* 得到JSON資訊 */
-//                while((inputLine = in.readLine())!=null){
-//                    stringBuilder.append(inputLine);
-//                }
-//                in.close(); /* 關閉 Read */
-//                msg = stringBuilder.toString();
-//
-//                /* 傳入原始訊息和翻譯過後的訊息，將JSON資訊做處理，並停止Thread */
-//                handle_message(origin_msg,msg);
-//                Thread.sleep(9999); /* Thread等待9999毫秒 */
-//                Thread.currentThread().interrupt(); /* 發出中斷訊號，通知 currentThread 進行中斷 */
-//
-//            } catch (IOException | InterruptedException e) {
-//                System.out.println(e.getMessage());
-//                e.printStackTrace();
-//            }
+////                /* 得到JSON資訊 */
+////                while((inputLine = in.readLine())!=null){
+////                    stringBuilder.append(inputLine);
+////                }
+////                in.close(); /* 關閉 Read */
+////                msg = stringBuilder.toString();
+////
+////                /* 傳入原始訊息和翻譯過後的訊息，將JSON資訊做處理，並停止Thread */
+////                handle_message(origin_msg,msg);
+////                Thread.sleep(9999); /* Thread等待9999毫秒 */
+////                Thread.currentThread().interrupt(); /* 發出中斷訊號，通知 currentThread 進行中斷 */
+////
+////            } catch (IOException | InterruptedException e) {
+////                System.out.println(e.getMessage());
+////                e.printStackTrace();
+////            }
 
         }
 
