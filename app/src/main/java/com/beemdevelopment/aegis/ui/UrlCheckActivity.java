@@ -5,7 +5,9 @@ package com.beemdevelopment.aegis.ui;
 import static android.content.DialogInterface.BUTTON_NEGATIVE;
 import static android.content.DialogInterface.BUTTON_POSITIVE;
 
+import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -15,6 +17,8 @@ import android.os.Build;
 import android.os.Bundle;
 
 
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 
 
@@ -58,6 +62,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 /* JSON */
 
@@ -82,12 +88,14 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private ArrayList<String> issuer;
     private AlertDialog alert_dialog; /* 警告diaolog */
     private AlertDialog whois_search_dialog; /* 搜尋whois dialog */
-    private AlertDialog whois_message_dialog; /* 搜尋whois dialog */
+    private ProgressDialog progressDialog; /* 加載 dialog */
+    private AlertDialog whois_message_dialog; /* 顯示網站資訊 dialog */
     private Toast dialog_toast;
     private GoogleApiClient mGoogleApiClient; /* ( GoogleApiClient已經棄用了) */
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File Domain_name_txt;
+    private ExecutorService executorService;
 
 
     /* Code代碼 */
@@ -128,25 +136,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    //生成 nonce
-    private static byte[] generateNonce(){
-        //生成隨機長度 範圍: 16~1024 (max - min) + min
-        int nonce_length = new SecureRandom().nextInt(1024 - 16) + 16;
-        byte[] nonce = new byte[nonce_length];
-        //SecureRandom默認用 SHA1PRNG生成隨機數，占用較少資源 (內置兩種隨機數字算法: NativePRNG 和 SHA1PRNG)
-        new SecureRandom().nextBytes(nonce);
-
-        // test -- 印出 nonce
-        StringBuilder result = new StringBuilder();
-        for (byte temp : nonce) {
-            result.append(String.format("%02x", temp));
-        }
-        System.out.println("印出nonce長度:"+nonce_length);
-        System.out.println("印出nonce: "+result.toString());
-        // test
-        return nonce;
-
-    }
 
 
     /* 初始化 設定所有參數等等 */
@@ -236,12 +225,20 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
         /* Whois資訊 dialog */
         AlertDialog.Builder whois_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        whois_message_builder.setTitle("網站資訊");
         /* 設定按鈕監聽器 */
         whois_message_builder.setPositiveButton(R.string.yes,this);
-//        whois_message_builder.setNegativeButton(R.string.no, this);
         whois_message_dialog = whois_message_builder.create();
         whois_message_dialog.dismiss();
+
+        /* loading dialog*/
+//        AlertDialog.Builder loading_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+//        loading_dialog_builder.setTitle("提示");
+//        loading_dialog_builder.setMessage("正在查詢中，請稍後");
+//        loading_dialog = loading_dialog_builder.create();
+//        loading_dialog.dismiss();
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("正在處理中...");
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
 
 
     }
@@ -252,6 +249,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     /* 實作dialog按鈕監聽 */
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onClick(DialogInterface dialog, int which) {
         /* 先判斷哪個dialog */
@@ -264,23 +262,14 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 case BUTTON_POSITIVE:
                     /* int which = -1 */
                     /* 啟動 whois thread 檢查 */
+                    whois_search_dialog.dismiss(); //隱藏 dialog再啟動 Thread
                     Thread whois_thread = new Thread(this);
                     whois_thread.setName("whois_thread");
+                    progressDialog.show();
                     whois_thread.start();
-                    dialog.dismiss();
-                    //使當前thread進入等待，等待 whois thread完成
-                    try {
-                        whois_thread.join();
-
-                    }
-                    catch(InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    whois_message_dialog.show();
                     break;
                 case BUTTON_NEGATIVE:
                     /* int which = -2 */
-                    dialog.dismiss();
                     alert_dialog.setMessage(URL_text+"\n"+R.string.unsafeURL);
                     alert_dialog.show();
                     break;
@@ -321,6 +310,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     }
+
 
 
     /* 檢查URL function */
@@ -531,6 +521,47 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
+    public String[] getIPQualityMessage(Map<String,String> IPQualityData){
+        String[] result = new String[2];
+        if(IPQualityData.get("success").equals("false")){
+            result[0] = "錯誤";
+            result[1] = "服務取得失敗，請求檢查網址次數已達上限";
+        }else{
+            String[] key = null;
+            //設定 key值 (中文和其他為英文)
+            if(Locale.getDefault().getDisplayLanguage().equals("中文")){
+                key = new String[]{"網站風險分數", "是否為不安全的網站", "域名",
+                        "網站是否有域名停留", "網站是否濫發垃圾郵件", "網站是否含惡意軟體",
+                        "網站是否為釣魚網站", "網站是否可疑", "網站是否含成人內容", "網站分類"};
+
+            }else{
+                key = new String[]{"Risk Score", "Unsafe Website", "Domain Name",
+                        "Website has a domain name suspension", "Website is spamming",
+                        "Website contains malware", "Website is a Phishing Website",
+                        "Website is Suspicious", "Website contains Adult Content", "Website Category"};
+
+            }
+            //拼接 &&設定 Dialog title和 message
+            StringBuilder sb = new StringBuilder();
+            Iterator<Map.Entry<String, String>> iterator = IPQualityData.entrySet().iterator();
+            int index = 1;
+            result[0] = key[0]+" "+IPQualityData.get("risk_score");
+            while(iterator.hasNext()){
+                Map.Entry<String, String> entry = iterator.next();
+                String entryKey = entry.getKey();
+                String value = entry.getValue();
+                if(entryKey.matches("success|risk_score")) continue;
+                if(value.matches("yes|no"))
+                    value =value.matches("yes")? "是":"否";
+                sb.append(key[index]+": "+value+"\n");
+                index++;
+            }
+            result[1] = sb.toString();
+            System.out.println("後臺測試用:\n"+result[0]+"\n"+result[1]);
+        }
+        return result;
+    }
+
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 whois search */
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -558,7 +589,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String msg = null;
         //判斷 thread name 執行對應動作
 
+
+
         try {
+
             // IP2WHOIS 使用
 //            IP2WHOIS_data = getIP2WHOIS(URL_text);
 //            System.out.println("data_map內容:");
@@ -585,49 +619,18 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 System.out.println(entry.getKey() + ": " + entry.getValue());
             });
             System.out.println("------------------------------------------");
-            //設定輸出訊息
-            if(IPQualityScore_data.get("success").equals("false")){
-                message = "服務取得失敗，請求檢查網址次數已達上限";
-            }
-            else{
-                String[] key = null;
-                //設定 key值
-                if(Locale.getDefault().getDisplayLanguage().equals("中文")){
-                    key = new String[]{"網站風險分數", "是否為不安全的網站", "域名",
-                            "網站是否有域名停留", "網站是否濫發垃圾郵件", "網站是否含惡意軟體",
-                            "網站是否為釣魚網站", "網站是否可疑", "網站是否含成人內容", "網站分類"};
-
-                }else{
-                    key = new String[]{"Risk Score", "Unsafe Website", "Domain Name",
-                            "Website has a domain name suspension", "Website is spamming",
-                            "Website contains malware", "Website is a Phishing Website",
-                            "Website is Suspicious", "Website contains Adult Content", "Website Category"};
-
+            title = getIPQualityMessage(IPQualityScore_data)[0];
+            message = getIPQualityMessage(IPQualityScore_data)[1];
+            whois_message_dialog.setTitle(title);
+            whois_message_dialog.setMessage(message);
+//            執行 Thread UI更新
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    progressDialog.dismiss();
+                    whois_message_dialog.show();
                 }
-                //拼接 &&設定 Dialog title和 message
-                StringBuilder sb = new StringBuilder();
-                Iterator<Map.Entry<String, String>> iterator = IPQualityScore_data.entrySet().iterator();
-                int index = 1;
-                title = key[0]+" "+IPQualityScore_data.get("risk_score");
-//                    sb.append(chinese_key[0]+": "+IPQualityScore_data.get("risk_score")+"\n");
-                while(iterator.hasNext()){
-                    Map.Entry<String, String> entry = iterator.next();
-                    String entryKey = entry.getKey();
-                    String value = entry.getValue();
-                    if(entryKey.matches("success|risk_score")) continue;
-                    if(value.matches("yes|no"))
-                        value =value.matches("yes")? "是":"否";
-                    sb.append(key[index]+": "+value+"\n");
-                    index++;
-                }
-                message = sb.toString();
-                System.out.println("後臺測試用:\n"+title+"\n"+message);
-
-                whois_message_dialog.setTitle(title);
-                whois_message_dialog.setMessage(message);
-                Thread.currentThread().interrupted(); //中斷執行緒
-
-            }
+            });
 
 
 
@@ -752,12 +755,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 ////            }
 
         }
-
-
-
-
-
-
 
     }
 
