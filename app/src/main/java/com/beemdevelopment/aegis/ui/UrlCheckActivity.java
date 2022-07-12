@@ -5,7 +5,6 @@ package com.beemdevelopment.aegis.ui;
 import static android.content.DialogInterface.BUTTON_NEGATIVE;
 import static android.content.DialogInterface.BUTTON_POSITIVE;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -17,8 +16,6 @@ import android.os.Build;
 import android.os.Bundle;
 
 
-import android.os.Handler;
-import android.os.Looper;
 import android.view.View;
 
 
@@ -54,7 +51,6 @@ import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -63,24 +59,30 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
 /* JSON */
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.Jsoup;
+
+
 import org.jsoup.nodes.Element;
+import org.xml.sax.SAXException;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
+
+
+import javax.xml.parsers.ParserConfigurationException;
+
 
 
 public class UrlCheckActivity extends AegisActivity implements View.OnClickListener,Runnable, DialogInterface.OnClickListener {
     /* 變數宣告 */
     EditText url_input;
-    Button send_button;
+    Button set_safe_url;
+    Button url_check;
     ImageButton clear_button;
     Button scan_qrcode_button;
     private static final int Scan_QR_CODE = 2;
@@ -94,7 +96,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private GoogleApiClient mGoogleApiClient; /* ( GoogleApiClient已經棄用了) */
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
-    File Domain_name_txt;
+    File url_database;
     private ExecutorService executorService;
 
 
@@ -123,15 +125,20 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         initialize();
 
 
-        /* Get File list(test) */
-//        String[] files = getApplicationContext().fileList();
-//        System.out.println("\nExist file list:");
-//        for(String file : files)
-//            System.out.println(file); test
-
-
-
-
+        /*測試addURL function*/
+        try {
+            addURLdatabase("test");
+        } catch (XmlPullParserException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
 
     }
@@ -142,18 +149,20 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     public void initialize(){
         /* 設定參數 */
         url_input = findViewById(R.id.url_input);
-        send_button = findViewById(R.id.send_button);
+        set_safe_url = findViewById(R.id.set_safe_url);
+        url_check = findViewById(R.id.url_check);
         clear_button = findViewById(R.id.clear_button);
         scan_qrcode_button = findViewById(R.id.scan_qrcode_button);
         /* 監聽器設定 */
-        send_button.setOnClickListener(this);
+        set_safe_url.setOnClickListener(this);
         clear_button.setOnClickListener(this);
         scan_qrcode_button.setOnClickListener(this);
+        url_check.setOnClickListener(this);
         /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
         Create_issuer_arrayList();
 
         /* 創立 Domain name的 txt file(目前為空) */
-        Create_Domain_name_txt_file();
+        Create_url_database_file();
 
         /* 設定alert dialog toast的參數 */
         setAlertDialogToast();
@@ -167,10 +176,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     @Override
     public void onClick(View v) {
         switch (v.getId()){
-            case R.id.send_button:
-                /* 按下send_button就隱藏鍵盤 */
+            case R.id.set_safe_url:
+                /* 按下set_safe_url就隱藏鍵盤 */
                 InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(send_button.getWindowToken(), 0);
+                imm.hideSoftInputFromWindow(set_safe_url.getWindowToken(), 0);
                 URL_text = url_input.getText().toString().trim();
                 /* 執行 URL check */
                 UrlCheck();
@@ -182,7 +191,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 Intent scan_qrcode_activity = new Intent(getApplicationContext(),UrlCheckActivity_ScanQrcodeActivity.class);
                 startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
                 break;
-
+            case R.id.url_check:
+                System.out.println("按下url_check");
+                /* 按下url_check就隱藏鍵盤 */
+                imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(set_safe_url.getWindowToken(), 0);
+                URL_text = url_input.getText().toString().trim();
+                break;
         }
     }
 
@@ -196,8 +211,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         switch (resultCode) {
             case Scan_QR_CODE:
                 URL_text = data.getStringExtra(pass_name);
-                /* 執行 URL check */
-                UrlCheck();
+                /* 將網址輸入input text改為QRcode掃出的內容 */
+                url_input.setText(URL_text);
                 break;
             default: return;  //resultCode為 0 時，return回原本activity
         }
@@ -298,6 +313,17 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     dialog_toast.setText(R.string.addURL); /* 此網址已添加到安全名單 */
                     dialog_toast.show();
                     dialog.dismiss();
+                    try {
+                        addURLdatabase(URL_text); /*將網址加入資料庫*/
+                    } catch (XmlPullParserException | IOException e) {
+                        e.printStackTrace();
+                    } catch (ParserConfigurationException e) {
+                        e.printStackTrace();
+                    } catch (SAXException e) {
+                        e.printStackTrace();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                     break;
                 case BUTTON_NEGATIVE:
                     /* int which = -2 */
@@ -310,7 +336,81 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     }
+    public  void addURLdatabase(String url) throws XmlPullParserException, IOException, ParserConfigurationException, SAXException, JSONException {
+        System.out.println("########################################################");
+        System.out.println("檔案路徑"+url_database.getPath());
+        System.out.println("檔案名稱"+url_database.getName());
+        System.out.println("可寫: "+url_database.canWrite());
+        System.out.println("可讀: "+url_database.canRead());
+        System.out.println("是否為file: "+url_database.isFile());
+        // 寫入
+        JSONObject jo = new JSONObject();
+        JSONObject jp = new JSONObject();
+        JSONArray ja = new JSONArray();
+        JSONArray jb = new JSONArray();
+        // 第一個 URL
+        int MainURL = 0;
+        jo.put("MainURL"+MainURL,"https://google.com");
+        // URL 1st Entry
+        String[] subURL = {"https://accounts.google.com","https://google.com"};
+        String[] subURL_format = {"basedomain","exact"};
+        for(int i=0;i< subURL.length;i++){
+            jp = new JSONObject();
+            jp.put("subURL",subURL[i]);
+            jp.put("format",subURL_format[i]);
+            jb.put(jp);
 
+        }
+        jo.put("subURL"+MainURL,jb);
+        MainURL++;
+        ja.put(jo);
+        // 第二個 URL
+        jo = new JSONObject();
+        jb = new JSONArray();
+        jo.put("MainURL"+MainURL,"https://github.com/");
+
+        for(int i=0;i< subURL.length;i++){
+            jp = new JSONObject();
+            jp.put("subURL",subURL[i]);
+            jp.put("format",subURL_format[i]);
+            jb.put(jp);
+        }
+        jo.put("subURL"+MainURL,jb);
+        MainURL++;
+        // 存放於 ja陣列中
+        ja.put(jo);
+        System.out.println(ja.toString());
+        OutputStream os = new FileOutputStream(url_database, false); //追加文件
+        os.write(0);
+        os.close();
+
+        InputStream is = new FileInputStream(url_database);
+
+
+
+
+
+
+//        讀取xml檔案
+//        System.out.println(doc.toString());
+//        XmlResourceParser url_database = getResources().getXml(R.xml.url_database);
+//        int event = url_database.getEventType(); /* 得到現在光標的位置 */
+//        while (event!= XmlPullParser.END_DOCUMENT){
+//            if(event == XmlPullParser.START_TAG){
+//                String tag_name = url_database.getName();
+//                System.out.println("印出當前標籤: "+tag_name);
+//                if(tag_name.equals("subEntry")){
+//                    System.out.println("印出格式: "+url_database.getAttributeValue(0));
+//                }
+//            }
+//            if(event == XmlPullParser.TEXT){
+//                System.out.println(url_database.getText());
+//
+//            }
+//            event = url_database.next();
+//        }
+
+    }
 
 
     /* 檢查URL function */
@@ -520,12 +620,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         return data_map;
 
     }
-
+//    處理IPQS輸出資訊
     public String[] getIPQualityMessage(Map<String,String> IPQualityData){
         String[] result = new String[2];
         if(IPQualityData.get("success").equals("false")){
             result[0] = "錯誤";
-            result[1] = "服務取得失敗，請求檢查網址次數已達上限";
+            result[1] = "服務取得失敗，請求檢查網址次數已達上限"; // TODO:訊息更改
         }else{
             String[] key = null;
             //設定 key值 (中文和其他為英文)
@@ -1037,20 +1137,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    /* 建立Domain name的檔案 */
-    public void Create_Domain_name_txt_file(){
-
-
-
+    /* 建立 url database的檔案 */
+    public void Create_url_database_file(){
         /* Create file */
         File dir = getApplicationContext().getFilesDir();
-        Domain_name_txt = new File(dir,"Domain_name_txt.txt");
+        url_database = new File(dir,"url_database.json");
+        url_database.setWritable(true);  // 設為可讀寫
+        url_database.setReadable(true);
         try {
-            if(Domain_name_txt.createNewFile()){
-//                System.out.println("Success Create Domain_name_txt file."); test
+            if(url_database.createNewFile()){
+                System.out.println("Success Create url_database file.");
             }
             else{
-//                System.out.println("Domain_name_txt file is exist."); test
+                System.out.println("url_database file is exist.");
             }
         } catch (IOException e) {
             e.printStackTrace();
