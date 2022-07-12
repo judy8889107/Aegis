@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<URL>
+    <Entry>testURL
+        <subEntry format="basedoamin">sub_test</subEntry>
+    </Entry>
+    <Entry>testURL2
+        <subEntry format="exact">sub_test2</subEntry>
+    </Entry>
+</URL>

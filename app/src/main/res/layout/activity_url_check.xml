@@ -95,17 +95,24 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <Button
-                    android:id="@+id/send_button"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Send" />
-
-                <Button
                     android:id="@+id/scan_qrcode_button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Scan QR code" />
+                    android:text="掃描OR code以輸入網址" />
+
+                <Button
+                    android:id="@+id/url_check"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="網址檢查" />
+
+                <Button
+                    android:id="@+id/set_safe_url"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="設定安全網址" />
 
             </LinearLayout>
 
