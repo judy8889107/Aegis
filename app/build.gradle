@@ -198,6 +198,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
     /*加入OKhttp*/
     implementation 'com.squareup.okhttp3:okhttp:4.7.2'
+    implementation 'commons-validator:commons-validator:1.4.0'
 
 
 
