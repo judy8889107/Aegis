@@ -46,6 +46,7 @@ import org.apache.commons.net.whois.WhoisClient;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
@@ -161,9 +162,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         /* 創立 url database(目前為空) */
         Create_url_database_file();
 
-        /* 設定alert dialog toast的參數 */
-        setAlertDialogToast();
-        /* 建立所有 dialog */
+
+        /* 建立所有 dialog 和 toast */
         buildAllDialog();
 
 
@@ -244,15 +244,11 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         IPQS_message_dialog.dismiss();
 
         progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("正在處理中...");
+        progressDialog.setMessage("");
         progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
 
-
-    }
-
-    /* 設定alert_dialog_toast */
-    public void setAlertDialogToast() {
         dialog_toast = Toast.makeText(this.getApplicationContext(), "", Toast.LENGTH_LONG);
+
     }
 
 
@@ -273,6 +269,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     IPQS_search_dialog.dismiss(); //隱藏 dialog再啟動 Thread
                     Thread IPQS_thread = new Thread(this);
                     IPQS_thread.setName("IPQS_thread");
+                    progressDialog.setMessage("網址正在IPQS進行檢查中，請稍後...");
                     progressDialog.show();
                     IPQS_thread.start();
                     break;
@@ -398,6 +395,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 /* 啟動IPQS thread送出請求 */
                 Thread IPQS_thread = new Thread(this);
                 IPQS_thread.setName("IPQS_thread");
+                progressDialog.setMessage("網址正在IPQS進行檢查中，請稍後...");
                 progressDialog.show();
                 IPQS_thread.start();
             } else {
@@ -428,53 +426,62 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         return result;
     }
 
-
     //IPQualityScore API
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public Map<String, String> getIPQualityScore(String URL_text) throws IOException, JSONException {
+    public Map<String, String> getIPQualityScore(String URL_text) {
         String result = null;
         Map<String, String> data_map = new LinkedHashMap<>(); //存對應的鍵值
         JSONObject jsonObject = null;
         String IPQualityScore = "https://ipqualityscore.com/api/json/url/mMdf76Tro3JGHcC3Cmv9WPGu14C56Rpm/";
-        String encodedURL = URLEncoder.encode(URL_text, "UTF-8");
-        URL url = new URL(IPQualityScore + encodedURL);
 
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("Accept", "application/json");
+        try {
+            String encodedURL = URLEncoder.encode(URL_text, "UTF-8");
+            URL url = new URL(IPQualityScore + encodedURL);
 
-        if (connection.getResponseCode() == 200) {
-            result = getData(connection.getInputStream());
-            connection.disconnect();
-            jsonObject = new JSONObject(result);
-            //取出要的資料
-            String[] key = {"success", "unsafe", "domain", "parking", "spamming", "malware", "phishing", "suspicious", "adult", "risk_score", "category"};
-            //若狀態為成功才放入相對應鍵值
-            if (jsonObject.getString("success").equals("true")) {
-                //放入鍵值
-                for (int i = 0; i < key.length; i++) {
-                    String value = jsonObject.getString(key[i]);
-                    if (value.matches("true|false"))
-                        value = value.equals("true") ? "yes" : "no";
-                    data_map.put(key[i], value);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/json");
+
+            if (connection.getResponseCode() == 200) {
+                result = getData(connection.getInputStream());
+                connection.disconnect();
+                jsonObject = new JSONObject(result);
+                //取出要的資料
+                String[] key = {"success", "unsafe", "domain", "parking", "spamming", "malware", "phishing", "suspicious", "adult", "risk_score", "category"};
+                //若狀態為成功才放入相對應鍵值
+                if (jsonObject.getString("success").equals("true")) {
+                    //放入鍵值
+                    for (int i = 0; i < key.length; i++) {
+                        String value = jsonObject.getString(key[i]);
+                        if (value.matches("true|false"))
+                            value = value.equals("true") ? "yes" : "no";
+                        data_map.put(key[i], value);
+                    }
+
+                } else {
+                    data_map.put(key[0], jsonObject.getString(key[0])); //若連結成功,但為其他狀態則放入其他狀態
                 }
-
-            } else data_map.put(key[0], jsonObject.getString(key[0])); //狀態失敗則放success = false
-
-
-        } else System.out.println(getData(connection.getErrorStream())); //印出失敗資訊
-
-        return data_map;
+            } else {
+                /* 若連結失敗則success = false */
+                System.out.println(getData(connection.getErrorStream())); //印出失敗資訊
+                data_map.put("success", "false");
+            }
+        } catch (IOException | JSONException e) {
+            e.printStackTrace();
+            data_map.put("success", "false"); /*若有任何例外,成功狀態都設為false值 */
+        } finally { /*必定執行 返回 data*/
+            return data_map;
+        }
 
     }
 
-    //    處理IPQS輸出資訊
+    // 處理IPQS輸出資訊
     public String[] getIPQualityMessage(Map<String, String> IPQualityData) {
         String[] result = new String[2];
         if (IPQualityData.get("success").equals("false")) {
             result[0] = "錯誤";
             result[1] = "服務取得失敗，請重新嘗試";
-        } else {
+        } else { /*其他狀態 */
             String[] key = null;
             //設定 key值 (中文和其他為英文)
             if (Locale.getDefault().getDisplayLanguage().equals("中文")) {
@@ -515,14 +522,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void run() {
-        System.out.println("進入sub thread");
         Map<String, String> IPQualityScore_data = null;
         String message = null;
         String title = null;
-
         try {
-
-
             //IPQualityScore使用
             IPQualityScore_data = getIPQualityScore(URL_text);
             System.out.println("逐行印出原始訊息:");
@@ -542,14 +545,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     IPQS_message_dialog.show();
                 }
             });
-        } catch (IOException e) {
-            e.printStackTrace();
         } catch (NullPointerException e) {
             System.out.println(e.getMessage());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        } finally {
-
         }
 
     }
@@ -574,43 +571,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
-    public void Create_issuer_arrayList() {
-        /* 打開 aegis.json 轉換 && 解析JSON檔，並創建 issuer arraylist */
-        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
-        BufferedReader br;
-        String aegis_json_string = ""; /* File JSON檔轉為String */
-        JSONObject jsonObject; /* String再建立成jsonObject */
-        JSONArray jsonArray;   /* 用來解析jsonObject */
-        issuer = new ArrayList<>(); /* 利用ArrayList儲存issuer */
-        try {
-            /* 讀取 file轉換成String，因為JDK版本關係要用 BufferedReader轉(用BufferedReader是因為讀取效率高) */
-            br = new BufferedReader(new FileReader(f));
-            while (br.ready()) {
-                aegis_json_string += br.readLine();
-            }
-            br.close();
-            /* 創立並解析 JSON物件 */
-            jsonObject = new JSONObject(aegis_json_string);
-            jsonObject = jsonObject.getJSONObject("db");
-            jsonArray = jsonObject.getJSONArray("entries");
-            for (int i = 0; i < jsonArray.length(); i++) {
-                jsonObject = jsonArray.getJSONObject(i);
-                issuer.add(jsonObject.get("issuer").toString().toLowerCase()); /* issuer轉換成小寫放入arrayList */
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-
-    }
-
-    /*----------------------------------------------------------------------------------------------------------------*/
     /* 沒用到的程式碼 */
+    /* ================================================================================================================== */
+    /* ================================================================================================================== */
+    /* ================================================================================================================== */
+    /* ================================================================================================================== */
+    /* ================================================================================================================== */
     //IP2WHOIS 使用
     public Map<String, String> getIP2WHOIS(String URL_text) throws IOException {
 
@@ -971,6 +937,41 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 System.out.println(token[i]);
             }
         }
+
+    }
+
+    /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
+    public void Create_issuer_arrayList() {
+        /* 打開 aegis.json 轉換 && 解析JSON檔，並創建 issuer arraylist */
+        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
+        BufferedReader br;
+        String aegis_json_string = ""; /* File JSON檔轉為String */
+        JSONObject jsonObject; /* String再建立成jsonObject */
+        JSONArray jsonArray;   /* 用來解析jsonObject */
+        issuer = new ArrayList<>(); /* 利用ArrayList儲存issuer */
+        try {
+            /* 讀取 file轉換成String，因為JDK版本關係要用 BufferedReader轉(用BufferedReader是因為讀取效率高) */
+            br = new BufferedReader(new FileReader(f));
+            while (br.ready()) {
+                aegis_json_string += br.readLine();
+            }
+            br.close();
+            /* 創立並解析 JSON物件 */
+            jsonObject = new JSONObject(aegis_json_string);
+            jsonObject = jsonObject.getJSONObject("db");
+            jsonArray = jsonObject.getJSONArray("entries");
+            for (int i = 0; i < jsonArray.length(); i++) {
+                jsonObject = jsonArray.getJSONObject(i);
+                issuer.add(jsonObject.get("issuer").toString().toLowerCase()); /* issuer轉換成小寫放入arrayList */
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
