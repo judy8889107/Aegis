@@ -105,12 +105,11 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private ProgressDialog progressDialog; /* 加載 dialog */
     private AlertDialog IPQS_message_dialog; /* 顯示網站資訊 IPQS dialog */
     private Toast dialog_toast;
-    private GoogleApiClient mGoogleApiClient; /* ( GoogleApiClient已經棄用了) */
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
-    private ExecutorService executorService;
-
+    String runMode = null;
+    String format = null;
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
@@ -140,13 +139,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
         /*測試function*/
         try {
-            addMainURL("https://www.google.com.tw/webhp?hl=zh-TW");
-            addMainURL("https://github.com/judy8889107?tab=repositories");
-            addMainURL("https://elearning.ntcu.edu.tw/");
-            addsubURL("https://example.google.com.tw/webhp?hl=zh-TW", "0", "basedomain");
-            addsubURL("https://github.com/example", "1", "basedomain");
-            addsubURL("https://elearning.ntcu.edu.tw/example", "2", "basedomain");
+//            addMainURL("https://www.google.com.tw/webhp?hl=zh-TW");
+//            addMainURL("https://github.com/judy8889107?tab=repositories");
+//            addMainURL("https://elearning.ntcu.edu.tw/");
+            matchDatabase("https://mail.google.com/mail/u/0/?ogbl");
 //            deleteMainURL("0");
+//            matchDatabase("");
         } catch (ParserConfigurationException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -408,7 +406,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     // 解析並比對資料庫 - 檢查網址
-    public void matchDatabase(String url) throws ParserConfigurationException, IOException, SAXException {
+    public void matchDatabase(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+        System.out.println("進入matchDatabase");
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = factory.newDocumentBuilder();
@@ -419,32 +418,47 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String format = null;
         String mainURL = null;
         Node node = null;
+        String mainURLID = null;
         //得到所有節點標籤名為 mainURL的 nodes
         NodeList nodeList = doc.getElementsByTagName("mainURL");
         // 逐一比對
         for (int i = 0; i < nodeList.getLength(); i++) {
             node = nodeList.item(i);
             mainURL = node.getTextContent();
-            System.out.println(mainURL);
+            mainURLID = node.getAttributes().getNamedItem("id").getNodeValue();
+            System.out.println(mainURL+"id:"+mainURLID);
             format = getURLMatchFormat(url, mainURL);
-            if (!format.equals(null)) break;
+            if (format!=null) break;
         }
         // mainURL全無匹配
-        if (format.equals(null)) {
+        if (format == null) {
+            System.out.println("mainURL全無匹配");
 
         } else {  /* 有匹配到 mainURL */
-            /* 比對subURL */
+            /* 比對 subURL */
+            if(format.equals("exact")|| matchSubURL(mainURLID,url,format)){ /*若 mainURL為 exact或 subURL配對成功*/
+                System.out.println("mainURL Exact 或 subURL有配對");
+                System.out.println(url+"格式:"+format);
+
+            }else{ /*配對失敗*/
+                System.out.println("subURL配對失敗");
+                System.out.println(url+"格式:"+format);
+                addsubURL(url,mainURLID,format); // 紀錄搜尋過的網址和其格式
+            }
+
         }
 
 
     }
 
-    //四種比對模式
+    //四種比對模式 TODO:
     public String getURLMatchFormat(String url, String mainURL) throws MalformedURLException {
+        System.out.println("主URL:"+url);
+        System.out.println("mainURL:"+mainURL);
         String format = null;
         //變數
-        InternetDomainName maj_basedomain = null;
-        InternetDomainName tmp_basedomain = null;
+        String maj_basedomain = null;
+        String tmp_basedomain = null;
         String maj_host = null;
         String tmp_host = null;
         int maj_port = 0;
@@ -452,26 +466,23 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String maj_path = null;
         String tmp_path = null;
         //賦值
-        maj_basedomain = InternetDomainName.from(url).topDomainUnderRegistrySuffix(); //要比對的網址的 domain name
-        tmp_basedomain = InternetDomainName.from(mainURL).topDomainUnderRegistrySuffix(); //mainURL網址的 domain name
+        maj_basedomain = InternetDomainName.from(url).topPrivateDomain().toString(); //要比對的網址的 domain name
+        tmp_basedomain = InternetDomainName.from(mainURL).topPrivateDomain().toString(); //mainURL網址的 domain name
         maj_port = new URL(url).getPort()<0? new URL(url).getDefaultPort():new URL(url).getPort();
         tmp_port = new URL(mainURL).getPort()<0? new URL(mainURL).getDefaultPort():new URL(mainURL).getPort();
         maj_host = new URL(url).getHost();
         tmp_host = new URL(mainURL).getHost();
         maj_path = new URL(url).getPath();
         tmp_path = new URL(mainURL).getPath();
-        //比對
-        String maj_startwith = maj_host+":"+maj_port+maj_path;
-        String tmp_startwith = tmp_host+":"+tmp_port+tmp_path;
-        String maj_hoststr = maj_host+":"+maj_port;
-        String tmp_hoststr = tmp_host+":"+tmp_port;
-        if(url.equals(mainURL)) return "exact";
-        if(maj_startwith.contains(tmp_startwith)) return "startwith";
-        if(maj_hoststr.contains(tmp_hoststr)) return "host";
-
-
-
-
+//        //比對
+//        String maj_startwith = maj_host+":"+maj_port+maj_path;
+//        String tmp_startwith = tmp_host+":"+tmp_port+tmp_path;
+//        String maj_hoststr = maj_host+":"+maj_port;
+//        String tmp_hoststr = tmp_host+":"+tmp_port;
+//        if(url.equals(mainURL)) return "exact";
+//        if(maj_startwith.contains(tmp_startwith)) return "startwith";
+//        if(maj_hoststr.contains(tmp_hoststr)) return "host";
+//        if(maj_basedomain.contains(tmp_basedomain)) return "basedomain";
         return format;
     }
 
@@ -505,13 +516,14 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    public boolean matchSubURL(org.w3c.dom.Element mainURLNode, String url, String format) throws ParserConfigurationException, IOException, SAXException {
+    public boolean matchSubURL(String mainURLID, String url, String format) throws ParserConfigurationException, IOException, SAXException {
         Boolean isMatch = false;
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = factory.newDocumentBuilder();
         //解析 url_database檔案
         org.w3c.dom.Document doc = db.parse(url_database);
+        org.w3c.dom.Element mainURLNode = doc.getElementById(mainURLID);
         // 創建 mainURLNode元素
         String subURL = null;
         Node node = null;
@@ -522,7 +534,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             node = nodeList.item(i);
             if (node.hasAttributes()) {
                 node_format = node.getAttributes().getNamedItem("format").getNodeValue();
-                System.out.println("節點的格式為" + node_format);
+                if(node_format.equals(format)){
+                    subURL = node.getTextContent();
+                    if(subURL.equals(url)) return true; //若找到相符的 subURL, 直接返回
+                }
             }
 
         }
@@ -659,32 +674,38 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void run() {
-        Map<String, String> IPQualityScore_data = null;
-        String message = null;
-        String title = null;
-        try {
-            //IPQualityScore使用
-            IPQualityScore_data = getIPQualityScore(URL_text);
-            System.out.println("逐行印出原始訊息:");
-            IPQualityScore_data.entrySet().forEach(entry -> {
-                System.out.println(entry.getKey() + ": " + entry.getValue());
-            });
-            System.out.println("------------------------------------------");
-            title = getIPQualityMessage(IPQualityScore_data)[0];
-            message = getIPQualityMessage(IPQualityScore_data)[1];
-            IPQS_message_dialog.setTitle(title);
-            IPQS_message_dialog.setMessage(message);
+        if(runMode.equals("getURLMatchFormat")){
+            System.out.println("testRunmode:"+runMode);
+
+        }else{
+            Map<String, String> IPQualityScore_data = null;
+            String message = null;
+            String title = null;
+            try {
+                //IPQualityScore使用
+                IPQualityScore_data = getIPQualityScore(URL_text);
+                System.out.println("逐行印出原始訊息:");
+                IPQualityScore_data.entrySet().forEach(entry -> {
+                    System.out.println(entry.getKey() + ": " + entry.getValue());
+                });
+                System.out.println("------------------------------------------");
+                title = getIPQualityMessage(IPQualityScore_data)[0];
+                message = getIPQualityMessage(IPQualityScore_data)[1];
+                IPQS_message_dialog.setTitle(title);
+                IPQS_message_dialog.setMessage(message);
 //            執行 Thread UI更新
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    progressDialog.dismiss();
-                    IPQS_message_dialog.show();
-                }
-            });
-        } catch (NullPointerException e) {
-            System.out.println(e.getMessage());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        progressDialog.dismiss();
+                        IPQS_message_dialog.show();
+                    }
+                });
+            } catch (NullPointerException e) {
+                System.out.println(e.getMessage());
+            }
         }
+
 
     }
 
