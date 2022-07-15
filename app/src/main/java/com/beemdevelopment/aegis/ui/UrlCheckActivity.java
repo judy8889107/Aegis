@@ -108,8 +108,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
-    String runMode = null;
-    String format = null;
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
@@ -426,9 +424,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             node = nodeList.item(i);
             mainURL = node.getTextContent();
             mainURLID = node.getAttributes().getNamedItem("id").getNodeValue();
-            System.out.println(mainURL+"id:"+mainURLID);
+            System.out.println(mainURL + "id:" + mainURLID);
             format = getURLMatchFormat(url, mainURL);
-            if (format!=null) break;
+            if (format != null) break;
         }
         // mainURL全無匹配
         if (format == null) {
@@ -436,14 +434,14 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
         } else {  /* 有匹配到 mainURL */
             /* 比對 subURL */
-            if(format.equals("exact")|| matchSubURL(mainURLID,url,format)){ /*若 mainURL為 exact或 subURL配對成功*/
+            if (format.equals("exact") || matchSubURL(mainURLID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
                 System.out.println("mainURL Exact 或 subURL有配對");
-                System.out.println(url+"格式:"+format);
+                System.out.println(url + "格式:" + format);
 
-            }else{ /*配對失敗*/
+            } else { /*配對失敗*/
                 System.out.println("subURL配對失敗");
-                System.out.println(url+"格式:"+format);
-                addsubURL(url,mainURLID,format); // 紀錄搜尋過的網址和其格式
+                System.out.println(url + "格式:" + format);
+                addsubURL(url, mainURLID, format); // 紀錄搜尋過的網址和其格式
             }
 
         }
@@ -453,8 +451,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     //四種比對模式 TODO:
     public String getURLMatchFormat(String url, String mainURL) throws MalformedURLException {
-        System.out.println("主URL:"+url);
-        System.out.println("mainURL:"+mainURL);
+        System.out.println("主URL:" + url);
+        System.out.println("mainURL:" + mainURL);
         String format = null;
         //變數
         String maj_basedomain = null;
@@ -468,8 +466,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         //賦值
         maj_basedomain = InternetDomainName.from(url).topPrivateDomain().toString(); //要比對的網址的 domain name
         tmp_basedomain = InternetDomainName.from(mainURL).topPrivateDomain().toString(); //mainURL網址的 domain name
-        maj_port = new URL(url).getPort()<0? new URL(url).getDefaultPort():new URL(url).getPort();
-        tmp_port = new URL(mainURL).getPort()<0? new URL(mainURL).getDefaultPort():new URL(mainURL).getPort();
+        maj_port = new URL(url).getPort() < 0 ? new URL(url).getDefaultPort() : new URL(url).getPort();
+        tmp_port = new URL(mainURL).getPort() < 0 ? new URL(mainURL).getDefaultPort() : new URL(mainURL).getPort();
         maj_host = new URL(url).getHost();
         tmp_host = new URL(mainURL).getHost();
         maj_path = new URL(url).getPath();
@@ -534,9 +532,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             node = nodeList.item(i);
             if (node.hasAttributes()) {
                 node_format = node.getAttributes().getNamedItem("format").getNodeValue();
-                if(node_format.equals(format)){
+                if (node_format.equals(format)) {
                     subURL = node.getTextContent();
-                    if(subURL.equals(url)) return true; //若找到相符的 subURL, 直接返回
+                    if (subURL.equals(url)) return true; //若找到相符的 subURL, 直接返回
                 }
             }
 
@@ -674,36 +672,32 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void run() {
-        if(runMode.equals("getURLMatchFormat")){
-            System.out.println("testRunmode:"+runMode);
 
-        }else{
-            Map<String, String> IPQualityScore_data = null;
-            String message = null;
-            String title = null;
-            try {
-                //IPQualityScore使用
-                IPQualityScore_data = getIPQualityScore(URL_text);
-                System.out.println("逐行印出原始訊息:");
-                IPQualityScore_data.entrySet().forEach(entry -> {
-                    System.out.println(entry.getKey() + ": " + entry.getValue());
-                });
-                System.out.println("------------------------------------------");
-                title = getIPQualityMessage(IPQualityScore_data)[0];
-                message = getIPQualityMessage(IPQualityScore_data)[1];
-                IPQS_message_dialog.setTitle(title);
-                IPQS_message_dialog.setMessage(message);
+        Map<String, String> IPQualityScore_data = null;
+        String message = null;
+        String title = null;
+        try {
+            //IPQualityScore使用
+            IPQualityScore_data = getIPQualityScore(URL_text);
+            System.out.println("逐行印出原始訊息:");
+            IPQualityScore_data.entrySet().forEach(entry -> {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            });
+            System.out.println("------------------------------------------");
+            title = getIPQualityMessage(IPQualityScore_data)[0];
+            message = getIPQualityMessage(IPQualityScore_data)[1];
+            IPQS_message_dialog.setTitle(title);
+            IPQS_message_dialog.setMessage(message);
 //            執行 Thread UI更新
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        progressDialog.dismiss();
-                        IPQS_message_dialog.show();
-                    }
-                });
-            } catch (NullPointerException e) {
-                System.out.println(e.getMessage());
-            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    progressDialog.dismiss();
+                    IPQS_message_dialog.show();
+                }
+            });
+        } catch (NullPointerException e) {
+            System.out.println(e.getMessage());
         }
 
 
