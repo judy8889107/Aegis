@@ -16,6 +16,7 @@ import android.os.Build;
 import android.os.Bundle;
 
 
+import android.util.Pair;
 import android.view.View;
 
 
@@ -70,12 +71,23 @@ import org.jsoup.Jsoup;
 
 
 import org.jsoup.nodes.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 
 public class UrlCheckActivity extends AegisActivity implements View.OnClickListener, Runnable, DialogInterface.OnClickListener {
@@ -125,20 +137,36 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         initialize();
 
 
-        /*測試addURL function*/
+
+        /*測試function*/
         try {
-            addURLdatabase("test");
-        } catch (XmlPullParserException e) {
+            addMainURL("https://www.google.com.tw/webhp?hl=zh-TW");
+            addMainURL("https://github.com/judy8889107?tab=repositories");
+            addMainURL("https://elearning.ntcu.edu.tw/");
+            addsubURL("https://example.google.com.tw/webhp?hl=zh-TW", "0", "basedomain");
+            addsubURL("https://github.com/example", "1", "basedomain");
+            addsubURL("https://elearning.ntcu.edu.tw/example", "2", "basedomain");
+//            deleteMainURL("0");
+        } catch (ParserConfigurationException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
         } catch (SAXException e) {
             e.printStackTrace();
-        } catch (JSONException e) {
+        } catch (TransformerException e) {
             e.printStackTrace();
         }
+
+        /* 測試網址比對function */
+//        try {
+//            matchDatabase("test");
+//        } catch (ParserConfigurationException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        } catch (SAXException e) {
+//            e.printStackTrace();
+//        }
 
 
     }
@@ -192,7 +220,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 System.out.println("按下url_check");
                 /* 按下url_check就隱藏鍵盤 */
                 imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(set_safe_url.getWindowToken(), 0);
+                imm.hideSoftInputFromWindow(url_check.getWindowToken(), 0);
                 URL_text = url_input.getText().toString().trim();
                 break;
         }
@@ -303,17 +331,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     dialog_toast.setText(R.string.addURL); /* 此網址已添加到安全名單 */
                     dialog_toast.show();
                     dialog.dismiss();
-                    try {
-                        addURLdatabase(URL_text); /*將網址加入資料庫*/
-                    } catch (XmlPullParserException | IOException e) {
-                        e.printStackTrace();
-                    } catch (ParserConfigurationException e) {
-                        e.printStackTrace();
-                    } catch (SAXException e) {
-                        e.printStackTrace();
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
                     break;
                 case BUTTON_NEGATIVE:
                     /* int which = -2 */
@@ -327,56 +344,189 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    public void addURLdatabase(String url) throws XmlPullParserException, IOException, ParserConfigurationException, SAXException, JSONException {
-        System.out.println("########################################################");
-        System.out.println("檔案路徑" + url_database.getPath());
-        System.out.println("檔案名稱" + url_database.getName());
-        System.out.println("可寫: " + url_database.canWrite());
-        System.out.println("可讀: " + url_database.canRead());
-        System.out.println("是否為file: " + url_database.isFile());
-        // 寫入
-        JSONObject jo = new JSONObject();
-        JSONObject jp = new JSONObject();
-        JSONArray ja = new JSONArray();
-        JSONArray jb = new JSONArray();
-        // 第一個 URL
-        int MainURL = 0;
-        jo.put("MainURL" + MainURL, "https://google.com");
-        // URL 1st Entry
-        String[] subURL = {"https://accounts.google.com", "https://google.com"};
-        String[] subURL_format = {"basedomain", "exact"};
-        for (int i = 0; i < subURL.length; i++) {
-            jp = new JSONObject();
-            jp.put("subURL", subURL[i]);
-            jp.put("format", subURL_format[i]);
-            jb.put(jp);
+    // 設定安全網址 - mainURL加入網址到資料庫中
+    public void addMainURL(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+        System.out.println("要加入mainURL節點的資料:" + url);
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        //得到 url_database根節點
+        org.w3c.dom.Document doc = db.parse(url_database);
+        org.w3c.dom.Element root = doc.getDocumentElement();
+        // 創建新節點
+        org.w3c.dom.Element mainURL = doc.createElement("mainURL");
+        mainURL.setTextContent(url);
+        // 設定 mainURL id
+        if (doc.getElementsByTagName("mainURL").getLength() >= 0) {
+            int index = doc.getElementsByTagName("mainURL").getLength();
+            mainURL.setAttribute("id", String.valueOf(index));
+            mainURL.setIdAttribute("id", true);
 
         }
-        jo.put("subURL" + MainURL, jb);
-        MainURL++;
-        ja.put(jo);
-        // 第二個 URL
-        jo = new JSONObject();
-        jb = new JSONArray();
-        jo.put("MainURL" + MainURL, "https://github.com/");
+        // 新增新節點
+        root.appendChild(mainURL);
 
-        for (int i = 0; i < subURL.length; i++) {
-            jp = new JSONObject();
-            jp.put("subURL", subURL[i]);
-            jp.put("format", subURL_format[i]);
-            jb.put(jp);
+        //開始把 Document對映到檔案
+        TransformerFactory transFactory = TransformerFactory.newInstance();
+        Transformer transFormer = transFactory.newTransformer();
+        //設定輸出結果並且生成XML檔案
+        DOMSource domSource = new DOMSource(doc);
+        FileOutputStream out = new FileOutputStream(url_database);
+        StreamResult xmlResult = new StreamResult(out); //設定輸入源
+        transFormer.setOutputProperty(OutputKeys.INDENT, "yes"); //元素換行設定
+        transFormer.transform(domSource, xmlResult); //輸出xml檔案
+        out.close();
+    }
+
+    // 刪除網址
+    public void deleteMainURL(String id) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        //解析 url_database檔案
+        org.w3c.dom.Document doc = db.parse(url_database);
+        // 得到父節點並移除mainURL
+        org.w3c.dom.Element root = doc.getDocumentElement();
+        org.w3c.dom.Element mainURLNode = doc.getElementById(id);
+        root.removeChild(mainURLNode);
+        //mainURL id編號重新命名
+        NodeList nodeList = doc.getElementsByTagName("mainURL");
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node node = nodeList.item(i);
+            node.getAttributes().getNamedItem("id").setNodeValue(String.valueOf(i));
         }
-        jo.put("subURL" + MainURL, jb);
-        MainURL++;
-        // 存放於 ja陣列中
-        ja.put(jo);
-        System.out.println(ja.toString());
-        OutputStream os = new FileOutputStream(url_database, false); //追加文件
-        os.write(0);
-        os.close();
+        //開始把 Document對映到檔案
+        TransformerFactory transFactory = TransformerFactory.newInstance();
+        Transformer transFormer = transFactory.newTransformer();
+        //設定輸出結果並且生成XML檔案
+        DOMSource domSource = new DOMSource(doc);
+        FileOutputStream out = new FileOutputStream(url_database);
+        StreamResult xmlResult = new StreamResult(out); //設定輸入源
+        transFormer.setOutputProperty(OutputKeys.INDENT, "yes"); //元素換行設定
+        transFormer.transform(domSource, xmlResult); //輸出xml檔案
+        out.close();
+    }
 
-        InputStream is = new FileInputStream(url_database);
+    // 解析並比對資料庫 - 檢查網址
+    public void matchDatabase(String url) throws ParserConfigurationException, IOException, SAXException {
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        //解析 url_database檔案
+        org.w3c.dom.Document doc = db.parse(url_database);
+        // 創建 mainURLNode元素
+        org.w3c.dom.Element mainURLNode = null;
+        String format = null;
+        String mainURL = null;
+        Node node = null;
+        //得到所有節點標籤名為 mainURL的 nodes
+        NodeList nodeList = doc.getElementsByTagName("mainURL");
+        // 逐一比對
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            node = nodeList.item(i);
+            mainURL = node.getTextContent();
+            System.out.println(mainURL);
+            format = getURLMatchFormat(url, mainURL);
+            if (!format.equals(null)) break;
+        }
+        // mainURL全無匹配
+        if (format.equals(null)) {
 
+        } else {  /* 有匹配到 mainURL */
+            /* 比對subURL */
+        }
+
+
+    }
+
+    //四種比對模式
+    public String getURLMatchFormat(String url, String mainURL) throws MalformedURLException {
+        String format = null;
+        //變數
+        InternetDomainName maj_basedomain = null;
+        InternetDomainName tmp_basedomain = null;
+        String maj_host = null;
+        String tmp_host = null;
+        int maj_port = 0;
+        int tmp_port = 0;
+        String maj_path = null;
+        String tmp_path = null;
+        //賦值
+        maj_basedomain = InternetDomainName.from(url).topDomainUnderRegistrySuffix(); //要比對的網址的 domain name
+        tmp_basedomain = InternetDomainName.from(mainURL).topDomainUnderRegistrySuffix(); //mainURL網址的 domain name
+        maj_port = new URL(url).getPort()<0? new URL(url).getDefaultPort():new URL(url).getPort();
+        tmp_port = new URL(mainURL).getPort()<0? new URL(mainURL).getDefaultPort():new URL(mainURL).getPort();
+        maj_host = new URL(url).getHost();
+        tmp_host = new URL(mainURL).getHost();
+        maj_path = new URL(url).getPath();
+        tmp_path = new URL(mainURL).getPath();
+        //比對
+        String maj_startwith = maj_host+":"+maj_port+maj_path;
+        String tmp_startwith = tmp_host+":"+tmp_port+tmp_path;
+        String maj_hoststr = maj_host+":"+maj_port;
+        String tmp_hoststr = tmp_host+":"+tmp_port;
+        if(url.equals(mainURL)) return "exact";
+        if(maj_startwith.contains(tmp_startwith)) return "startwith";
+        if(maj_hoststr.contains(tmp_hoststr)) return "host";
+
+
+
+
+        return format;
+    }
+
+    // 紀錄 subURL 到 database
+    public void addsubURL(String url, String mainURL_id, String format) throws TransformerException, IOException, SAXException, ParserConfigurationException {
+        System.out.println("要加入sub節點的資料:" + url);
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        //解析 url_database檔案
+        org.w3c.dom.Document doc = db.parse(url_database);
+
+        // 創建新節點(subURL)
+        org.w3c.dom.Element subURL = doc.createElement("subURL");
+        subURL.setTextContent(url);
+        subURL.setAttribute("format", format);
+        // 新增 subURL節點
+        org.w3c.dom.Element mainURLNode = doc.getElementById(mainURL_id);
+        mainURLNode.appendChild(subURL);
+        //開始把 Document對映到檔案
+        TransformerFactory transFactory = TransformerFactory.newInstance();
+        Transformer transFormer = transFactory.newTransformer();
+        //設定輸出結果並且生成XML檔案
+        DOMSource domSource = new DOMSource(doc);
+        FileOutputStream out = new FileOutputStream(url_database);
+        StreamResult xmlResult = new StreamResult(out); //設定輸入源
+        transFormer.setOutputProperty(OutputKeys.INDENT, "yes"); //元素換行設定
+        transFormer.transform(domSource, xmlResult); //輸出xml檔案
+        out.close();
+
+
+    }
+
+    public boolean matchSubURL(org.w3c.dom.Element mainURLNode, String url, String format) throws ParserConfigurationException, IOException, SAXException {
+        Boolean isMatch = false;
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        //解析 url_database檔案
+        org.w3c.dom.Document doc = db.parse(url_database);
+        // 創建 mainURLNode元素
+        String subURL = null;
+        Node node = null;
+        String node_format;
+        //得到 mainURLNode底下的 subURL nodes
+        NodeList nodeList = mainURLNode.getChildNodes();
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            node = nodeList.item(i);
+            if (node.hasAttributes()) {
+                node_format = node.getAttributes().getNamedItem("format").getNodeValue();
+                System.out.println("節點的格式為" + node_format);
+            }
+
+        }
+        return isMatch;
 
     }
 
@@ -384,32 +534,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     /* 檢查URL function */
     public void IPQSCheck() {
 
-        /* 變數宣告 */
-        URL url_obj; /* URL class 提供了解析 URL 地址的基本方法 */
-        try {
-            /* 設定變數 */
-            url_obj = new URL(URL_text);
-            /* 檢查網址是否 valid */
-            UrlValidator defaultValidator = new UrlValidator();
-            if (defaultValidator.isValid(URL_text)) {
-                /* 啟動IPQS thread送出請求 */
-                Thread IPQS_thread = new Thread(this);
-                IPQS_thread.setName("IPQS_thread");
-                progressDialog.setMessage("網址正在IPQS進行檢查中，請稍後...");
-                progressDialog.show();
-                IPQS_thread.start();
-            } else {
-                dialog_toast.setText(R.string.parseFail);
-                dialog_toast.show();
-            }
-
-
-        } catch (IOException e) {
+        /* 檢查網址是否 valid */
+        UrlValidator defaultValidator = new UrlValidator();
+        if (defaultValidator.isValid(URL_text)) {
+            /* 啟動IPQS thread送出請求 */
+            Thread IPQS_thread = new Thread(this);
+            IPQS_thread.setName("IPQS_thread");
+            progressDialog.setMessage("網址正在IPQS進行檢查中，請稍後...");
+            progressDialog.show();
+            IPQS_thread.start();
+        } else {
             dialog_toast.setText(R.string.parseFail);
             dialog_toast.show();
-            e.printStackTrace();
         }
-
     }
 
 
@@ -555,16 +692,36 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     public void Create_url_database_file() {
         /* Create file */
         File dir = getApplicationContext().getFilesDir();
-        url_database = new File(dir, "url_database.json");
+        url_database = new File(dir, "url_database.xml");
         url_database.setWritable(true);  // 設為可讀寫
         url_database.setReadable(true);
         try {
             if (url_database.createNewFile()) {
+                //建立一個 Document類
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder db = factory.newDocumentBuilder();
+                //建立一個根節點，並且將根節點新增到Document物件中去
+                org.w3c.dom.Document doc = db.newDocument();
+                org.w3c.dom.Element root = doc.createElement("root");
+                doc.appendChild(root);
+
+                //開始把Document對映到檔案
+                TransformerFactory transFactory = TransformerFactory.newInstance();
+                Transformer transFormer = transFactory.newTransformer();
+                //設定輸出結果並且生成XML檔案
+                DOMSource domSource = new DOMSource(doc);
+                File file = url_database;
+                FileOutputStream out = new FileOutputStream(file);
+                StreamResult xmlResult = new StreamResult(out); //設定輸入源
+                transFormer.transform(domSource, xmlResult); //輸出xml檔案
                 System.out.println("成功創建url database 檔案");
+
             } else {
                 System.out.println("url database檔案已存在");
             }
-        } catch (IOException e) {
+        } catch (IOException | ParserConfigurationException | TransformerConfigurationException e) {
+            e.printStackTrace();
+        } catch (TransformerException e) {
             e.printStackTrace();
         }
 
