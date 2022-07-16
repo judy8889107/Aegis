@@ -137,25 +137,27 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
         /*測試function*/
-        try {
-            addMainURL("https://www.google.com.tw/webhp?hl=zh-TW");
-            addMainURL("https://github.com/judy8889107?tab=repositories");
-            addMainURL("https://www.youtube.com/?gl=TW&hl=zh-TW");
-            addsubURL("https://about.google/products/","0","basedomain");
-            addsubURL("https://about.google/commitments/","0","basedomain");
-            addsubURL("https://about.google/stories/","0","basedomain");
-//            matchDatabase("https://mail.google.com/mail/u/0/?ogbl");
+//        try {
+//            addMainURL("https://www.google.com/");
+//            addMainURL("https://github.com/judy8889107?tab=repositories");
+//            addMainURL("https://www.youtube.com/?gl=TW&hl=zh-TW");
+//            addsubURL("https://accounts2.google.com","0","basedomain");
+//            addsubURL("https://accounts3.google.com","0","basedomain");
+//            addsubURL("https://accounts.google.com","0","basedomain");
+//            matchDatabase("https://accounts.google.com");
+//            matchDatabase("http://google.com");
+//            matchDatabase("http://yahoo.com");
 //            deleteMainURL("0");
 //            matchDatabase("");
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        } catch (TransformerException e) {
-            e.printStackTrace();
-        }
+//        } catch (ParserConfigurationException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        } catch (SAXException e) {
+//            e.printStackTrace();
+//        } catch (TransformerException e) {
+//            e.printStackTrace();
+//        }
 
         /* 測試網址比對function */
 //        try {
@@ -217,11 +219,22 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
                 break;
             case R.id.url_check:
-                System.out.println("按下url_check");
+                System.out.println("按下url_check，進行網址資料庫比對");
                 /* 按下url_check就隱藏鍵盤 */
                 imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(url_check.getWindowToken(), 0);
                 URL_text = url_input.getText().toString().trim();
+                try {
+                    matchDatabase(URL_text);
+                } catch (ParserConfigurationException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (SAXException e) {
+                    e.printStackTrace();
+                } catch (TransformerException e) {
+                    e.printStackTrace();
+                }
                 break;
         }
     }
@@ -256,19 +269,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         alert_dialog.dismiss();
 
         /* IPQS search dialog */
-        AlertDialog.Builder whois_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        whois_dialog_builder.setTitle(R.string.warning);
+        AlertDialog.Builder IPQS_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+        IPQS_dialog_builder.setTitle(R.string.warning);
         /* 設定按鈕監聽器 */
-        whois_dialog_builder.setPositiveButton(R.string.yes, this);
-        whois_dialog_builder.setNegativeButton(R.string.no, this);
-        IPQS_search_dialog = whois_dialog_builder.create();
+        IPQS_dialog_builder.setPositiveButton(R.string.yes, this);
+        IPQS_dialog_builder.setNegativeButton(R.string.no, this);
+        IPQS_search_dialog = IPQS_dialog_builder.create();
         IPQS_search_dialog.dismiss();
 
         /* IPQS資訊 dialog */
-        AlertDialog.Builder whois_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+        AlertDialog.Builder IPQS_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
         /* 設定按鈕監聽器 */
-        whois_message_builder.setPositiveButton(R.string.yes, this);
-        IPQS_message_dialog = whois_message_builder.create();
+        IPQS_message_builder.setPositiveButton(R.string.yes, this);
+        IPQS_message_dialog = IPQS_message_builder.create();
         IPQS_message_dialog.dismiss();
 
         progressDialog = new ProgressDialog(this);
@@ -316,7 +329,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 case BUTTON_POSITIVE:
                     /* int which = -1 */
                     dialog.dismiss();
-                    alert_dialog.setMessage(URL_text + "\n" + getResources().getString(R.string.unsafeURL));
+                    alert_dialog.setMessage(URL_text + "\n" +"請問是否要將此網址加入安全網址資料庫中?");
                     alert_dialog.show();
                     break;
             }
@@ -328,6 +341,17 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 /* 是 */
                 case BUTTON_POSITIVE:
                     /* int which = -1 */
+                    try {
+                        addMainURL(URL_text);
+                    } catch (ParserConfigurationException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (SAXException e) {
+                        e.printStackTrace();
+                    } catch (TransformerException e) {
+                        e.printStackTrace();
+                    }
                     dialog_toast.setText(R.string.addURL); /* 此網址已添加到安全名單 */
                     dialog_toast.show();
                     dialog.dismiss();
@@ -367,17 +391,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             //得到根節點
             org.w3c.dom.Element root = doc.getDocumentElement();
             // 創建新節點
+            org.w3c.dom.Element token = doc.createElement("token");
             org.w3c.dom.Element mainURL = doc.createElement("mainURL");
             mainURL.setTextContent(url);
             // 設定 mainURL id
-            if (doc.getElementsByTagName("mainURL").getLength() >= 0) {
-                int index = doc.getElementsByTagName("mainURL").getLength();
-                mainURL.setAttribute("id", String.valueOf(index));
-                mainURL.setIdAttribute("id", true);
+            if (doc.getElementsByTagName("token").getLength() >= 0) {
+                int index = doc.getElementsByTagName("token").getLength();
+                token.setAttribute("id", String.valueOf(index));
+                token.setIdAttribute("id", true);
 
             }
             // 新增新節點
-            root.appendChild(mainURL);
+            token.appendChild(mainURL);
+            root.appendChild(token);
             //寫入xml檔案
             writeXml(doc);
         }else{
@@ -409,28 +435,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         org.w3c.dom.Document doc = db.parse(url_database);
         // 得到父節點並移除mainURL
         org.w3c.dom.Element root = doc.getDocumentElement();
-        org.w3c.dom.Element mainURLNode = doc.getElementById(id);
-        root.removeChild(mainURLNode);
+        org.w3c.dom.Element tokenNode = doc.getElementById(id);
+        root.removeChild(tokenNode);
         //mainURL id編號重新命名
-        NodeList nodeList = doc.getElementsByTagName("mainURL");
+        NodeList nodeList = doc.getElementsByTagName("token");
         for (int i = 0; i < nodeList.getLength(); i++) {
             Node node = nodeList.item(i);
             node.getAttributes().getNamedItem("id").setNodeValue(String.valueOf(i));
         }
-        //開始把 Document對映到檔案
-        TransformerFactory transFactory = TransformerFactory.newInstance();
-        Transformer transFormer = transFactory.newTransformer();
-        //設定輸出結果並且生成XML檔案
-        DOMSource domSource = new DOMSource(doc);
-        FileOutputStream out = new FileOutputStream(url_database);
-        StreamResult xmlResult = new StreamResult(out); //設定輸入源
-        transFormer.setOutputProperty(OutputKeys.INDENT, "yes"); //元素換行設定
-        transFormer.transform(domSource, xmlResult); //輸出xml檔案
-        out.close();
+        writeXml(doc);
     }
 
     // 解析並比對資料庫 - 檢查網址
-    public void matchDatabase(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException, InterruptedException {
+    public void matchDatabase(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
         System.out.println("進入matchDatabase");
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -442,32 +459,43 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String format = null;
         String mainURL = null;
         Node node = null;
-        String mainURLID = null;
+        Node tokenNode = null;
+        String tokenID = null;
         //得到所有節點標籤名為 mainURL的 nodes
         NodeList nodeList = doc.getElementsByTagName("mainURL");
         // 逐一比對
+        System.out.println("列出mainURL和id");
         for (int i = 0; i < nodeList.getLength(); i++) {
             node = nodeList.item(i);
             mainURL = node.getTextContent();
-            mainURLID = node.getAttributes().getNamedItem("id").getNodeValue();
-            System.out.println(mainURL + "id:" + mainURLID);
+            tokenNode = node.getParentNode();
+            tokenID = tokenNode.getAttributes().getNamedItem("id").getNodeValue();
+            System.out.println(mainURL + " tokenID: " + tokenID);
             format = getURLMatchFormat(url, mainURL);
             if (format != null) break;
         }
         // mainURL全無匹配
-        if (format == null) {
+        if (format == null) { /*TODO:看要讓使用者用IPQS檢查或是其他*/
             System.out.println("mainURL全無匹配");
+            dialog_toast.setText("mainURL全無匹配");
+            dialog_toast.show();
 
         } else {  /* 有匹配到 mainURL */
             /* 比對 subURL */
-            if (format.equals("exact") || matchSubURL(mainURLID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
-                System.out.println("mainURL Exact 或 subURL有配對");
-                System.out.println(url + "格式:" + format);
+            if (format.equals("exact") || matchSubURL(tokenID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
+                System.out.println("subURL也有存在此網址");
+                System.out.println("是否mainURL Exact: "+format.equals("exact"));
+                System.out.println(url + "匹配格式:" + format);
+                dialog_toast.setText("mainURL Exact 或 subURL有配對/n格式為"+format);
+                dialog_toast.show();
 
-            } else { /*配對失敗*/
+            } else { /*配對失敗*/ /*TODO:format級數顯示*/
                 System.out.println("subURL配對失敗");
                 System.out.println(url + "格式:" + format);
-                addsubURL(url, mainURLID, format); // 紀錄搜尋過的網址和其格式
+                addsubURL(url, tokenID, format); // 紀錄搜尋過的網址和其格式
+                dialog_toast.setText("mainURL格式配對到"+format+"/n但subURL沒有配對");
+                dialog_toast.show();
+
             }
 
         }
@@ -475,8 +503,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    //四種比對模式 TODO:
+    //四種比對模式
     public String getURLMatchFormat(String url, String mainURL) throws MalformedURLException {
+        System.out.println();
         System.out.println("主URL:" + url);
         System.out.println("mainURL:" + mainURL);
         String format = null;
@@ -503,6 +532,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String tmp_startwith = tmp_host + ":" + tmp_port + tmp_path;
         String maj_hoststr = maj_host + ":" + maj_port;
         String tmp_hoststr = tmp_host + ":" + tmp_port;
+        System.out.println(maj_basedomain+" "+tmp_basedomain);
+        System.out.println(maj_host+" "+tmp_host);
+        System.out.println(maj_port+" "+tmp_port);
+        System.out.println(maj_path+" "+tmp_path);
         if (url.equals(mainURL)) return "exact";
         if (maj_startwith.contains(tmp_startwith)) return "startwith";
         if (maj_hoststr.contains(tmp_hoststr)) return "host";
@@ -511,45 +544,49 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     // 紀錄 subURL 到 database
-    public void addsubURL(String url, String mainURL_id, String format) throws TransformerException, IOException, SAXException, ParserConfigurationException {
+    public void addsubURL(String url, String tokenID, String format) throws TransformerException, IOException, SAXException, ParserConfigurationException {
         System.out.println("要加入sub節點的資料:" + url);
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = factory.newDocumentBuilder();
         //解析 url_database檔案
         org.w3c.dom.Document doc = db.parse(url_database);
-        org.w3c.dom.Element mainURLNode = doc.getElementById(mainURL_id);
+        org.w3c.dom.Element tokenNode = doc.getElementById(tokenID);
         //檢查有無添加過,若有則先把舊的那筆刪除
-        NodeList nodeList = mainURLNode.getChildNodes();
+        NodeList nodeList = tokenNode.getChildNodes();
         for(int i=0;i<nodeList.getLength();i++){
             Node node = nodeList.item(i);
-            if(node.getTextContent().equals(url)){
-                mainURLNode.removeChild(node);
+            //判定是否為subURL node
+            if(node.hasAttributes()){
+                if(node.getTextContent().equals(url)){
+                    tokenNode.removeChild(node);
+                }
             }
+
         }
         // 創建新節點(subURL)
         org.w3c.dom.Element subURL = doc.createElement("subURL");
         subURL.setTextContent(url);
         subURL.setAttribute("format", format);
         // 新增 subURL節點
-        mainURLNode.appendChild(subURL);
+        tokenNode.appendChild(subURL);
         writeXml(doc);
     }
 
-    public boolean matchSubURL(String mainURLID, String url, String format) throws ParserConfigurationException, IOException, SAXException {
+    public boolean matchSubURL(String tokenID, String url, String format) throws ParserConfigurationException, IOException, SAXException {
         Boolean isMatch = false;
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = factory.newDocumentBuilder();
         //解析 url_database檔案
         org.w3c.dom.Document doc = db.parse(url_database);
-        org.w3c.dom.Element mainURLNode = doc.getElementById(mainURLID);
-        // 創建 mainURLNode元素
+        org.w3c.dom.Element tokenNode = doc.getElementById(tokenID);
+        // 創建 變數
         String subURL = null;
         Node node = null;
         String node_format;
-        //得到 mainURLNode底下的 subURL nodes
-        NodeList nodeList = mainURLNode.getChildNodes();
+        //得到 toeknNode底下的 子 nodes
+        NodeList nodeList = tokenNode.getChildNodes();
         for (int i = 0; i < nodeList.getLength(); i++) {
             node = nodeList.item(i);
             if (node.hasAttributes()) {
