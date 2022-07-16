@@ -109,6 +109,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
 
+
     /* Code代碼 */
     final int CODE_SCAN = 0;
 
@@ -137,10 +138,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
         /*測試function*/
         try {
-//            addMainURL("https://www.google.com.tw/webhp?hl=zh-TW");
-//            addMainURL("https://github.com/judy8889107?tab=repositories");
-//            addMainURL("https://elearning.ntcu.edu.tw/");
-            matchDatabase("https://mail.google.com/mail/u/0/?ogbl");
+            addMainURL("https://www.google.com.tw/webhp?hl=zh-TW");
+            addMainURL("https://github.com/judy8889107?tab=repositories");
+            addMainURL("https://www.youtube.com/?gl=TW&hl=zh-TW");
+            addsubURL("https://about.google/products/","0","basedomain");
+            addsubURL("https://about.google/commitments/","0","basedomain");
+            addsubURL("https://about.google/stories/","0","basedomain");
+//            matchDatabase("https://mail.google.com/mail/u/0/?ogbl");
 //            deleteMainURL("0");
 //            matchDatabase("");
         } catch (ParserConfigurationException e) {
@@ -342,26 +346,48 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     // 設定安全網址 - mainURL加入網址到資料庫中
     public void addMainURL(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+        Boolean isExist = false;
         System.out.println("要加入mainURL節點的資料:" + url);
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = factory.newDocumentBuilder();
-        //得到 url_database根節點
+        //解析 url_database檔案
         org.w3c.dom.Document doc = db.parse(url_database);
-        org.w3c.dom.Element root = doc.getDocumentElement();
-        // 創建新節點
-        org.w3c.dom.Element mainURL = doc.createElement("mainURL");
-        mainURL.setTextContent(url);
-        // 設定 mainURL id
-        if (doc.getElementsByTagName("mainURL").getLength() >= 0) {
-            int index = doc.getElementsByTagName("mainURL").getLength();
-            mainURL.setAttribute("id", String.valueOf(index));
-            mainURL.setIdAttribute("id", true);
-
+        //先檢查有無重複網址
+        NodeList nodeList = doc.getElementsByTagName("mainURL");
+        for(int i=0;i<nodeList.getLength();i++){
+            Node node = nodeList.item(i);
+            if(node.getTextContent().equals(url)){
+                isExist = true;
+                break;
+            }
         }
-        // 新增新節點
-        root.appendChild(mainURL);
+        //若此網址從未添加過才寫入xml檔
+        if(!isExist){
+            //得到根節點
+            org.w3c.dom.Element root = doc.getDocumentElement();
+            // 創建新節點
+            org.w3c.dom.Element mainURL = doc.createElement("mainURL");
+            mainURL.setTextContent(url);
+            // 設定 mainURL id
+            if (doc.getElementsByTagName("mainURL").getLength() >= 0) {
+                int index = doc.getElementsByTagName("mainURL").getLength();
+                mainURL.setAttribute("id", String.valueOf(index));
+                mainURL.setIdAttribute("id", true);
 
+            }
+            // 新增新節點
+            root.appendChild(mainURL);
+            //寫入xml檔案
+            writeXml(doc);
+        }else{
+            dialog_toast.setText("此網址已存在於資料庫中");
+            dialog_toast.show();
+        }
+
+    }
+    //寫入xml檔案
+    public void writeXml(org.w3c.dom.Document doc) throws IOException, TransformerException {
         //開始把 Document對映到檔案
         TransformerFactory transFactory = TransformerFactory.newInstance();
         Transformer transFormer = transFactory.newTransformer();
@@ -404,7 +430,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     // 解析並比對資料庫 - 檢查網址
-    public void matchDatabase(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+    public void matchDatabase(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException, InterruptedException {
         System.out.println("進入matchDatabase");
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -464,23 +490,23 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String maj_path = null;
         String tmp_path = null;
         //賦值
-        maj_basedomain = InternetDomainName.from(url).topPrivateDomain().toString(); //要比對的網址的 domain name
-        tmp_basedomain = InternetDomainName.from(mainURL).topPrivateDomain().toString(); //mainURL網址的 domain name
-        maj_port = new URL(url).getPort() < 0 ? new URL(url).getDefaultPort() : new URL(url).getPort();
-        tmp_port = new URL(mainURL).getPort() < 0 ? new URL(mainURL).getDefaultPort() : new URL(mainURL).getPort();
         maj_host = new URL(url).getHost();
         tmp_host = new URL(mainURL).getHost();
+        maj_basedomain = InternetDomainName.from(maj_host).topPrivateDomain().toString(); //要比對的網址的 domain name
+        tmp_basedomain = InternetDomainName.from(tmp_host).topPrivateDomain().toString(); //mainURL網址的 domain name
+        maj_port = new URL(url).getPort() < 0 ? new URL(url).getDefaultPort() : new URL(url).getPort();
+        tmp_port = new URL(mainURL).getPort() < 0 ? new URL(mainURL).getDefaultPort() : new URL(mainURL).getPort();
         maj_path = new URL(url).getPath();
         tmp_path = new URL(mainURL).getPath();
-//        //比對
-//        String maj_startwith = maj_host+":"+maj_port+maj_path;
-//        String tmp_startwith = tmp_host+":"+tmp_port+tmp_path;
-//        String maj_hoststr = maj_host+":"+maj_port;
-//        String tmp_hoststr = tmp_host+":"+tmp_port;
-//        if(url.equals(mainURL)) return "exact";
-//        if(maj_startwith.contains(tmp_startwith)) return "startwith";
-//        if(maj_hoststr.contains(tmp_hoststr)) return "host";
-//        if(maj_basedomain.contains(tmp_basedomain)) return "basedomain";
+        //比對
+        String maj_startwith = maj_host + ":" + maj_port + maj_path;
+        String tmp_startwith = tmp_host + ":" + tmp_port + tmp_path;
+        String maj_hoststr = maj_host + ":" + maj_port;
+        String tmp_hoststr = tmp_host + ":" + tmp_port;
+        if (url.equals(mainURL)) return "exact";
+        if (maj_startwith.contains(tmp_startwith)) return "startwith";
+        if (maj_hoststr.contains(tmp_hoststr)) return "host";
+        if (maj_basedomain.contains(tmp_basedomain)) return "basedomain";
         return format;
     }
 
@@ -492,26 +518,22 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         DocumentBuilder db = factory.newDocumentBuilder();
         //解析 url_database檔案
         org.w3c.dom.Document doc = db.parse(url_database);
-
+        org.w3c.dom.Element mainURLNode = doc.getElementById(mainURL_id);
+        //檢查有無添加過,若有則先把舊的那筆刪除
+        NodeList nodeList = mainURLNode.getChildNodes();
+        for(int i=0;i<nodeList.getLength();i++){
+            Node node = nodeList.item(i);
+            if(node.getTextContent().equals(url)){
+                mainURLNode.removeChild(node);
+            }
+        }
         // 創建新節點(subURL)
         org.w3c.dom.Element subURL = doc.createElement("subURL");
         subURL.setTextContent(url);
         subURL.setAttribute("format", format);
         // 新增 subURL節點
-        org.w3c.dom.Element mainURLNode = doc.getElementById(mainURL_id);
         mainURLNode.appendChild(subURL);
-        //開始把 Document對映到檔案
-        TransformerFactory transFactory = TransformerFactory.newInstance();
-        Transformer transFormer = transFactory.newTransformer();
-        //設定輸出結果並且生成XML檔案
-        DOMSource domSource = new DOMSource(doc);
-        FileOutputStream out = new FileOutputStream(url_database);
-        StreamResult xmlResult = new StreamResult(out); //設定輸入源
-        transFormer.setOutputProperty(OutputKeys.INDENT, "yes"); //元素換行設定
-        transFormer.transform(domSource, xmlResult); //輸出xml檔案
-        out.close();
-
-
+        writeXml(doc);
     }
 
     public boolean matchSubURL(String mainURLID, String url, String format) throws ParserConfigurationException, IOException, SAXException {
@@ -672,7 +694,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void run() {
-
         Map<String, String> IPQualityScore_data = null;
         String message = null;
         String title = null;
@@ -698,6 +719,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             });
         } catch (NullPointerException e) {
             System.out.println(e.getMessage());
+
         }
 
 
