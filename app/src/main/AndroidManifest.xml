@@ -83,6 +83,9 @@
         <activity
             android:name=".ui.UrlCheckActivity"
             android:label="@string/url_check" />
+        <!-- Y:分享app-->
+
+
         <activity
             android:name=".ui.IntroActivity"
             android:screenOrientation="portrait" />
@@ -90,7 +93,6 @@
         <activity
             android:name=".ui.Intro2FAActivity"
             android:screenOrientation="portrait"/>
-
         <activity
             android:name=".ui.AuthActivity" />
         <activity

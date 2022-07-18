@@ -83,7 +83,6 @@ public abstract class IntroBaseActivity extends AegisActivity implements IntroAc
     void setCurrentSlide(SlideFragment slide) {
         _currentSlide = new WeakReference<>(slide);
     }
-//yu:Button slide頁面
     @Override
     public void goToNextSlide() {
         int pos = _pager.getCurrentItem();
@@ -129,7 +128,6 @@ public abstract class IntroBaseActivity extends AegisActivity implements IntroAc
     protected boolean onBeforeSlideChanged(Class<? extends SlideFragment> oldSlide, Class<? extends SlideFragment> newSlide) {
         return false;
     }
-
     /**
      * Called after a slide change was made.
      * @param oldSlide the slide that was previously shown.

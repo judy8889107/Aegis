@@ -119,9 +119,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             return;
         }
         /* 設定Content是 layout裡面的 activity_url_check檔案
-        * 原本要寫為 final View variablename = setContentView(R.layout.activityName);
-        * 這裡應該是因為 extends Aegis，用this即可
-        *  */
+         * 原本要寫為 final View variablename = setContentView(R.layout.activityName);
+         * 這裡應該是因為 extends Aegis，用this即可
+         *  */
         this.setContentView(R.layout.activity_url_check);
         this.setSupportActionBar(findViewById(R.id.toolbar));
 
@@ -341,43 +341,43 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         boolean containsIssuer = false;
 
 
-            try{
-                /* 設定變數 */
-                url_obj = new URL(URL_text);
-                protocol = url_obj.getProtocol();
-                host = url_obj.getHost().toLowerCase();
+        try{
+            /* 設定變數 */
+            url_obj = new URL(URL_text);
+            protocol = url_obj.getProtocol();
+            host = url_obj.getHost().toLowerCase();
 
-                /* check protocol */
-                if(!protocol.equals("http") && !protocol.equals("https")){
-                    alert_dialog.setMessage(URL_text+"\n"+ getResources().getString(R.string.unsafeURL));
-                    alert_dialog.show();
-                }
-                /* 檢查 host有無包含 issuer */
-                for(int i=0;i<issuer.size();i++){
-                    if(host.contains(issuer.get(i))){
-                        containsIssuer = true;
-                        break;
-                    }
-                }
-                if(!containsIssuer){
-                    /* 若 host中不包含 otp引入的issuer，則先詢問是否要用 whois查找網站相關資訊 */
-                    whois_search_dialog.setMessage(URL_text+"\n"+"這個網址可能不安全，請問要查看網站相關資訊嗎？");
-                    whois_search_dialog.show();
-                }
-                else{
-                    /* 檢查網址 host包含 issuer */
-                    dialog_toast.setText(R.string.safeURL);
-                    dialog_toast.show();
-                }
-
-
-
-
-            }catch (MalformedURLException e){
-                dialog_toast.setText(R.string.parseFail);
-                dialog_toast.show();
-                e.printStackTrace();
+            /* check protocol */
+            if(!protocol.equals("http") && !protocol.equals("https")){
+                alert_dialog.setMessage(URL_text+"\n"+ getResources().getString(R.string.unsafeURL));
+                alert_dialog.show();
             }
+            /* 檢查 host有無包含 issuer */
+            for(int i=0;i<issuer.size();i++){
+                if(host.contains(issuer.get(i))){
+                    containsIssuer = true;
+                    break;
+                }
+            }
+            if(!containsIssuer){
+                /* 若 host中不包含 otp引入的issuer，則先詢問是否要用 whois查找網站相關資訊 */
+                whois_search_dialog.setMessage(URL_text+"\n"+"這個網址可能不安全，請問要查看網站相關資訊嗎？");
+                whois_search_dialog.show();
+            }
+            else{
+                /* 檢查網址 host包含 issuer */
+                dialog_toast.setText(R.string.safeURL);
+                dialog_toast.show();
+            }
+
+
+
+
+        }catch (MalformedURLException e){
+            dialog_toast.setText(R.string.parseFail);
+            dialog_toast.show();
+            e.printStackTrace();
+        }
 
 
         /* 每次檢查完都將 URL_text清空 */
@@ -488,7 +488,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         } catch (IOException e) {
             e.printStackTrace();
         } catch (NullPointerException e){
-          System.out.println(e.getMessage());
+            System.out.println(e.getMessage());
         } finally {
 
             /* 將原本訊息備份 */
@@ -754,17 +754,17 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             }
             //Updated Date
             if(tag.matches("(?i).*Updated.*") || tag.matches("(?i).*Modifi(ed|cation).*")||
-               tag.matches("(?i).*Changed.*")|| tag.matches("(?i)RelevantDates")){
+                    tag.matches("(?i).*Changed.*")|| tag.matches("(?i)RelevantDates")){
                 System.out.println(token[i]);
             }
             //Creation Date
             if(tag.matches("(?i).*Creation.*") || tag.matches("(?i).*Created.*")||
-               tag.matches("(?i)Registration(Date|Time)")){
+                    tag.matches("(?i)Registration(Date|Time)")){
                 System.out.println(token[i]);
             }
             //Expiry Date
             if(tag.matches("(?i).*Expir(y|es|ation).*") || tag.matches("(?i).*DateRegistered.*") ||
-               tag.matches("(?i)PaidTill")){
+                    tag.matches("(?i)PaidTill")){
                 System.out.println(token[i]);
             }
 
@@ -891,7 +891,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 }
-
 
 
 

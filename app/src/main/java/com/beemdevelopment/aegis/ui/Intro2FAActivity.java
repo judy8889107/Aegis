@@ -78,4 +78,5 @@ public class Intro2FAActivity extends IntroBaseActivity {
         setResult(RESULT_OK);
         finish();
     }
+
 }
