@@ -1,6 +1,6 @@
 <!--J:translate=false代表沒有其他語系的翻譯了-->
 <resources>
-    <string name="app_name" translatable="false">Aegis</string>
+    <string name="app_name" translatable="false">MyOTP</string>
     <string name="app_name_full" translatable="false">MyOTP Authenticator</string>
     <string name="org_name_full" translatable="false">Beem Development</string>
     <string name="action_settings">Settings</string>
