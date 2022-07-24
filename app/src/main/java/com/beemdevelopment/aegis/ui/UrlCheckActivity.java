@@ -17,6 +17,7 @@ import android.os.Bundle;
 
 
 import android.util.Pair;
+import android.view.LayoutInflater;
 import android.view.View;
 
 
@@ -36,6 +37,8 @@ import android.widget.EditText;
 /* 控制鍵盤 */
 /* ImageButton的import */
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 /* URL lib */
@@ -104,6 +107,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private AlertDialog IPQS_search_dialog; /* 搜尋 IPQS dialog */
     private ProgressDialog progressDialog; /* 加載 dialog */
     private AlertDialog IPQS_message_dialog; /* 顯示網站資訊 IPQS dialog */
+    private AlertDialog message_dialog; /* 顯示提示訊息 dialog */
+
     private Toast dialog_toast;
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
@@ -257,16 +262,33 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         }
     }
 
+    //設定 dialog顯示圖片&&文字
+    public void setDialog(AlertDialog dialog, int id, String msg) {
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        View view = layoutInflater.inflate(R.layout.dialog_picture, null);
+        ImageView imageView = view.findViewById(R.id.safe_icon);
+        TextView textView = view.findViewById(R.id.dialog_message_box);
+        imageView.setImageResource(id); //設定icon來源
+        textView.setText(msg);
+        dialog.setView(view);
+    }
+
     /* 設定所有dialog */
     public void buildAllDialog() {
         /* alert dialog */
         AlertDialog.Builder alert_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+        AlertDialog.Builder message_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
         alert_dialog_builder.setTitle(R.string.warning);
         /* 設定按鈕監聽器 */
         alert_dialog_builder.setPositiveButton(R.string.yes, this);
         alert_dialog_builder.setNegativeButton(R.string.no, this);
         alert_dialog = alert_dialog_builder.create();
         alert_dialog.dismiss();
+
+        //訊息 dialog
+        message_dialog_builder.setPositiveButton(R.string.yes, this);
+        message_dialog = message_dialog_builder.create();
+        message_dialog.dismiss();
 
         /* IPQS search dialog */
         AlertDialog.Builder IPQS_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
@@ -282,6 +304,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         /* 設定按鈕監聽器 */
         IPQS_message_builder.setPositiveButton(R.string.yes, this);
         IPQS_message_dialog = IPQS_message_builder.create();
+
         IPQS_message_dialog.dismiss();
 
         progressDialog = new ProgressDialog(this);
@@ -329,7 +352,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 case BUTTON_POSITIVE:
                     /* int which = -1 */
                     dialog.dismiss();
-                    alert_dialog.setMessage(URL_text + "\n" +"請問是否要將此網址加入安全網址資料庫中?");
+                    alert_dialog.setMessage(URL_text + "\n" + "請問是否要將此網址加入安全網址資料庫中?");
                     alert_dialog.show();
                     break;
             }
@@ -379,15 +402,15 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         org.w3c.dom.Document doc = db.parse(url_database);
         //先檢查有無重複網址
         NodeList nodeList = doc.getElementsByTagName("mainURL");
-        for(int i=0;i<nodeList.getLength();i++){
+        for (int i = 0; i < nodeList.getLength(); i++) {
             Node node = nodeList.item(i);
-            if(node.getTextContent().equals(url)){
+            if (node.getTextContent().equals(url)) {
                 isExist = true;
                 break;
             }
         }
         //若此網址從未添加過才寫入xml檔
-        if(!isExist){
+        if (!isExist) {
             //得到根節點
             org.w3c.dom.Element root = doc.getDocumentElement();
             // 創建新節點
@@ -406,12 +429,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             root.appendChild(token);
             //寫入xml檔案
             writeXml(doc);
-        }else{
+        } else {
             dialog_toast.setText("此網址已存在於資料庫中");
             dialog_toast.show();
         }
 
     }
+
     //寫入xml檔案
     public void writeXml(org.w3c.dom.Document doc) throws IOException, TransformerException {
         //開始把 Document對映到檔案
@@ -426,7 +450,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         out.close();
     }
 
-    // 刪除網址
+    // 刪除 mainURL網址
     public void deleteMainURL(String id) throws ParserConfigurationException, IOException, SAXException, TransformerException {
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -483,18 +507,27 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         } else {  /* 有匹配到 mainURL */
             /* 比對 subURL */
             if (format.equals("exact") || matchSubURL(tokenID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
-                System.out.println("subURL也有存在此網址");
-                System.out.println("是否mainURL Exact: "+format.equals("exact"));
-                System.out.println(url + "匹配格式:" + format);
-                dialog_toast.setText("mainURL Exact 或 subURL有配對/n格式為"+format);
-                dialog_toast.show();
+                setDialog(message_dialog, R.drawable.safe_icon, "此為安全網址，可以放心登入");
+                message_dialog.show();
 
-            } else { /*配對失敗*/ /*TODO:format級數顯示*/
+            } else { /*配對失敗*/
                 System.out.println("subURL配對失敗");
                 System.out.println(url + "格式:" + format);
-                addsubURL(url, tokenID, format); // 紀錄搜尋過的網址和其格式
-                dialog_toast.setText("mainURL格式配對到"+format+"/n但subURL沒有配對");
+                /*TODO:format級數顯示*/
+                // 比對級數配對
+                switch (format) {
+                    case "exact":
+                        break;
+                    case "startwith":
+                        break;
+                    case "host":
+                        break;
+                    case "basedomain":
+                        break;
+                }
+                dialog_toast.setText("mainURL格式配對到" + format + "/n但subURL沒有配對");
                 dialog_toast.show();
+                addsubURL(url, tokenID, format); // 紀錄搜尋過的網址和其格式
 
             }
 
@@ -532,10 +565,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String tmp_startwith = tmp_host + ":" + tmp_port + tmp_path;
         String maj_hoststr = maj_host + ":" + maj_port;
         String tmp_hoststr = tmp_host + ":" + tmp_port;
-        System.out.println(maj_basedomain+" "+tmp_basedomain);
-        System.out.println(maj_host+" "+tmp_host);
-        System.out.println(maj_port+" "+tmp_port);
-        System.out.println(maj_path+" "+tmp_path);
+        System.out.println(maj_basedomain + " " + tmp_basedomain);
+        System.out.println(maj_host + " " + tmp_host);
+        System.out.println(maj_port + " " + tmp_port);
+        System.out.println(maj_path + " " + tmp_path);
         if (url.equals(mainURL)) return "exact";
         if (maj_startwith.contains(tmp_startwith)) return "startwith";
         if (maj_hoststr.contains(tmp_hoststr)) return "host";
@@ -554,11 +587,11 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         org.w3c.dom.Element tokenNode = doc.getElementById(tokenID);
         //檢查有無添加過,若有則先把舊的那筆刪除
         NodeList nodeList = tokenNode.getChildNodes();
-        for(int i=0;i<nodeList.getLength();i++){
+        for (int i = 0; i < nodeList.getLength(); i++) {
             Node node = nodeList.item(i);
             //判定是否為subURL node
-            if(node.hasAttributes()){
-                if(node.getTextContent().equals(url)){
+            if (node.hasAttributes()) {
+                if (node.getTextContent().equals(url)) {
                     tokenNode.removeChild(node);
                 }
             }
