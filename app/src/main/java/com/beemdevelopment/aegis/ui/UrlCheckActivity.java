@@ -501,9 +501,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         // mainURL全無匹配
         if (format == null) { /*TODO:看要讓使用者用IPQS檢查或是其他*/
             System.out.println("mainURL全無匹配");
-            dialog_toast.setText("mainURL全無匹配");
-            dialog_toast.show();
-
+            setMessageDialog(R.drawable.safe_scale_1,"此網址在資料庫中無任何匹配\n是否進一步檢查此網址？",true);
+            message_dialog.show();
         } else {  /* 有匹配到 mainURL */
             /* 比對 subURL */
             if (format.equals("exact") || matchSubURL(tokenID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
