@@ -16,7 +16,6 @@ import android.os.Build;
 import android.os.Bundle;
 
 
-import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -24,7 +23,6 @@ import android.view.View;
 import com.beemdevelopment.aegis.R;
 
 
-import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
@@ -44,13 +42,10 @@ import android.widget.Toast;
 /* URL lib */
 import androidx.annotation.RequiresApi;
 
-import org.apache.commons.net.whois.WhoisClient;
-
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
@@ -62,7 +57,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 /* JSON */
 
 import org.apache.commons.validator.routines.UrlValidator;
@@ -262,22 +256,28 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         }
     }
 
-    //設定 dialog顯示圖片&&文字
-    public void setDialog(AlertDialog dialog, int id, String msg) {
+    //設定 message dialog顯示圖片&&文字(重建以更新UI)
+    public void setMessageDialog(int id, String msg, boolean enable_no_button) {
+        AlertDialog.Builder message_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+        message_dialog_builder.setPositiveButton(R.string.yes, this);
+        if(enable_no_button) //開啟取消 button
+            message_dialog_builder.setNegativeButton(R.string.no, this);
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         View view = layoutInflater.inflate(R.layout.dialog_picture, null);
-        ImageView imageView = view.findViewById(R.id.safe_icon);
+        ImageView imageView = view.findViewById(R.id.safe_scale);
         TextView textView = view.findViewById(R.id.dialog_message_box);
         imageView.setImageResource(id); //設定icon來源
         textView.setText(msg);
-        dialog.setView(view);
+        message_dialog_builder.setView(view);
+        message_dialog = message_dialog_builder.create();
+        message_dialog.dismiss();
     }
 
     /* 設定所有dialog */
     public void buildAllDialog() {
         /* alert dialog */
         AlertDialog.Builder alert_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        AlertDialog.Builder message_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+
         alert_dialog_builder.setTitle(R.string.warning);
         /* 設定按鈕監聽器 */
         alert_dialog_builder.setPositiveButton(R.string.yes, this);
@@ -285,10 +285,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         alert_dialog = alert_dialog_builder.create();
         alert_dialog.dismiss();
 
-        //訊息 dialog
-        message_dialog_builder.setPositiveButton(R.string.yes, this);
-        message_dialog = message_dialog_builder.create();
-        message_dialog.dismiss();
+
 
         /* IPQS search dialog */
         AlertDialog.Builder IPQS_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
@@ -386,7 +383,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     dialog_toast.show();
                     break;
             }
+
         }
+
 
 
     }
@@ -498,6 +497,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             format = getURLMatchFormat(url, mainURL);
             if (format != null) break;
         }
+
         // mainURL全無匹配
         if (format == null) { /*TODO:看要讓使用者用IPQS檢查或是其他*/
             System.out.println("mainURL全無匹配");
@@ -507,28 +507,60 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         } else {  /* 有匹配到 mainURL */
             /* 比對 subURL */
             if (format.equals("exact") || matchSubURL(tokenID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
-                setDialog(message_dialog, R.drawable.safe_icon, "此為安全網址，可以放心登入");
+                setMessageDialog(R.drawable.safe_scale_5, "此為安全網址，可以放心登入", false);
                 message_dialog.show();
 
             } else { /*配對失敗*/
                 System.out.println("subURL配對失敗");
                 System.out.println(url + "格式:" + format);
-                /*TODO:format級數顯示*/
+                String str = "此網址安全層級為%s級\n(低於三級網址建議登入後小心使用)\n此網址不在資料庫中，請問是否要加入資料庫？";
                 // 比對級數配對
                 switch (format) {
-                    case "exact":
-                        break;
                     case "startwith":
+                        str = String.format(str, "四");
+                        setMessageDialog(R.drawable.safe_scale_4, str, true);
                         break;
                     case "host":
+                        str = String.format(str, "三");
+                        setMessageDialog(R.drawable.safe_scale_3, str, true);
                         break;
                     case "basedomain":
+                        str = String.format(str, "二");
+                        setMessageDialog(R.drawable.safe_scale_2, str, true);
                         break;
                 }
-                dialog_toast.setText("mainURL格式配對到" + format + "/n但subURL沒有配對");
-                dialog_toast.show();
-                addsubURL(url, tokenID, format); // 紀錄搜尋過的網址和其格式
+                message_dialog.show();
+                /* 詢問是否加入subURL(監聽器製作) */
+                final String final_tokenID = tokenID;
+                final String final_format = format;
+                message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        message_dialog.dismiss();
+                        dialog_toast.setText("取消添加此網址到資料庫中");
+                        dialog_toast.show();
 
+                    }
+                });
+                message_dialog.getButton(BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        try {
+                            addsubURL(url, final_tokenID, final_format);
+                            message_dialog.dismiss();
+                            dialog_toast.setText("此網址已加入資料庫");
+                            dialog_toast.show();
+                        } catch (TransformerException e) {
+                            e.printStackTrace();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } catch (SAXException e) {
+                            e.printStackTrace();
+                        } catch (ParserConfigurationException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
             }
 
         }
