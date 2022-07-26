@@ -499,10 +499,25 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         }
 
         // mainURL全無匹配
-        if (format == null) { /*TODO:看要讓使用者用IPQS檢查或是其他*/
+        if (format == null) {
             System.out.println("mainURL全無匹配");
             setMessageDialog(R.drawable.safe_scale_1,"此網址在資料庫中無任何匹配\n是否進一步檢查此網址？",true);
             message_dialog.show();
+            message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    message_dialog.dismiss();
+                    dialog_toast.setText("取消進一步檢查此網址");
+                    dialog_toast.show();
+                }
+            });
+            message_dialog.getButton(BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    message_dialog.dismiss();
+                    IPQSCheck();
+                }
+            });
         } else {  /* 有匹配到 mainURL */
             /* 比對 subURL */
             if (format.equals("exact") || matchSubURL(tokenID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
