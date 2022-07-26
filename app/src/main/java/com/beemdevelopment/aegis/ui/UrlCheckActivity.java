@@ -12,6 +12,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 
 import android.content.res.XmlResourceParser;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -296,13 +297,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         IPQS_search_dialog = IPQS_dialog_builder.create();
         IPQS_search_dialog.dismiss();
 
-        /* IPQS資訊 dialog */
-        AlertDialog.Builder IPQS_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        /* 設定按鈕監聽器 */
-        IPQS_message_builder.setPositiveButton(R.string.yes, this);
-        IPQS_message_dialog = IPQS_message_builder.create();
 
-        IPQS_message_dialog.dismiss();
 
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("");
@@ -527,19 +522,20 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             } else { /*配對失敗*/
                 System.out.println("subURL配對失敗");
                 System.out.println(url + "格式:" + format);
-                String str = "此網址安全層級為%s級\n(低於三級網址建議登入後小心使用)\n此網址不在資料庫中，請問是否要加入資料庫？";
+                String str = "此網址安全層級為%s級\n%s此網址不在資料庫中，請問是否要加入資料庫？";
+                String hint = "(低於三級網址建議登入後小心使用)\n";
                 // 比對級數配對
                 switch (format) {
                     case "startwith":
-                        str = String.format(str, "四");
+                        str = String.format(str, "四", "");
                         setMessageDialog(R.drawable.safe_scale_4, str, true);
                         break;
                     case "host":
-                        str = String.format(str, "三");
+                        str = String.format(str, "三", hint);
                         setMessageDialog(R.drawable.safe_scale_3, str, true);
                         break;
                     case "basedomain":
-                        str = String.format(str, "二");
+                        str = String.format(str, "二", hint);
                         setMessageDialog(R.drawable.safe_scale_2, str, true);
                         break;
                 }
@@ -652,6 +648,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         writeXml(doc);
     }
 
+    //比對 subURL有無exact
     public boolean matchSubURL(String tokenID, String url, String format) throws ParserConfigurationException, IOException, SAXException {
         Boolean isMatch = false;
         //建立一個 Document類
@@ -735,7 +732,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 connection.disconnect();
                 jsonObject = new JSONObject(result);
                 //取出要的資料
-                String[] key = {"success", "unsafe", "domain", "parking", "spamming", "malware", "phishing", "suspicious", "adult", "risk_score", "category"};
+                String[] key = {"success", "domain", "parking", "spamming", "malware", "phishing", "suspicious", "adult", "risk_score", "category"};
                 //若狀態為成功才放入相對應鍵值
                 if (jsonObject.getString("success").equals("true")) {
                     //放入鍵值
@@ -765,7 +762,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     // 處理IPQS輸出資訊
     public String[] getIPQualityMessage(Map<String, String> IPQualityData) {
-        String[] result = new String[2];
+        String[] result = new String[3];
         if (IPQualityData.get("success").equals("false")) {
             result[0] = "錯誤";
             result[1] = "服務取得失敗，請重新嘗試";
@@ -773,12 +770,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             String[] key = null;
             //設定 key值 (中文和其他為英文)
             if (Locale.getDefault().getDisplayLanguage().equals("中文")) {
-                key = new String[]{"網站風險分數", "是否為不安全的網站", "域名",
+                key = new String[]{"網站風險分數", "域名",
                         "網站是否有域名停留", "網站是否濫發垃圾郵件", "網站是否含惡意軟體",
                         "網站是否為釣魚網站", "網站是否可疑", "網站是否含成人內容", "網站分類"};
 
             } else {
-                key = new String[]{"Risk Score", "Unsafe Website", "Domain Name",
+                key = new String[]{"Risk Score", "Domain Name",
                         "Website has a domain name suspension", "Website is spamming",
                         "Website contains malware", "Website is a Phishing Website",
                         "Website is Suspicious", "Website contains Adult Content", "Website Category"};
@@ -788,7 +785,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             StringBuilder sb = new StringBuilder();
             Iterator<Map.Entry<String, String>> iterator = IPQualityData.entrySet().iterator();
             int index = 1;
-            result[0] = key[0] + " " + IPQualityData.get("risk_score");
+            result[0] = IPQualityData.get("risk_score"); //取得分數
             while (iterator.hasNext()) {
                 Map.Entry<String, String> entry = iterator.next();
                 String entryKey = entry.getKey();
@@ -805,14 +802,42 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         return result;
     }
 
+    public void setIPQSDialog(String risk_score, String msg){
+        int score;
+        /* IPQS資訊 dialog */
+        AlertDialog.Builder IPQS_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+        /* 設定按鈕監聽器 */
+        IPQS_message_builder.setPositiveButton(R.string.yes, this);
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        View view = layoutInflater.inflate(R.layout.ipqs_msg_display, null);
+        TextView ipqs_score = view.findViewById(R.id.ipqs_score);
+        TextView ipqs_msg = view.findViewById(R.id.ipqs_msg);
+        ipqs_score.setText(risk_score);
+        ipqs_msg.setText(msg);
+        /* 評判風險分數並換顏色 */
+        score = Integer.valueOf(risk_score);
+        if(0<=score && score<=20)
+            ipqs_score.setTextColor(Color.parseColor("#457c0d"));
+        else if(21<=score && score<=40)
+            ipqs_score.setTextColor(Color.parseColor("#78c430"));
+        else if(41<=score && score<=60)
+            ipqs_score.setTextColor(Color.parseColor("#fec721"));
+        else if(61<=score && score<=80)
+            ipqs_score.setTextColor(Color.parseColor("#f65922"));
+        else
+            ipqs_score.setTextColor(Color.parseColor("#d63839"));
+        IPQS_message_builder.setView(view);
+        IPQS_message_dialog = IPQS_message_builder.create();
+        IPQS_message_dialog.dismiss();
+    }
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 IPQS search */
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void run() {
         Map<String, String> IPQualityScore_data = null;
-        String message = null;
-        String title = null;
+        String message;
+        String risk_score;
         try {
             //IPQualityScore使用
             IPQualityScore_data = getIPQualityScore(URL_text);
@@ -821,15 +846,14 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 System.out.println(entry.getKey() + ": " + entry.getValue());
             });
             System.out.println("------------------------------------------");
-            title = getIPQualityMessage(IPQualityScore_data)[0];
             message = getIPQualityMessage(IPQualityScore_data)[1];
-            IPQS_message_dialog.setTitle(title);
-            IPQS_message_dialog.setMessage(message);
+            risk_score = getIPQualityMessage(IPQualityScore_data)[0];
 //            執行 Thread UI更新
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     progressDialog.dismiss();
+                    setIPQSDialog(risk_score, message);
                     IPQS_message_dialog.show();
                 }
             });
