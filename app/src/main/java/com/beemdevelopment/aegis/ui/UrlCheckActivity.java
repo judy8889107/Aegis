@@ -13,10 +13,12 @@ import android.content.Intent;
 
 import android.content.res.XmlResourceParser;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 
 
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -30,6 +32,7 @@ import java.io.IOException;
 
 import android.view.inputmethod.InputMethodManager;
 
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 /* 使用EditText */
 import android.widget.EditText;
@@ -37,6 +40,9 @@ import android.widget.EditText;
 /* ImageButton的import */
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -56,6 +62,7 @@ import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 /* JSON */
@@ -170,6 +177,17 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //            e.printStackTrace();
 //        }
 
+        //測試
+        try {
+            displayDatabase();
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
@@ -198,6 +216,51 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     }
+
+
+    /* Database 顯示在 UI介面上 */
+    public void displayDatabase() throws ParserConfigurationException, IOException, SAXException {
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        //解析 url_database檔案
+        org.w3c.dom.Document doc = db.parse(url_database);
+        org.w3c.dom.Element root = doc.getDocumentElement();
+
+
+        TextView textView = null;
+        ListView listView = null;
+
+        NodeList tokenNodes = doc.getElementsByTagName("token"); //得到 root底下所有 node
+        LinearLayout scroll_layout = (LinearLayout) this.findViewById(R.id.scroll_layout);
+        List list = null;
+        ArrayAdapter arrayAdapter = null;
+
+
+
+        String[] strings = {"測試0","測試1","測試2"};
+        list = Arrays.asList(strings);
+        arrayAdapter = new ArrayAdapter(this,R.layout.activity_url_check,list);
+        listView.setAdapter(arrayAdapter);
+        scroll_layout.addView(listView);
+
+//        for (int i = 0; i < tokenNodes.getLength(); i++) {
+//            //逐一讀取 node
+//            Node tokenNode = tokenNodes.item(i);
+//            NodeList tokenItems = tokenNode.getChildNodes();
+//            String tmp = tokenNode.getAttributes().getNamedItem("id").getNodeValue();
+//            int tokenID = Integer.valueOf(tmp);
+//            for(int j=0;j<tokenItems.getLength();j++){
+//
+//            }
+//
+//
+//
+//        }
+
+
+    }
+
 
     /* Layout按鈕監聽器事件，實作 View.OnClickListener */
     @Override
@@ -236,6 +299,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     e.printStackTrace();
                 }
                 break;
+            //textView監聽事件
+            default:
+
+                System.out.println("id為" + v.getId());
+
+                break;
+
         }
     }
 
@@ -261,7 +331,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     public void setMessageDialog(int id, String msg, boolean enable_no_button) {
         AlertDialog.Builder message_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
         message_dialog_builder.setPositiveButton(R.string.yes, this);
-        if(enable_no_button) //開啟取消 button
+        if (enable_no_button) //開啟取消 button
             message_dialog_builder.setNegativeButton(R.string.no, this);
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         View view = layoutInflater.inflate(R.layout.dialog_picture, null);
@@ -296,7 +366,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         IPQS_dialog_builder.setNegativeButton(R.string.no, this);
         IPQS_search_dialog = IPQS_dialog_builder.create();
         IPQS_search_dialog.dismiss();
-
 
 
         progressDialog = new ProgressDialog(this);
@@ -380,7 +449,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             }
 
         }
-
 
 
     }
@@ -496,7 +564,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         // mainURL全無匹配
         if (format == null) {
             System.out.println("mainURL全無匹配");
-            setMessageDialog(R.drawable.safe_scale_1,"此網址在資料庫中無任何匹配\n是否進一步檢查此網址？",true);
+            setMessageDialog(R.drawable.safe_scale_1, "此網址在資料庫中無任何匹配\n是否進一步檢查此網址？", true);
             message_dialog.show();
             message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -802,7 +870,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         return result;
     }
 
-    public void setIPQSDialog(String risk_score, String msg){
+    public void setIPQSDialog(String risk_score, String msg) {
         int score;
         /* IPQS資訊 dialog */
         AlertDialog.Builder IPQS_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
@@ -816,13 +884,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         ipqs_msg.setText(msg);
         /* 評判風險分數並換顏色 */
         score = Integer.valueOf(risk_score);
-        if(0<=score && score<=20)
+        if (0 <= score && score <= 20)
             ipqs_score.setTextColor(Color.parseColor("#457c0d"));
-        else if(21<=score && score<=40)
+        else if (21 <= score && score <= 40)
             ipqs_score.setTextColor(Color.parseColor("#78c430"));
-        else if(41<=score && score<=60)
+        else if (41 <= score && score <= 60)
             ipqs_score.setTextColor(Color.parseColor("#fec721"));
-        else if(61<=score && score<=80)
+        else if (61 <= score && score <= 80)
             ipqs_score.setTextColor(Color.parseColor("#f65922"));
         else
             ipqs_score.setTextColor(Color.parseColor("#d63839"));
@@ -830,6 +898,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         IPQS_message_dialog = IPQS_message_builder.create();
         IPQS_message_dialog.dismiss();
     }
+
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 IPQS search */
     @RequiresApi(api = Build.VERSION_CODES.N)
