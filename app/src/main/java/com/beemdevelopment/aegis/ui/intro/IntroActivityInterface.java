@@ -14,7 +14,6 @@ public interface IntroActivityInterface {
      * Navigate to the previous slide.
      */
     void goToPreviousSlide();
-
     /**
      * Navigate to the slide of the given type.
      */

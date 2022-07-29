@@ -1,5 +1,7 @@
 package com.beemdevelopment.aegis.ui.slides;
 
+
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,4 +15,5 @@ public class DoneSlide extends SlideFragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_done_slide, container, false);
     }
+
 }

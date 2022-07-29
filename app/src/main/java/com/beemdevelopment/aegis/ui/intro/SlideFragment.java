@@ -54,7 +54,6 @@ public abstract class SlideFragment extends Fragment implements IntroActivityInt
     protected void onSaveIntroState(@NonNull Bundle introState) {
 
     }
-
     @Override
     public void goToNextSlide() {
         getParent().goToNextSlide();
