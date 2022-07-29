@@ -17,6 +17,7 @@ import android.os.Build;
 import android.os.Bundle;
 
 
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -37,6 +38,7 @@ import android.widget.EditText;
 /* ImageButton的import */
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -69,6 +71,7 @@ import org.jsoup.Jsoup;
 
 
 import org.jsoup.nodes.Element;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
@@ -137,10 +140,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
         /*測試function*/
-//        try {
-//            addMainURL("https://www.google.com/");
-//            addMainURL("https://github.com/judy8889107?tab=repositories");
-//            addMainURL("https://www.youtube.com/?gl=TW&hl=zh-TW");
+        try {
+            addMainURL("https://www.google.com/");
+            addMainURL("https://github.com/judy8889107?tab=repositories");
+            addMainURL("https://www.youtube.com/?gl=TW&hl=zh-TW");
 //            addsubURL("https://accounts2.google.com","0","basedomain");
 //            addsubURL("https://accounts3.google.com","0","basedomain");
 //            addsubURL("https://accounts.google.com","0","basedomain");
@@ -149,26 +152,21 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //            matchDatabase("http://yahoo.com");
 //            deleteMainURL("0");
 //            matchDatabase("");
-//        } catch (ParserConfigurationException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } catch (SAXException e) {
-//            e.printStackTrace();
-//        } catch (TransformerException e) {
-//            e.printStackTrace();
-//        }
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (TransformerException e) {
+            e.printStackTrace();
+        }
 
-        /* 測試網址比對function */
-//        try {
-//            matchDatabase("test");
-//        } catch (ParserConfigurationException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } catch (SAXException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            displayDatabase();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
 
     }
@@ -261,7 +259,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     public void setMessageDialog(int id, String msg, boolean enable_no_button) {
         AlertDialog.Builder message_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
         message_dialog_builder.setPositiveButton(R.string.yes, this);
-        if(enable_no_button) //開啟取消 button
+        if (enable_no_button) //開啟取消 button
             message_dialog_builder.setNegativeButton(R.string.no, this);
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         View view = layoutInflater.inflate(R.layout.dialog_picture, null);
@@ -298,7 +296,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         IPQS_search_dialog.dismiss();
 
 
-
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("");
         progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
@@ -307,7 +304,37 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
+    //顯示資料庫
+    public void displayDatabase() throws Exception {
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        //解析 url_database檔案
+        org.w3c.dom.Document doc = db.parse(url_database);
+        NodeList nodeList = doc.getElementsByTagName("token");
+        LinearLayout scroll_block = this.findViewById(R.id.scroll_block);
 
+        for(int i=0;i<nodeList.getLength();i++){
+            Node tokenNode = nodeList.item(i);
+            NodeList itemNodes = tokenNode.getChildNodes();
+            for(int j=0;j<itemNodes.getLength();j++){
+                Node itemNode = itemNodes.item(j);
+                String URLstr = itemNode.getTextContent();
+                //TextView設定
+                TextView textView = new TextView(this);
+                textView.setText(URLstr);
+                textView.setTextColor(Color.parseColor("#000000"));
+                textView.setOnClickListener(this);
+                textView.setSingleLine();//設定單行顯示
+                textView.setEllipsize(TextUtils.TruncateAt.END); //設定省略符號在尾端
+                textView.setCompoundDrawablesWithIntrinsicBounds(0,0,0,0);
+
+            }
+        }
+
+
+
+    }
     /* 實作dialog按鈕監聽 */
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
@@ -382,8 +409,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         }
 
 
-
     }
+
 
     // 設定安全網址 - mainURL加入網址到資料庫中
     public void addMainURL(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
@@ -416,8 +443,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 int index = doc.getElementsByTagName("token").getLength();
                 token.setAttribute("id", String.valueOf(index));
                 token.setIdAttribute("id", true);
-
+                mainURL.setAttribute("groupID", String.valueOf(index));
             }
+            //設定唯一id
+            String uuid = Long.toHexString(System.currentTimeMillis());
+            mainURL.setAttribute("uuid",uuid);
+            mainURL.setIdAttribute("uuid",true);
             // 新增新節點
             token.appendChild(mainURL);
             root.appendChild(token);
@@ -477,7 +508,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String format = null;
         String mainURL = null;
         Node node = null;
-        Node tokenNode = null;
         String tokenID = null;
         //得到所有節點標籤名為 mainURL的 nodes
         NodeList nodeList = doc.getElementsByTagName("mainURL");
@@ -486,9 +516,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         for (int i = 0; i < nodeList.getLength(); i++) {
             node = nodeList.item(i);
             mainURL = node.getTextContent();
-            tokenNode = node.getParentNode();
-            tokenID = tokenNode.getAttributes().getNamedItem("id").getNodeValue();
-            System.out.println(mainURL + " tokenID: " + tokenID);
+            tokenID = node.getAttributes().getNamedItem("groupID").getNodeValue();
+            System.out.println(mainURL + " groupID: " + tokenID);
+
             format = getURLMatchFormat(url, mainURL);
             if (format != null) break;
         }
@@ -496,7 +526,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         // mainURL全無匹配
         if (format == null) {
             System.out.println("mainURL全無匹配");
-            setMessageDialog(R.drawable.safe_scale_1,"此網址在資料庫中無任何匹配\n是否進一步檢查此網址？",true);
+            setMessageDialog(R.drawable.safe_scale_1, "此網址在資料庫中無任何匹配\n是否進一步檢查此網址？", true);
             message_dialog.show();
             message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -521,7 +551,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
             } else { /*配對失敗*/
                 System.out.println("subURL配對失敗");
-                System.out.println(url + "格式:" + format);
+                System.out.println(url + "/格式:" + format);
                 String str = "此網址安全層級為%s級\n%s此網址不在資料庫中，請問是否要加入資料庫？";
                 String hint = "(低於三級網址建議登入後小心使用)\n";
                 // 比對級數配對
@@ -643,6 +673,11 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         org.w3c.dom.Element subURL = doc.createElement("subURL");
         subURL.setTextContent(url);
         subURL.setAttribute("format", format);
+        //加入uuid 和 groupID
+        String uuid = Long.toHexString(System.currentTimeMillis());
+        subURL.setAttribute("groupID", tokenID);
+        subURL.setAttribute("uuid",uuid);
+        subURL.setIdAttribute("uuid", true);
         // 新增 subURL節點
         tokenNode.appendChild(subURL);
         writeXml(doc);
@@ -650,6 +685,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     //比對 subURL有無exact
     public boolean matchSubURL(String tokenID, String url, String format) throws ParserConfigurationException, IOException, SAXException {
+        System.out.println("\n\nfunction matchSubURL");
         Boolean isMatch = false;
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -663,15 +699,20 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String node_format;
         //得到 toeknNode底下的 子 nodes
         NodeList nodeList = tokenNode.getChildNodes();
+        System.out.println(nodeList.getLength());
         for (int i = 0; i < nodeList.getLength(); i++) {
+            System.out.println("進入迴圈" + i);
             node = nodeList.item(i);
-            if (node.hasAttributes()) {
+            //若為subURL才進行判斷
+            if (node.getNodeName().equals("subURL")) {
                 node_format = node.getAttributes().getNamedItem("format").getNodeValue();
+                System.out.println(node_format);
                 if (node_format.equals(format)) {
                     subURL = node.getTextContent();
                     if (subURL.equals(url)) return true; //若找到相符的 subURL, 直接返回
                 }
             }
+
 
         }
         return isMatch;
@@ -802,7 +843,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         return result;
     }
 
-    public void setIPQSDialog(String risk_score, String msg){
+    public void setIPQSDialog(String risk_score, String msg) {
         int score;
         /* IPQS資訊 dialog */
         AlertDialog.Builder IPQS_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
@@ -816,13 +857,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         ipqs_msg.setText(msg);
         /* 評判風險分數並換顏色 */
         score = Integer.valueOf(risk_score);
-        if(0<=score && score<=20)
+        if (0 <= score && score <= 20)
             ipqs_score.setTextColor(Color.parseColor("#457c0d"));
-        else if(21<=score && score<=40)
+        else if (21 <= score && score <= 40)
             ipqs_score.setTextColor(Color.parseColor("#78c430"));
-        else if(41<=score && score<=60)
+        else if (41 <= score && score <= 60)
             ipqs_score.setTextColor(Color.parseColor("#fec721"));
-        else if(61<=score && score<=80)
+        else if (61 <= score && score <= 80)
             ipqs_score.setTextColor(Color.parseColor("#f65922"));
         else
             ipqs_score.setTextColor(Color.parseColor("#d63839"));
@@ -830,6 +871,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         IPQS_message_dialog = IPQS_message_builder.create();
         IPQS_message_dialog.dismiss();
     }
+
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 IPQS search */
     @RequiresApi(api = Build.VERSION_CODES.N)
