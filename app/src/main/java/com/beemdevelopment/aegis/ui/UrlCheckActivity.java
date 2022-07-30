@@ -55,9 +55,11 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 /* JSON */
@@ -111,6 +113,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
+    private HashMap<String, ArrayList<Node>> databaseList; /* 資料庫儲存在 List中，用 Map做groupIndex*/
+    private HashMap<String, ArrayList<TextView>> textViewList = new HashMap<>();
 
 
     /* Code代碼 */
@@ -135,15 +139,17 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
         /* 初始化 */
-        initialize();
+        try {
+            initialize();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
 
 
         /*測試function*/
         try {
             addMainURL("https://www.google.com/");
-            addMainURL("https://github.com/judy8889107?tab=repositories");
-            addMainURL("https://www.youtube.com/?gl=TW&hl=zh-TW");
 //            addsubURL("https://accounts2.google.com","0","basedomain");
 //            addsubURL("https://accounts3.google.com","0","basedomain");
 //            addsubURL("https://accounts.google.com","0","basedomain");
@@ -161,19 +167,14 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         } catch (TransformerException e) {
             e.printStackTrace();
         }
-
-        try {
-            displayDatabase();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        displayDatabase();
 
 
     }
 
 
     /* 初始化 設定所有參數等等 */
-    public void initialize() {
+    public void initialize() throws Exception {
         /* 設定參數 */
         url_input = findViewById(R.id.url_input);
         set_safe_url = findViewById(R.id.set_safe_url);
@@ -194,10 +195,14 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         /* 建立所有 dialog 和 toast */
         buildAllDialog();
 
+        //讀資料庫
+        loadDatabase();
+
 
     }
 
     /* Layout按鈕監聽器事件，實作 View.OnClickListener */
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
@@ -234,6 +239,52 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     e.printStackTrace();
                 }
                 break;
+            default:
+                String widgetClass = v.getClass().toString();
+                if (widgetClass.contains("TextView")) {
+                    TextView textView = (TextView) v;
+                    HashMap<String, String> tags = (HashMap) v.getTag();
+                    //收合功能
+                    if (tags.containsKey("icon")) {
+                        String groupID = tags.get("groupID");
+                        if (tags.get("icon").equals("right_arrow")) {
+                            textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.down_arrow, 0);
+                            tags.replace("icon", "down_arrow");
+                            displayGroup(groupID); //顯示群組
+                        } else {
+                            textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
+                            tags.replace("icon", "right_arrow");
+                            hideGroup(groupID); //隱藏群組
+                        }
+                    }
+
+
+                }
+
+                break;
+        }
+
+    }
+
+    //群組顯示
+    public void displayGroup(String groupID) {
+        System.out.println("\n\n群組id:" + groupID);
+        ArrayList<TextView> groupItem = textViewList.get(groupID);
+        TextView textView;
+        for (int i = 0; i < groupItem.size(); i++) {
+            textView = groupItem.get(i);
+            textView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    //群組隱藏
+    public void hideGroup(String groupID) {
+        System.out.println("\n\n群組id:" + groupID);
+        ArrayList<TextView> groupItem = textViewList.get(groupID);
+        TextView textView;
+        for (int i = 1; i < groupItem.size(); i++) { //跳過第一個 mainURL
+            textView = groupItem.get(i);
+            textView.setVisibility(View.GONE);
         }
     }
 
@@ -304,37 +355,83 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    //顯示資料庫
-    public void displayDatabase() throws Exception {
+    //顯示資料庫 TODO:可折疊清單研究(防止資料量過大)
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    public void displayDatabase() {
+
+        LinearLayout scroll_block = this.findViewById(R.id.scroll_block);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, 0, 0, 20);
+
+        //TODO:可折疊清單
+        for (int i = 0; i < databaseList.size(); i++) {
+            String groupID = String.valueOf(i);
+            ArrayList<Node> nodes = databaseList.get(groupID);
+            ArrayList<TextView> textViews = new ArrayList<>();
+            for (int j = 0; j < nodes.size(); j++) {
+                Node node = nodes.get(j);
+                String uuid = node.getAttributes().getNamedItem("uuid").getNodeValue();
+                String url = node.getTextContent();
+
+                //TextView設定
+                TextView textView = new TextView(this);
+                textView.setText(url);
+                textView.setTextColor(Color.parseColor("#000000"));
+                textView.setTextSize(18);
+                textView.setOnClickListener(this);
+                textView.setSingleLine();//設定單行顯示
+                textView.setEllipsize(TextUtils.TruncateAt.END); //設定省略符號在尾端
+
+                //設定 tags資料
+                Map<String, String> tags = new HashMap<>();
+                tags.put("uuid", uuid);
+                tags.put("groupID", groupID);
+                if (node.getNodeName().equals("mainURL")) {
+                    textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
+                    textView.setTextSize(20);
+                    textView.setPaddingRelative(20, 0, 0, 0);
+                    textView.setLayoutParams(params); //設定 margin
+                    textView.setBackgroundColor(Color.parseColor("#FFFAFA"));
+                    tags.put("icon", "right_arrow");
+                }
+                if (node.getNodeName().equals("subURL")) {
+                    textView.setVisibility(View.GONE);
+                    textView.setPaddingRelative(60, 0, 0, 0);
+                }
+                textView.setTag(tags);
+                textViews.add(textView);
+                scroll_block.addView(textView);
+            }
+            textViewList.put(String.valueOf(i), textViews);
+        }
+    }
+
+    //讀取資料庫進入 arraylist
+    public void loadDatabase() throws Exception {
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = factory.newDocumentBuilder();
         //解析 url_database檔案
         org.w3c.dom.Document doc = db.parse(url_database);
         NodeList nodeList = doc.getElementsByTagName("token");
-        LinearLayout scroll_block = this.findViewById(R.id.scroll_block);
 
-        for(int i=0;i<nodeList.getLength();i++){
+        databaseList = new HashMap<>();
+        for (int i = 0; i < nodeList.getLength(); i++) {
             Node tokenNode = nodeList.item(i);
-            NodeList itemNodes = tokenNode.getChildNodes();
-            for(int j=0;j<itemNodes.getLength();j++){
-                Node itemNode = itemNodes.item(j);
-                String URLstr = itemNode.getTextContent();
-                //TextView設定
-                TextView textView = new TextView(this);
-                textView.setText(URLstr);
-                textView.setTextColor(Color.parseColor("#000000"));
-                textView.setOnClickListener(this);
-                textView.setSingleLine();//設定單行顯示
-                textView.setEllipsize(TextUtils.TruncateAt.END); //設定省略符號在尾端
-                textView.setCompoundDrawablesWithIntrinsicBounds(0,0,0,0);
-
+            String groupID = tokenNode.getAttributes().getNamedItem("id").getNodeValue();
+            NodeList childNodes = tokenNode.getChildNodes();
+            ArrayList<Node> childNodeList = new ArrayList<>();
+            for (int j = 0; j < childNodes.getLength(); j++) {
+                Node node = childNodes.item(j);
+                if (node.getNodeName().matches("mainURL|subURL"))
+                    childNodeList.add(node);
             }
+            databaseList.put(groupID, childNodeList);
         }
-
-
-
+        System.out.println("讀取資料庫...完畢");
     }
+
     /* 實作dialog按鈕監聽 */
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
@@ -415,23 +512,25 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     // 設定安全網址 - mainURL加入網址到資料庫中
     public void addMainURL(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
         Boolean isExist = false;
-        System.out.println("要加入mainURL節點的資料:" + url);
+        System.out.println("\n要加入mainURL的資料: " + url);
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = factory.newDocumentBuilder();
+
         //解析 url_database檔案
         org.w3c.dom.Document doc = db.parse(url_database);
         //先檢查有無重複網址
-        NodeList nodeList = doc.getElementsByTagName("mainURL");
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node node = nodeList.item(i);
-            if (node.getTextContent().equals(url)) {
+        for (int i = 0; i < databaseList.size(); i++) {
+            ArrayList<Node> nodes = databaseList.get(String.valueOf(i));
+            Node mainNode = nodes.get(0);
+            if (mainNode.getTextContent().equals(url)) {
                 isExist = true;
                 break;
             }
         }
         //若此網址從未添加過才寫入xml檔
         if (!isExist) {
+
             //得到根節點
             org.w3c.dom.Element root = doc.getDocumentElement();
             // 創建新節點
@@ -447,8 +546,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             }
             //設定唯一id
             String uuid = Long.toHexString(System.currentTimeMillis());
-            mainURL.setAttribute("uuid",uuid);
-            mainURL.setIdAttribute("uuid",true);
+            mainURL.setAttribute("uuid", uuid);
+            mainURL.setIdAttribute("uuid", true);
             // 新增新節點
             token.appendChild(mainURL);
             root.appendChild(token);
@@ -473,6 +572,11 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         transFormer.setOutputProperty(OutputKeys.INDENT, "yes"); //元素換行設定
         transFormer.transform(domSource, xmlResult); //輸出xml檔案
         out.close();
+    }
+
+    //TODO
+    public void writeDatabase(){
+
     }
 
     // 刪除 mainURL網址
@@ -676,7 +780,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         //加入uuid 和 groupID
         String uuid = Long.toHexString(System.currentTimeMillis());
         subURL.setAttribute("groupID", tokenID);
-        subURL.setAttribute("uuid",uuid);
+        subURL.setAttribute("uuid", uuid);
         subURL.setIdAttribute("uuid", true);
         // 新增 subURL節點
         tokenNode.appendChild(subURL);
