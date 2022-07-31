@@ -59,7 +59,15 @@
                         android:id="@+id/scroll_block"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical" />
+                        android:orientation="vertical" >
+
+                        <ExpandableListView
+                            android:id="@+id/expand_listview"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"></ExpandableListView>
+
+                    </LinearLayout>
+
                 </androidx.core.widget.NestedScrollView>
 
                 <com.google.android.material.textfield.TextInputLayout
