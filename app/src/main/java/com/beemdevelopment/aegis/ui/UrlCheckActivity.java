@@ -18,6 +18,7 @@ import android.os.Bundle;
 
 
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -25,6 +26,7 @@ import android.view.View;
 import com.beemdevelopment.aegis.R;
 
 
+import com.google.android.gms.vision.text.Text;
 import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
@@ -92,6 +94,11 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+class Struct {
+    public static class urlObject {
+        public String tagName, uuid, text, format = "none";
+    }
+}
 
 public class UrlCheckActivity extends AegisActivity implements View.OnClickListener, Runnable, DialogInterface.OnClickListener {
     /* 變數宣告 */
@@ -114,8 +121,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
     private HashMap<String, ArrayList<Node>> databaseList; /* 資料庫儲存在 List中，用 Map做groupIndex*/
-    private HashMap<String, ArrayList<TextView>> textViewList = new HashMap<>();
-
+    private HashMap<Integer, ArrayList<TextView>> textViewList = new HashMap<>();
+    private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
+    private ArrayList<Struct.urlObject> operation_url = new ArrayList<>();
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
@@ -158,13 +166,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 //            matchDatabase("http://yahoo.com");
 //            deleteMainURL("0");
 //            matchDatabase("");
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        } catch (TransformerException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         displayDatabase();
@@ -229,13 +231,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 URL_text = url_input.getText().toString().trim();
                 try {
                     matchDatabase(URL_text);
-                } catch (ParserConfigurationException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (SAXException e) {
-                    e.printStackTrace();
-                } catch (TransformerException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
                 break;
@@ -244,9 +240,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 if (widgetClass.contains("TextView")) {
                     TextView textView = (TextView) v;
                     HashMap<String, String> tags = (HashMap) v.getTag();
-                    //收合功能
+                    int groupID = textView.getId();
                     if (tags.containsKey("icon")) {
-                        String groupID = tags.get("groupID");
+                        System.out.println("groupID: " + groupID);
                         if (tags.get("icon").equals("right_arrow")) {
                             textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.down_arrow, 0);
                             tags.replace("icon", "down_arrow");
@@ -257,8 +253,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                             hideGroup(groupID); //隱藏群組
                         }
                     }
-
-
                 }
 
                 break;
@@ -267,7 +261,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     //群組顯示
-    public void displayGroup(String groupID) {
+    public void displayGroup(int groupID) {
         System.out.println("\n\n群組id:" + groupID);
         ArrayList<TextView> groupItem = textViewList.get(groupID);
         TextView textView;
@@ -278,7 +272,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     //群組隱藏
-    public void hideGroup(String groupID) {
+    public void hideGroup(int groupID) {
         System.out.println("\n\n群組id:" + groupID);
         ArrayList<TextView> groupItem = textViewList.get(groupID);
         TextView textView;
@@ -364,15 +358,14 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.setMargins(0, 0, 0, 20);
 
-        //TODO:可折疊清單
-        for (int i = 0; i < databaseList.size(); i++) {
-            String groupID = String.valueOf(i);
-            ArrayList<Node> nodes = databaseList.get(groupID);
+        for (int i = 0; i < url_database_list.size(); i++) {
+            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
             ArrayList<TextView> textViews = new ArrayList<>();
-            for (int j = 0; j < nodes.size(); j++) {
-                Node node = nodes.get(j);
-                String uuid = node.getAttributes().getNamedItem("uuid").getNodeValue();
-                String url = node.getTextContent();
+            for (int j = 0; j < urlObjects.size(); j++) {
+                Struct.urlObject urlObject = urlObjects.get(j);
+                String uuid = urlObject.uuid;
+                String tagName = urlObject.tagName;
+                String url = urlObject.text;
 
                 //TextView設定
                 TextView textView = new TextView(this);
@@ -386,8 +379,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 //設定 tags資料
                 Map<String, String> tags = new HashMap<>();
                 tags.put("uuid", uuid);
-                tags.put("groupID", groupID);
-                if (node.getNodeName().equals("mainURL")) {
+                tags.put("tagName", tagName);
+                if (tagName.equals("mainURL")) {
+                    textView.setId(i); //紀錄 groupID用
                     textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
                     textView.setTextSize(20);
                     textView.setPaddingRelative(20, 0, 0, 0);
@@ -395,19 +389,20 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     textView.setBackgroundColor(Color.parseColor("#FFFAFA"));
                     tags.put("icon", "right_arrow");
                 }
-                if (node.getNodeName().equals("subURL")) {
+                if (tagName.equals("subURL")) {
                     textView.setVisibility(View.GONE);
                     textView.setPaddingRelative(60, 0, 0, 0);
                 }
                 textView.setTag(tags);
-                textViews.add(textView);
                 scroll_block.addView(textView);
+                textViews.add(textView);
+
             }
-            textViewList.put(String.valueOf(i), textViews);
+            textViewList.put(i, textViews);
         }
     }
 
-    //讀取資料庫進入 arraylist
+    //讀取資料庫進入 url_database_list
     public void loadDatabase() throws Exception {
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -416,20 +411,27 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         org.w3c.dom.Document doc = db.parse(url_database);
         NodeList nodeList = doc.getElementsByTagName("token");
 
-        databaseList = new HashMap<>();
+        url_database_list = new HashMap<>();
         for (int i = 0; i < nodeList.getLength(); i++) {
             Node tokenNode = nodeList.item(i);
             String groupID = tokenNode.getAttributes().getNamedItem("id").getNodeValue();
             NodeList childNodes = tokenNode.getChildNodes();
-            ArrayList<Node> childNodeList = new ArrayList<>();
+            ArrayList<Struct.urlObject> groupList = new ArrayList<>();
             for (int j = 0; j < childNodes.getLength(); j++) {
                 Node node = childNodes.item(j);
-                if (node.getNodeName().matches("mainURL|subURL"))
-                    childNodeList.add(node);
+                if (!node.getNodeName().matches("mainURL|subURL")) continue;
+                Struct.urlObject urlObject = new Struct.urlObject();
+                urlObject.tagName = node.getNodeName();
+                urlObject.uuid = node.getAttributes().getNamedItem("uuid").getNodeValue();
+                urlObject.text = node.getTextContent();
+                if (node.getNodeName().equals("subURL"))
+                    urlObject.format = node.getAttributes().getNamedItem("format").getNodeValue();
+                groupList.add(urlObject);
             }
-            databaseList.put(groupID, childNodeList);
+            url_database_list.put(Integer.valueOf(groupID), groupList);
+
         }
-        System.out.println("讀取資料庫...完畢");
+        System.out.println("\n讀取資料庫...完畢");
     }
 
     /* 實作dialog按鈕監聽 */
@@ -481,19 +483,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 case BUTTON_POSITIVE:
                     /* int which = -1 */
                     try {
+                        dialog.dismiss();
                         addMainURL(URL_text);
-                    } catch (ParserConfigurationException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (SAXException e) {
-                        e.printStackTrace();
-                    } catch (TransformerException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                     dialog_toast.setText(R.string.addURL); /* 此網址已添加到安全名單 */
                     dialog_toast.show();
-                    dialog.dismiss();
                     break;
                 case BUTTON_NEGATIVE:
                     /* int which = -2 */
@@ -510,49 +506,40 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     // 設定安全網址 - mainURL加入網址到資料庫中
-    public void addMainURL(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+    public void addMainURL(String url) throws Exception {
         Boolean isExist = false;
-        System.out.println("\n要加入mainURL的資料: " + url);
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
+        System.out.println("要加入mainURL的資料: " + url);
         //先檢查有無重複網址
-        for (int i = 0; i < databaseList.size(); i++) {
-            ArrayList<Node> nodes = databaseList.get(String.valueOf(i));
-            Node mainNode = nodes.get(0);
-            if (mainNode.getTextContent().equals(url)) {
+        for (int i = 0; i < url_database_list.size(); i++) {
+            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
+            String mainURL = urlObjects.get(0).text;
+            if (mainURL.equals(url)) {
                 isExist = true;
+                System.out.println(url+" 已存在於資料庫中");
                 break;
             }
         }
         //若此網址從未添加過才寫入xml檔
         if (!isExist) {
 
-            //得到根節點
-            org.w3c.dom.Element root = doc.getDocumentElement();
-            // 創建新節點
-            org.w3c.dom.Element token = doc.createElement("token");
-            org.w3c.dom.Element mainURL = doc.createElement("mainURL");
-            mainURL.setTextContent(url);
-            // 設定 mainURL id
-            if (doc.getElementsByTagName("token").getLength() >= 0) {
-                int index = doc.getElementsByTagName("token").getLength();
-                token.setAttribute("id", String.valueOf(index));
-                token.setIdAttribute("id", true);
-                mainURL.setAttribute("groupID", String.valueOf(index));
+            //創建 url Object加入到 list中
+            Struct.urlObject urlObject = new Struct.urlObject();
+            //設定 urlObject
+            urlObject.text = url;
+            urlObject.tagName = "mainURL";
+            urlObject.uuid = Long.toHexString(System.currentTimeMillis());
+            ArrayList<Struct.urlObject> urlObjects = new ArrayList<>();
+            urlObjects.add(urlObject);
+            //檢查 groupID有無沒被用到的,有的話就先放, 沒有則放入hashmap最後
+            for (int i = 0; i < url_database_list.size()+1; i++) {
+                System.out.println(url_database_list.containsKey(i)+" "+i);
+                if (!url_database_list.containsKey(i)){
+                    url_database_list.put(i, urlObjects);
+                    break;
+                }
             }
-            //設定唯一id
-            String uuid = Long.toHexString(System.currentTimeMillis());
-            mainURL.setAttribute("uuid", uuid);
-            mainURL.setIdAttribute("uuid", true);
-            // 新增新節點
-            token.appendChild(mainURL);
-            root.appendChild(token);
-            //寫入xml檔案
-            writeXml(doc);
+            System.out.println(url+" 成功新增mainURL");
+            write_url_database(); //寫入xml檔案
         } else {
             dialog_toast.setText("此網址已存在於資料庫中");
             dialog_toast.show();
@@ -561,7 +548,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     //寫入xml檔案
-    public void writeXml(org.w3c.dom.Document doc) throws IOException, TransformerException {
+    public void writeXml(org.w3c.dom.Document doc) throws Exception {
         //開始把 Document對映到檔案
         TransformerFactory transFactory = TransformerFactory.newInstance();
         Transformer transFormer = transFactory.newTransformer();
@@ -574,13 +561,59 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         out.close();
     }
 
-    //TODO
-    public void writeDatabase(){
+    //清空doc重新寫入, 因可能有刪除id會改變的情況
+    public void write_url_database() throws Exception {
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        org.w3c.dom.Document doc = db.parse(url_database); //解析 url_database檔案
+        org.w3c.dom.Element root = doc.getDocumentElement(); //得到根節點
+        NodeList childNodes = root.getChildNodes();
+        for (int i = 0; i < childNodes.getLength(); i++)
+            root.removeChild(childNodes.item(i)); //移除所有子node
 
+        for (int i = 0; i < url_database_list.size(); i++) {
+            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
+            String groupID = String.valueOf(i);
+            //每一個 entry都一定有一個 token
+            org.w3c.dom.Element token = doc.createElement("token");
+            for (int j = 0; j < urlObjects.size(); j++) {
+                Struct.urlObject urlObject = urlObjects.get(j);
+                switch (urlObject.tagName) {
+                    case "mainURL":
+                        org.w3c.dom.Element mainURL = doc.createElement("mainURL");
+                        // 設定 attribute
+                        mainURL.setTextContent(urlObject.text);
+                        token.setAttribute("id", groupID);
+                        token.setIdAttribute("id", true);
+                        mainURL.setAttribute("groupID", groupID);
+                        mainURL.setAttribute("uuid", urlObject.uuid);
+                        mainURL.setIdAttribute("uuid", true);
+                        //增加
+                        token.appendChild(mainURL);
+                        break;
+                    case "subURL":
+                        org.w3c.dom.Element subURL = doc.createElement("subURL");
+                        subURL.setTextContent(urlObject.text);
+                        subURL.setAttribute("format", urlObject.format);
+                        subURL.setAttribute("groupID", groupID);
+                        subURL.setAttribute("uuid", urlObject.uuid);
+                        subURL.setIdAttribute("uuid", true);
+                        // 新增 subURL節點
+                        token.appendChild(subURL);
+
+                        break;
+                }
+            }
+            root.appendChild(token);
+        }
+        writeXml(doc);
+        System.out.println("資料庫寫入完畢!");
     }
 
     // 刪除 mainURL網址
-    public void deleteMainURL(String id) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+    public void deleteMainURL(String id) throws Exception {
+
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = factory.newDocumentBuilder();
@@ -600,36 +633,22 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     // 解析並比對資料庫 - 檢查網址
-    public void matchDatabase(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
-        System.out.println("進入matchDatabase");
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
-        // 創建 mainURLNode元素
-        org.w3c.dom.Element mainURLNode = null;
+    public void matchDatabase(String url) throws Exception {
+        System.out.println(url+" 進入網址資料庫進行比對...");
+        // 外部變數紀錄
         String format = null;
-        String mainURL = null;
-        Node node = null;
-        String tokenID = null;
-        //得到所有節點標籤名為 mainURL的 nodes
-        NodeList nodeList = doc.getElementsByTagName("mainURL");
-        // 逐一比對
-        System.out.println("列出mainURL和id");
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            node = nodeList.item(i);
-            mainURL = node.getTextContent();
-            tokenID = node.getAttributes().getNamedItem("groupID").getNodeValue();
-            System.out.println(mainURL + " groupID: " + tokenID);
-
+        int groupID = 0;
+        for (int i = 0; i < url_database_list.size(); i++) {
+            Struct.urlObject urlObject = url_database_list.get(i).get(0);
+            String mainURL = urlObject.text;
+            groupID = i;
             format = getURLMatchFormat(url, mainURL);
             if (format != null) break;
         }
+        System.out.println("mainURL配對完畢...比對結果為: " + format);
 
         // mainURL全無匹配
         if (format == null) {
-            System.out.println("mainURL全無匹配");
             setMessageDialog(R.drawable.safe_scale_1, "此網址在資料庫中無任何匹配\n是否進一步檢查此網址？", true);
             message_dialog.show();
             message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
@@ -649,13 +668,11 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             });
         } else {  /* 有匹配到 mainURL */
             /* 比對 subURL */
-            if (format.equals("exact") || matchSubURL(tokenID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
+            if (format.equals("exact") || matchSubURL(groupID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
                 setMessageDialog(R.drawable.safe_scale_5, "此為安全網址，可以放心登入", false);
                 message_dialog.show();
 
             } else { /*配對失敗*/
-                System.out.println("subURL配對失敗");
-                System.out.println(url + "/格式:" + format);
                 String str = "此網址安全層級為%s級\n%s此網址不在資料庫中，請問是否要加入資料庫？";
                 String hint = "(低於三級網址建議登入後小心使用)\n";
                 // 比對級數配對
@@ -675,7 +692,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 }
                 message_dialog.show();
                 /* 詢問是否加入subURL(監聽器製作) */
-                final String final_tokenID = tokenID;
+                final int final_groupID = groupID;
                 final String final_format = format;
                 message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -690,17 +707,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     @Override
                     public void onClick(View v) {
                         try {
-                            addsubURL(url, final_tokenID, final_format);
                             message_dialog.dismiss();
+                            addsubURL(final_groupID, url, final_format);
                             dialog_toast.setText("此網址已加入資料庫");
                             dialog_toast.show();
-                        } catch (TransformerException e) {
-                            e.printStackTrace();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } catch (SAXException e) {
-                            e.printStackTrace();
-                        } catch (ParserConfigurationException e) {
+                        } catch (Exception e) {
+                            System.out.println(e.getMessage());
                             e.printStackTrace();
                         }
                     }
@@ -713,7 +725,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     //四種比對模式
-    public String getURLMatchFormat(String url, String mainURL) throws MalformedURLException {
+    public String getURLMatchFormat(String url, String mainURL) throws Exception {
         System.out.println();
         System.out.println("主URL:" + url);
         System.out.println("mainURL:" + mainURL);
@@ -753,72 +765,56 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     // 紀錄 subURL 到 database
-    public void addsubURL(String url, String tokenID, String format) throws TransformerException, IOException, SAXException, ParserConfigurationException {
-        System.out.println("要加入sub節點的資料:" + url);
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
-        org.w3c.dom.Element tokenNode = doc.getElementById(tokenID);
-        //檢查有無添加過,若有則先把舊的那筆刪除
-        NodeList nodeList = tokenNode.getChildNodes();
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node node = nodeList.item(i);
-            //判定是否為subURL node
-            if (node.hasAttributes()) {
-                if (node.getTextContent().equals(url)) {
-                    tokenNode.removeChild(node);
-                }
-            }
-
-        }
-        // 創建新節點(subURL)
-        org.w3c.dom.Element subURL = doc.createElement("subURL");
-        subURL.setTextContent(url);
-        subURL.setAttribute("format", format);
-        //加入uuid 和 groupID
-        String uuid = Long.toHexString(System.currentTimeMillis());
-        subURL.setAttribute("groupID", tokenID);
-        subURL.setAttribute("uuid", uuid);
-        subURL.setIdAttribute("uuid", true);
-        // 新增 subURL節點
-        tokenNode.appendChild(subURL);
-        writeXml(doc);
+    public void addsubURL(final int groupID, String url, final String format) throws Exception {
+        System.out.println(String.format("準備將 %s[格式%s]的網址加入群組%d中...", url, format, groupID));
+        Struct.urlObject urlObject = new Struct.urlObject();
+        urlObject.text = url;
+        urlObject.format = format;
+        urlObject.tagName = "subURL";
+        urlObject.uuid = Long.toHexString(System.currentTimeMillis());
+        ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID); //加入清單中
+        urlObjects.add(urlObject);
+        url_database_list.put(groupID,urlObjects); //hashMap鍵更新鍵值
+        System.out.println(String.format("%s 已成功加入資料庫中!",url));
+        write_url_database();
     }
 
-    //比對 subURL有無exact
-    public boolean matchSubURL(String tokenID, String url, String format) throws ParserConfigurationException, IOException, SAXException {
-        System.out.println("\n\nfunction matchSubURL");
+    //比對 subURL有無 exact
+    public boolean matchSubURL(int groupID, String url, String format) {
+        System.out.println("準備在群組"+groupID+"中搜尋...");
         Boolean isMatch = false;
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
-        org.w3c.dom.Element tokenNode = doc.getElementById(tokenID);
-        // 創建 變數
-        String subURL = null;
-        Node node = null;
-        String node_format;
-        //得到 toeknNode底下的 子 nodes
-        NodeList nodeList = tokenNode.getChildNodes();
-        System.out.println(nodeList.getLength());
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            System.out.println("進入迴圈" + i);
-            node = nodeList.item(i);
-            //若為subURL才進行判斷
-            if (node.getNodeName().equals("subURL")) {
-                node_format = node.getAttributes().getNamedItem("format").getNodeValue();
-                System.out.println(node_format);
-                if (node_format.equals(format)) {
-                    subURL = node.getTextContent();
-                    if (subURL.equals(url)) return true; //若找到相符的 subURL, 直接返回
+        ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID);
+        for (int i = 0; i < urlObjects.size(); i++) {
+            Struct.urlObject urlObject = urlObjects.get(i);
+            if (urlObject.format.equals(format)) {
+                String subURL = urlObject.text;
+                if (subURL.equals(url)){
+                    isMatch = true;
+                    System.out.println("\n檢查subURL有無存在網址...檢查完畢");
+                    System.out.println("結果為..." + isMatch);
+                    return isMatch;
                 }
             }
-
-
         }
+        System.out.println("\n檢查subURL有無存在網址...檢查完畢");
+        System.out.println("結果為..." + isMatch);
+
+
+//        for (int i = 0; i < nodeList.getLength(); i++) {
+//            System.out.println("進入迴圈" + i);
+//            node = nodeList.item(i);
+//            //若為subURL才進行判斷
+//            if (node.getNodeName().equals("subURL")) {
+//                node_format = node.getAttributes().getNamedItem("format").getNodeValue();
+//                System.out.println(node_format);
+//                if (node_format.equals(format)) {
+//                    subURL = node.getTextContent();
+//                    if (subURL.equals(url)) return true; //若找到相符的 subURL, 直接返回
+//                }
+//            }
+//
+//
+//        }
         return isMatch;
 
     }
@@ -1034,13 +1030,16 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 //設定輸出結果並且生成XML檔案
                 DOMSource domSource = new DOMSource(doc);
                 File file = url_database;
+
                 FileOutputStream out = new FileOutputStream(file);
                 StreamResult xmlResult = new StreamResult(out); //設定輸入源
                 transFormer.transform(domSource, xmlResult); //輸出xml檔案
-                System.out.println("成功創建url database 檔案");
+                out.close();
+                System.out.println("成功創建url_database 檔案");
+
 
             } else {
-                System.out.println("url database檔案已存在");
+                System.out.println("url_database檔案已存在");
             }
         } catch (IOException | ParserConfigurationException | TransformerConfigurationException e) {
             e.printStackTrace();
