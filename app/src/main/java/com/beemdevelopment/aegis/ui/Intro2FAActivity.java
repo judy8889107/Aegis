@@ -1,30 +1,21 @@
 package com.beemdevelopment.aegis.ui;
 
-import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_BIOMETRIC;
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_INVALID;
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_NONE;
-import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_PASS;
-
 import android.os.Bundle;
 import android.view.inputmethod.InputMethodManager;
-
-import com.beemdevelopment.aegis.R;
 import com.beemdevelopment.aegis.ThemeMap;
-import com.beemdevelopment.aegis.ui.dialogs.Dialogs;
 import com.beemdevelopment.aegis.ui.intro.IntroBaseActivity;
 import com.beemdevelopment.aegis.ui.intro.SlideFragment;
-import com.beemdevelopment.aegis.ui.slides.DoneSlide;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_first;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_five;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_four;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_fourth;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_one;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_second;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_third;
-import com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide;
-import com.beemdevelopment.aegis.ui.slides.SecuritySetupSlide;
-import com.beemdevelopment.aegis.ui.slides.WelcomeSlide;
-import com.beemdevelopment.aegis.vault.VaultFileCredentials;
-import com.beemdevelopment.aegis.vault.VaultRepositoryException;
-import com.beemdevelopment.aegis.vault.slots.BiometricSlot;
-import com.beemdevelopment.aegis.vault.slots.PasswordSlot;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_three;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_two;
 
 public class Intro2FAActivity extends IntroBaseActivity {
     @Override
@@ -34,6 +25,11 @@ public class Intro2FAActivity extends IntroBaseActivity {
         addSlide(Intro2FA_first.class);
         addSlide(Intro2FA_second.class);
         addSlide(Intro2FA_third.class);
+        addSlide(Intro2FA_one.class);
+        addSlide(Intro2FA_two.class);
+        addSlide(Intro2FA_three.class);
+        addSlide(Intro2FA_four.class);
+        addSlide(Intro2FA_five.class);
         addSlide(Intro2FA_fourth.class);
     }
 //呼叫按鈕activity_intro
@@ -68,4 +64,5 @@ public class Intro2FAActivity extends IntroBaseActivity {
         setResult(RESULT_OK);
         finish();
     }
+
 }
