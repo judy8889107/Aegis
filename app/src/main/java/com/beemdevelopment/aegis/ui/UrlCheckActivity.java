@@ -154,7 +154,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             e.printStackTrace();
         }
 //        displayDatabase();
-
+        //測試
         //測試看看
         System.out.println("測試摺疊清單");
         expandableListView = (ExpandableListView) this.findViewById(R.id.expand_listview);
