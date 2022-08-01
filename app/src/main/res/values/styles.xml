@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <style name="Theme.Aegis.Launch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- colorPrimary in the root theme sets the task description color (seen in task switcher) -->
         <item name="colorPrimary">@color/colorPrimary</item>

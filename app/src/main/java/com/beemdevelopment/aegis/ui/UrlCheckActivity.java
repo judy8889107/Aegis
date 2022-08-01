@@ -17,6 +17,8 @@ import android.os.Build;
 import android.os.Bundle;
 
 
+import android.text.TextUtils;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -35,8 +37,10 @@ import android.widget.Button;
 import android.widget.EditText;
 /* 控制鍵盤 */
 /* ImageButton的import */
+import android.widget.ExpandableListView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,13 +50,13 @@ import androidx.annotation.RequiresApi;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -71,7 +75,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -87,6 +90,11 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+class Struct {
+    public static class urlObject {
+        public String tagName, uuid, text, format = "none";
+    }
+}
 
 public class UrlCheckActivity extends AegisActivity implements View.OnClickListener, Runnable, DialogInterface.OnClickListener {
     /* 變數宣告 */
@@ -108,7 +116,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
-
+    private HashMap<Integer, ArrayList<TextView>> textViewList = new HashMap<>();
+    private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
+    private ExpandableListView expandableListView;
+    private MyBaseExpandableListAdapter myAdapter;
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
@@ -128,54 +139,70 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
          *  */
         this.setContentView(R.layout.activity_url_check);
         this.setSupportActionBar(findViewById(R.id.toolbar));
-
-
-
         /* 初始化 */
-        initialize();
-
-
-
+        try {
+            initialize();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         /*測試function*/
-//        try {
-//            addMainURL("https://www.google.com/");
-//            addMainURL("https://github.com/judy8889107?tab=repositories");
-//            addMainURL("https://www.youtube.com/?gl=TW&hl=zh-TW");
-//            addsubURL("https://accounts2.google.com","0","basedomain");
-//            addsubURL("https://accounts3.google.com","0","basedomain");
-//            addsubURL("https://accounts.google.com","0","basedomain");
-//            matchDatabase("https://accounts.google.com");
-//            matchDatabase("http://google.com");
-//            matchDatabase("http://yahoo.com");
-//            deleteMainURL("0");
-//            matchDatabase("");
-//        } catch (ParserConfigurationException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } catch (SAXException e) {
-//            e.printStackTrace();
-//        } catch (TransformerException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            addMainURL("http://google.com");
+            addMainURL("https://github.com/");
+            addMainURL("http://www.eyny.com/");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+//        displayDatabase();
 
-        /* 測試網址比對function */
-//        try {
-//            matchDatabase("test");
-//        } catch (ParserConfigurationException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } catch (SAXException e) {
-//            e.printStackTrace();
-//        }
+        //測試看看
+        System.out.println("測試摺疊清單");
+        expandableListView = (ExpandableListView) this.findViewById(R.id.expand_listview);
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list,this);
+        expandableListView.setAdapter(myAdapter);
+        expandableListView.setLongClickable(true);
+        expandableListView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
+            @Override
+            public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+                System.out.println("你點擊了 "+url_database_list.get(groupPosition).get(0).text);
+                if(expandableListView.isGroupExpanded(groupPosition))
+                    expandableListView.collapseGroup(groupPosition);
+                else expandableListView.expandGroup(groupPosition);
+                return true;
+            }
+        });
+        expandableListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
+            @Override
+            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
+                String message = myAdapter.child_list.get(groupPosition).get(childPosition).text;
+                System.out.println(message);
+                return true;
+            }
+        });
+
+
 
 
     }
 
+    //捕捉返回鍵, 寫入到外部記憶體後離開
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if ((keyCode == KeyEvent.KEYCODE_BACK)) {
+            try {
+                write_url_database();
+                this.finish();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
 
     /* 初始化 設定所有參數等等 */
-    public void initialize() {
+    public void initialize() throws Exception {
         /* 設定參數 */
         url_input = findViewById(R.id.url_input);
         set_safe_url = findViewById(R.id.set_safe_url);
@@ -187,19 +214,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         clear_button.setOnClickListener(this);
         scan_qrcode_button.setOnClickListener(this);
         url_check.setOnClickListener(this);
-
-
         /* 創立 url database(目前為空) */
         Create_url_database_file();
-
-
         /* 建立所有 dialog 和 toast */
         buildAllDialog();
+        /* 讀資料庫 */
+        loadDatabase();
 
 
     }
 
+
     /* Layout按鈕監聽器事件，實作 View.OnClickListener */
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
@@ -226,16 +253,54 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 URL_text = url_input.getText().toString().trim();
                 try {
                     matchDatabase(URL_text);
-                } catch (ParserConfigurationException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (SAXException e) {
-                    e.printStackTrace();
-                } catch (TransformerException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
                 break;
+            default:
+                String widgetClass = v.getClass().toString();
+                if (widgetClass.contains("TextView")) {
+                    TextView textView = (TextView) v;
+                    HashMap<String, String> tags = (HashMap) v.getTag();
+                    int groupID = textView.getId();
+                    if (tags.containsKey("icon")) {
+                        System.out.println("groupID: " + groupID);
+                        if (tags.get("icon").equals("right_arrow")) {
+                            textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.down_arrow, 0);
+                            tags.replace("icon", "down_arrow");
+                            displayGroup(groupID); //顯示群組
+                        } else {
+                            textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
+                            tags.replace("icon", "right_arrow");
+                            hideGroup(groupID); //隱藏群組
+                        }
+                    }
+                }
+
+                break;
+        }
+
+    }
+
+    //群組顯示
+    public void displayGroup(int groupID) {
+        System.out.println("\n\n群組id:" + groupID);
+        ArrayList<TextView> groupItem = textViewList.get(groupID);
+        TextView textView;
+        for (int i = 0; i < groupItem.size(); i++) {
+            textView = groupItem.get(i);
+            textView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    //群組隱藏
+    public void hideGroup(int groupID) {
+        System.out.println("\n\n群組id:" + groupID);
+        ArrayList<TextView> groupItem = textViewList.get(groupID);
+        TextView textView;
+        for (int i = 1; i < groupItem.size(); i++) { //跳過第一個 mainURL
+            textView = groupItem.get(i);
+            textView.setVisibility(View.GONE);
         }
     }
 
@@ -261,7 +326,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     public void setMessageDialog(int id, String msg, boolean enable_no_button) {
         AlertDialog.Builder message_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
         message_dialog_builder.setPositiveButton(R.string.yes, this);
-        if(enable_no_button) //開啟取消 button
+        if (enable_no_button) //開啟取消 button
             message_dialog_builder.setNegativeButton(R.string.no, this);
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         View view = layoutInflater.inflate(R.layout.dialog_picture, null);
@@ -298,7 +363,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         IPQS_search_dialog.dismiss();
 
 
-
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("");
         progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
@@ -307,6 +371,90 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
+    //顯示資料庫 TODO:可折疊清單研究(防止資料量過大)
+//    @RequiresApi(api = Build.VERSION_CODES.M)
+//    public void displayDatabase() {
+//
+//        LinearLayout scroll_block = this.findViewById(R.id.scroll_block);
+//        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+//                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+//        params.setMargins(0, 0, 0, 20);
+//
+//        for (int i = 0; i < url_database_list.size(); i++) {
+//            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
+//            ArrayList<TextView> textViews = new ArrayList<>();
+//            for (int j = 0; j < urlObjects.size(); j++) {
+//                Struct.urlObject urlObject = urlObjects.get(j);
+//                String uuid = urlObject.uuid;
+//                String tagName = urlObject.tagName;
+//                String url = urlObject.text;
+//
+//                //TextView設定
+//                TextView textView = new TextView(this);
+//                textView.setText(url);
+//                textView.setTextColor(Color.parseColor("#000000"));
+//                textView.setTextSize(18);
+//                textView.setOnClickListener(this);
+//                textView.setSingleLine();//設定單行顯示
+//                textView.setEllipsize(TextUtils.TruncateAt.END); //設定省略符號在尾端
+//
+//                //設定 tags資料
+//                Map<String, String> tags = new HashMap<>();
+//                tags.put("uuid", uuid);
+//                tags.put("tagName", tagName);
+//                if (tagName.equals("mainURL")) {
+//                    textView.setId(i); //紀錄 groupID用
+//                    textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
+//                    textView.setTextSize(20);
+//                    textView.setPaddingRelative(20, 0, 0, 0);
+//                    textView.setLayoutParams(params); //設定 margin
+//                    textView.setBackgroundColor(Color.parseColor("#FFFAFA"));
+//                    tags.put("icon", "right_arrow");
+//                }
+//                if (tagName.equals("subURL")) {
+//                    textView.setVisibility(View.GONE);
+//                    textView.setPaddingRelative(60, 0, 0, 0);
+//                }
+//                textView.setTag(tags);
+//                scroll_block.addView(textView);
+//                textViews.add(textView);
+//
+//            }
+//            textViewList.put(i, textViews);
+//        }
+//    }
+
+    //讀取資料庫進入 url_database_list
+    public void loadDatabase() throws Exception {
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        //解析 url_database檔案
+        org.w3c.dom.Document doc = db.parse(url_database);
+        NodeList nodeList = doc.getElementsByTagName("token");
+
+        url_database_list = new HashMap<>();
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node tokenNode = nodeList.item(i);
+            String groupID = tokenNode.getAttributes().getNamedItem("id").getNodeValue();
+            NodeList childNodes = tokenNode.getChildNodes();
+            ArrayList<Struct.urlObject> groupList = new ArrayList<>();
+            for (int j = 0; j < childNodes.getLength(); j++) {
+                Node node = childNodes.item(j);
+                if (!node.getNodeName().matches("mainURL|subURL")) continue;
+                Struct.urlObject urlObject = new Struct.urlObject();
+                urlObject.tagName = node.getNodeName();
+                urlObject.uuid = node.getAttributes().getNamedItem("uuid").getNodeValue();
+                urlObject.text = node.getTextContent();
+                if (node.getNodeName().equals("subURL"))
+                    urlObject.format = node.getAttributes().getNamedItem("format").getNodeValue();
+                groupList.add(urlObject);
+            }
+            url_database_list.put(Integer.valueOf(groupID), groupList);
+
+        }
+        System.out.println("\n讀取資料庫...完畢");
+    }
 
     /* 實作dialog按鈕監聽 */
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -357,19 +505,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 case BUTTON_POSITIVE:
                     /* int which = -1 */
                     try {
+                        dialog.dismiss();
                         addMainURL(URL_text);
-                    } catch (ParserConfigurationException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (SAXException e) {
-                        e.printStackTrace();
-                    } catch (TransformerException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                     dialog_toast.setText(R.string.addURL); /* 此網址已添加到安全名單 */
                     dialog_toast.show();
-                    dialog.dismiss();
                     break;
                 case BUTTON_NEGATIVE:
                     /* int which = -2 */
@@ -382,47 +524,44 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         }
 
 
-
     }
 
+
     // 設定安全網址 - mainURL加入網址到資料庫中
-    public void addMainURL(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+    public void addMainURL(String url) throws Exception {
         Boolean isExist = false;
-        System.out.println("要加入mainURL節點的資料:" + url);
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
+        System.out.println("要加入mainURL的資料: " + url);
         //先檢查有無重複網址
-        NodeList nodeList = doc.getElementsByTagName("mainURL");
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node node = nodeList.item(i);
-            if (node.getTextContent().equals(url)) {
+        for (int i = 0; i < url_database_list.size(); i++) {
+            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
+            String mainURL = urlObjects.get(0).text;
+            if (mainURL.equals(url)) {
                 isExist = true;
+                System.out.println(url+" 已存在於資料庫中");
                 break;
             }
         }
         //若此網址從未添加過才寫入xml檔
         if (!isExist) {
-            //得到根節點
-            org.w3c.dom.Element root = doc.getDocumentElement();
-            // 創建新節點
-            org.w3c.dom.Element token = doc.createElement("token");
-            org.w3c.dom.Element mainURL = doc.createElement("mainURL");
-            mainURL.setTextContent(url);
-            // 設定 mainURL id
-            if (doc.getElementsByTagName("token").getLength() >= 0) {
-                int index = doc.getElementsByTagName("token").getLength();
-                token.setAttribute("id", String.valueOf(index));
-                token.setIdAttribute("id", true);
 
+            //創建 url Object加入到 list中
+            Struct.urlObject urlObject = new Struct.urlObject();
+            //設定 urlObject
+            urlObject.text = url;
+            urlObject.tagName = "mainURL";
+            urlObject.uuid = Long.toHexString(System.currentTimeMillis());
+            ArrayList<Struct.urlObject> urlObjects = new ArrayList<>();
+            urlObjects.add(urlObject);
+            //檢查 groupID有無沒被用到的,有的話就先放, 沒有則放入hashmap最後
+            for (int i = 0; i < url_database_list.size()+1; i++) {
+                System.out.println(url_database_list.containsKey(i)+" "+i);
+                if (!url_database_list.containsKey(i)){
+                    url_database_list.put(i, urlObjects);
+                    break;
+                }
             }
-            // 新增新節點
-            token.appendChild(mainURL);
-            root.appendChild(token);
-            //寫入xml檔案
-            writeXml(doc);
+            System.out.println(url+" 成功新增mainURL");
+//            write_url_database(); //TODO:寫入xml檔案
         } else {
             dialog_toast.setText("此網址已存在於資料庫中");
             dialog_toast.show();
@@ -431,7 +570,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     //寫入xml檔案
-    public void writeXml(org.w3c.dom.Document doc) throws IOException, TransformerException {
+    public void writeXml(org.w3c.dom.Document doc) throws Exception {
         //開始把 Document對映到檔案
         TransformerFactory transFactory = TransformerFactory.newInstance();
         Transformer transFormer = transFactory.newTransformer();
@@ -444,8 +583,59 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         out.close();
     }
 
+    //清空doc重新寫入, 因可能有刪除id會改變的情況
+    public void write_url_database() throws Exception {
+        //建立一個 Document類
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = factory.newDocumentBuilder();
+        org.w3c.dom.Document doc = db.parse(url_database); //解析 url_database檔案
+        org.w3c.dom.Element root = doc.getDocumentElement(); //得到根節點
+        NodeList childNodes = root.getChildNodes();
+        for (int i = 0; i < childNodes.getLength(); i++)
+            root.removeChild(childNodes.item(i)); //移除所有子node
+
+        for (int i = 0; i < url_database_list.size(); i++) {
+            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
+            String groupID = String.valueOf(i);
+            //每一個 entry都一定有一個 token
+            org.w3c.dom.Element token = doc.createElement("token");
+            for (int j = 0; j < urlObjects.size(); j++) {
+                Struct.urlObject urlObject = urlObjects.get(j);
+                switch (urlObject.tagName) {
+                    case "mainURL":
+                        org.w3c.dom.Element mainURL = doc.createElement("mainURL");
+                        // 設定 attribute
+                        mainURL.setTextContent(urlObject.text);
+                        token.setAttribute("id", groupID);
+                        token.setIdAttribute("id", true);
+                        mainURL.setAttribute("groupID", groupID);
+                        mainURL.setAttribute("uuid", urlObject.uuid);
+                        mainURL.setIdAttribute("uuid", true);
+                        //增加
+                        token.appendChild(mainURL);
+                        break;
+                    case "subURL":
+                        org.w3c.dom.Element subURL = doc.createElement("subURL");
+                        subURL.setTextContent(urlObject.text);
+                        subURL.setAttribute("format", urlObject.format);
+                        subURL.setAttribute("groupID", groupID);
+                        subURL.setAttribute("uuid", urlObject.uuid);
+                        subURL.setIdAttribute("uuid", true);
+                        // 新增 subURL節點
+                        token.appendChild(subURL);
+
+                        break;
+                }
+            }
+            root.appendChild(token);
+        }
+        writeXml(doc);
+        System.out.println("資料庫寫入完畢!");
+    }
+
     // 刪除 mainURL網址
-    public void deleteMainURL(String id) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+    public void deleteMainURL(String id) throws Exception {
+
         //建立一個 Document類
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder db = factory.newDocumentBuilder();
@@ -465,38 +655,23 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     // 解析並比對資料庫 - 檢查網址
-    public void matchDatabase(String url) throws ParserConfigurationException, IOException, SAXException, TransformerException {
-        System.out.println("進入matchDatabase");
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
-        // 創建 mainURLNode元素
-        org.w3c.dom.Element mainURLNode = null;
+    public void matchDatabase(String url) throws Exception {
+        System.out.println(url+" 進入網址資料庫進行比對...");
+        // 外部變數紀錄
         String format = null;
-        String mainURL = null;
-        Node node = null;
-        Node tokenNode = null;
-        String tokenID = null;
-        //得到所有節點標籤名為 mainURL的 nodes
-        NodeList nodeList = doc.getElementsByTagName("mainURL");
-        // 逐一比對
-        System.out.println("列出mainURL和id");
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            node = nodeList.item(i);
-            mainURL = node.getTextContent();
-            tokenNode = node.getParentNode();
-            tokenID = tokenNode.getAttributes().getNamedItem("id").getNodeValue();
-            System.out.println(mainURL + " tokenID: " + tokenID);
+        int groupID = 0;
+        for (int i = 0; i < url_database_list.size(); i++) {
+            Struct.urlObject urlObject = url_database_list.get(i).get(0);
+            String mainURL = urlObject.text;
+            groupID = i;
             format = getURLMatchFormat(url, mainURL);
             if (format != null) break;
         }
+        System.out.println("mainURL配對完畢...比對結果為: " + format);
 
         // mainURL全無匹配
         if (format == null) {
-            System.out.println("mainURL全無匹配");
-            setMessageDialog(R.drawable.safe_scale_1,"此網址在資料庫中無任何匹配\n是否進一步檢查此網址？",true);
+            setMessageDialog(R.drawable.safe_scale_1, "此網址在資料庫中無任何匹配\n是否進一步檢查此網址？", true);
             message_dialog.show();
             message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -515,13 +690,11 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             });
         } else {  /* 有匹配到 mainURL */
             /* 比對 subURL */
-            if (format.equals("exact") || matchSubURL(tokenID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
+            if (format.equals("exact") || matchSubURL(groupID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
                 setMessageDialog(R.drawable.safe_scale_5, "此為安全網址，可以放心登入", false);
                 message_dialog.show();
 
             } else { /*配對失敗*/
-                System.out.println("subURL配對失敗");
-                System.out.println(url + "格式:" + format);
                 String str = "此網址安全層級為%s級\n%s此網址不在資料庫中，請問是否要加入資料庫？";
                 String hint = "(低於三級網址建議登入後小心使用)\n";
                 // 比對級數配對
@@ -541,7 +714,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 }
                 message_dialog.show();
                 /* 詢問是否加入subURL(監聽器製作) */
-                final String final_tokenID = tokenID;
+                final int final_groupID = groupID;
                 final String final_format = format;
                 message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -556,17 +729,12 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     @Override
                     public void onClick(View v) {
                         try {
-                            addsubURL(url, final_tokenID, final_format);
                             message_dialog.dismiss();
+                            addsubURL(final_groupID, url, final_format);
                             dialog_toast.setText("此網址已加入資料庫");
                             dialog_toast.show();
-                        } catch (TransformerException e) {
-                            e.printStackTrace();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } catch (SAXException e) {
-                            e.printStackTrace();
-                        } catch (ParserConfigurationException e) {
+                        } catch (Exception e) {
+                            System.out.println(e.getMessage());
                             e.printStackTrace();
                         }
                     }
@@ -579,7 +747,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     //四種比對模式
-    public String getURLMatchFormat(String url, String mainURL) throws MalformedURLException {
+    public String getURLMatchFormat(String url, String mainURL) throws Exception {
         System.out.println();
         System.out.println("主URL:" + url);
         System.out.println("mainURL:" + mainURL);
@@ -619,61 +787,56 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     // 紀錄 subURL 到 database
-    public void addsubURL(String url, String tokenID, String format) throws TransformerException, IOException, SAXException, ParserConfigurationException {
-        System.out.println("要加入sub節點的資料:" + url);
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
-        org.w3c.dom.Element tokenNode = doc.getElementById(tokenID);
-        //檢查有無添加過,若有則先把舊的那筆刪除
-        NodeList nodeList = tokenNode.getChildNodes();
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node node = nodeList.item(i);
-            //判定是否為subURL node
-            if (node.hasAttributes()) {
-                if (node.getTextContent().equals(url)) {
-                    tokenNode.removeChild(node);
-                }
-            }
-
-        }
-        // 創建新節點(subURL)
-        org.w3c.dom.Element subURL = doc.createElement("subURL");
-        subURL.setTextContent(url);
-        subURL.setAttribute("format", format);
-        // 新增 subURL節點
-        tokenNode.appendChild(subURL);
-        writeXml(doc);
+    public void addsubURL(final int groupID, String url, final String format) throws Exception {
+        System.out.println(String.format("準備將 %s[格式%s]的網址加入群組%d中...", url, format, groupID));
+        Struct.urlObject urlObject = new Struct.urlObject();
+        urlObject.text = url;
+        urlObject.format = format;
+        urlObject.tagName = "subURL";
+        urlObject.uuid = Long.toHexString(System.currentTimeMillis());
+        ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID); //加入清單中
+        urlObjects.add(urlObject);
+        url_database_list.put(groupID,urlObjects); //hashMap鍵更新鍵值
+        System.out.println(String.format("%s 已成功加入資料庫中!",url));
+//        write_url_database();
     }
 
-    //比對 subURL有無exact
-    public boolean matchSubURL(String tokenID, String url, String format) throws ParserConfigurationException, IOException, SAXException {
+    //比對 subURL有無 exact
+    public boolean matchSubURL(int groupID, String url, String format) {
+        System.out.println("準備在群組"+groupID+"中搜尋...");
         Boolean isMatch = false;
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
-        org.w3c.dom.Element tokenNode = doc.getElementById(tokenID);
-        // 創建 變數
-        String subURL = null;
-        Node node = null;
-        String node_format;
-        //得到 toeknNode底下的 子 nodes
-        NodeList nodeList = tokenNode.getChildNodes();
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            node = nodeList.item(i);
-            if (node.hasAttributes()) {
-                node_format = node.getAttributes().getNamedItem("format").getNodeValue();
-                if (node_format.equals(format)) {
-                    subURL = node.getTextContent();
-                    if (subURL.equals(url)) return true; //若找到相符的 subURL, 直接返回
+        ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID);
+        for (int i = 0; i < urlObjects.size(); i++) {
+            Struct.urlObject urlObject = urlObjects.get(i);
+            if (urlObject.format.equals(format)) {
+                String subURL = urlObject.text;
+                if (subURL.equals(url)){
+                    isMatch = true;
+                    System.out.println("\n檢查subURL有無存在網址...檢查完畢");
+                    System.out.println("結果為..." + isMatch);
+                    return isMatch;
                 }
             }
-
         }
+        System.out.println("\n檢查subURL有無存在網址...檢查完畢");
+        System.out.println("結果為..." + isMatch);
+
+
+//        for (int i = 0; i < nodeList.getLength(); i++) {
+//            System.out.println("進入迴圈" + i);
+//            node = nodeList.item(i);
+//            //若為subURL才進行判斷
+//            if (node.getNodeName().equals("subURL")) {
+//                node_format = node.getAttributes().getNamedItem("format").getNodeValue();
+//                System.out.println(node_format);
+//                if (node_format.equals(format)) {
+//                    subURL = node.getTextContent();
+//                    if (subURL.equals(url)) return true; //若找到相符的 subURL, 直接返回
+//                }
+//            }
+//
+//
+//        }
         return isMatch;
 
     }
@@ -802,7 +965,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         return result;
     }
 
-    public void setIPQSDialog(String risk_score, String msg){
+    public void setIPQSDialog(String risk_score, String msg) {
         int score;
         /* IPQS資訊 dialog */
         AlertDialog.Builder IPQS_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
@@ -816,13 +979,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         ipqs_msg.setText(msg);
         /* 評判風險分數並換顏色 */
         score = Integer.valueOf(risk_score);
-        if(0<=score && score<=20)
+        if (0 <= score && score <= 20)
             ipqs_score.setTextColor(Color.parseColor("#457c0d"));
-        else if(21<=score && score<=40)
+        else if (21 <= score && score <= 40)
             ipqs_score.setTextColor(Color.parseColor("#78c430"));
-        else if(41<=score && score<=60)
+        else if (41 <= score && score <= 60)
             ipqs_score.setTextColor(Color.parseColor("#fec721"));
-        else if(61<=score && score<=80)
+        else if (61 <= score && score <= 80)
             ipqs_score.setTextColor(Color.parseColor("#f65922"));
         else
             ipqs_score.setTextColor(Color.parseColor("#d63839"));
@@ -830,6 +993,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         IPQS_message_dialog = IPQS_message_builder.create();
         IPQS_message_dialog.dismiss();
     }
+
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 IPQS search */
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -888,13 +1052,16 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 //設定輸出結果並且生成XML檔案
                 DOMSource domSource = new DOMSource(doc);
                 File file = url_database;
+
                 FileOutputStream out = new FileOutputStream(file);
                 StreamResult xmlResult = new StreamResult(out); //設定輸入源
                 transFormer.transform(domSource, xmlResult); //輸出xml檔案
-                System.out.println("成功創建url database 檔案");
+                out.close();
+                System.out.println("成功創建url_database 檔案");
+
 
             } else {
-                System.out.println("url database檔案已存在");
+                System.out.println("url_database檔案已存在");
             }
         } catch (IOException | ParserConfigurationException | TransformerConfigurationException e) {
             e.printStackTrace();
@@ -905,6 +1072,9 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
+    //class定義
+
+
     /* 沒用到的程式碼 */
     /* ================================================================================================================== */
     /* ================================================================================================================== */
@@ -912,402 +1082,402 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     /* ================================================================================================================== */
     /* ================================================================================================================== */
     //IP2WHOIS 使用
-    public Map<String, String> getIP2WHOIS(String URL_text) throws IOException {
-
-        Map<String, String> data_map = new LinkedHashMap<String, String>();
-
-        String result = null;
-        String key = "TZ6JJY5XVPJH5TOI6R2KQIVD9Y9IB2UX"; //My api key
-        Hashtable<String, String> data = new Hashtable<String, String>();
-        String domain = InternetDomainName.from(new URL(URL_text).getHost()).topDomainUnderRegistrySuffix().toString(); /* 得到 Domain name */
-        data.put("domain", domain);
-        data.put("format", "xml");
-        String datastr = "";
-        for (Map.Entry<String, String> entry : data.entrySet()) {
-            datastr += "&" + entry.getKey() + "=" + URLEncoder.encode(entry.getValue(), "UTF-8");
-        }
-        //建立連線
-        URL url = new URL("https://api.ip2whois.com/v2?key=" + key + datastr);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Accept", "application/json");
-
-        if (conn.getResponseCode() != 200) {
-            throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
-        }
-        result = getData(conn.getInputStream());
-        conn.disconnect();
-
-        Document doc = Jsoup.parse(result);
-        String[] tag = {"domain", "create_date", "update_date", "expire_date", "domain_age", "error_code"};
-        for (String s : tag) {
-            Element element = doc.getElementsByTag(s).first();
-            String element_str = (element == null) ? null : element.text();  //判斷式 ？ 若判斷為真執行區塊 ： 若判斷為假執行區塊
-            data_map.put(s, element_str);
-
-        }
-
-        return data_map;
-    }
-
-
-    //VirusTotal返回結果
-    public Map<String, Integer> getAalysisResult(String URL_text) throws JSONException, IOException, InterruptedException {
-        String analysisID = getAnalysisID(URL_text);
-        String x_apikey = "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714";
-        String status = null;
-        JSONObject jsonObject = null;
-        Map<String, Integer> data_map = new LinkedHashMap<>();
-
-        //建立連線
-        HttpURLConnection connection = (HttpURLConnection) new URL("https://www.virustotal.com/api/v3/analyses/" + analysisID).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setRequestProperty("x-apikey", x_apikey);
-        System.out.println("建立連線");
-        connection.connect();
-        if (200 == connection.getResponseCode()) {
-            String result = getData(connection.getInputStream());
-            jsonObject = new JSONObject(result).getJSONObject("data").getJSONObject("attributes");
-            status = jsonObject.getString("status");
-            data_map.put("status", status.equals("completed") ? 1 : 0); //若 complete status=1, 其他則 status = 0
-            //放入鍵和鍵值
-            jsonObject = jsonObject.getJSONObject("stats");
-            Iterator<String> iterator = jsonObject.keys();
-            while (iterator.hasNext()) {
-                String key = iterator.next();
-                data_map.put(key, jsonObject.getInt(key));
-            }
-        } else System.out.println(getData(connection.getErrorStream()));
-
-        connection.disconnect();
-        return data_map;
-    }
-
-    //VirusTotal得到分析ID
-    public String getAnalysisID(String URL_text) throws IOException, JSONException {
-        String x_apikey = "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714";
-        String analysisID = null;
-        HttpURLConnection connection = (HttpURLConnection) new URL("https://www.virustotal.com/api/v3/urls").openConnection();
-        connection.setDoOutput(true);
-        connection.setDoInput(true);
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setRequestProperty("x-apikey", x_apikey);
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        connection.setUseCaches(false);
-        //需要先寫入流再做connection
-        DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
-        String parameter = "url=" + URLEncoder.encode(URL_text, "UTF-8");
-        outputStream.write(parameter.getBytes(StandardCharsets.UTF_8));
-        connection.connect();
-        if (200 == connection.getResponseCode()) {
-            String result = getData(connection.getInputStream());
-            analysisID = new JSONObject(result).getJSONObject("data").getString("id");
-        } else {
-            System.out.println(getData(connection.getErrorStream()));
-
-        }
-        outputStream.close(); //關閉寫入流
-        connection.disconnect(); //關閉連接
-        return analysisID;
-    }
-
-    /* 在 XML 中找 whois server */
-    public String get_whois_server(String xdot_text) {
-
-        String whois_server = null;
-        /* 利用 resources讀取 res/xml中檔案 */
-        XmlResourceParser server_file = getResources().getXml(R.xml.whois_server);
-        boolean isFind = false;
-        try {
-            int event = server_file.getEventType(); /* 得到現在光標的位置 */
-            while (event != XmlPullParser.END_DOCUMENT) { /* 當光標還未到文件結尾 */
-                if (event == XmlPullParser.TEXT) { /* 若得到的是文字(非 XmlPullParser.START_TAG <XXX></XXX> ) */
-                    if (isFind) {
-                        whois_server = server_file.getText(); /* 找到的server給whois_server, whois_server就不為空了 */
-                        break;
-                    }
-                    if (xdot_text.equalsIgnoreCase(server_file.getText())) {
-                        isFind = true;
-                    }
-                }
-
-                if (whois_server != null) break;
-                event = server_file.next(); /* 移動光標 */
-            }
-        } catch (IOException | XmlPullParserException e) {
-            e.printStackTrace();
-        }
-
-
-        return whois_server;
-
-    }
-
-    /* information欄位切割 (註：若非英文的information 將不欄位處理，但會進行翻譯)*/
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    public void splitting_filed(String TLD, String msg) {
-
-        System.out.println("############################################\n原始訊息:\n" + msg);
-
-
-        /* 先將可以處理的大致處理 */
-        msg = msg.replaceAll("_", " ");
-        msg = msg.replaceAll("\\.{2,}", ""); //匹配一長串..... .no TLD
-        msg = msg.replaceAll("\r", ""); //把 \r置換(\r是將光標移動到行首)
-//        System.out.println("\n\nReplace過後:\n"+msg+"\n----------------------------");
-
-        /* 分割字串 */
-//        System.out.println("\n\n=================================================================================\n");
-
-        String[] token = msg.split("\n");
-        //TLD 為.pl的另外處理，但.pl的REGISTRAR 還要再處理其他前面有空白的欄位。所以會在下面 if判斷.ua錯誤，執行 else再把其他欄位處理好
-        if (TLD.equals("pl")) {
-            //處理 REGISTRAR field
-            for (int i = 0; i < token.length; i++) {
-                //找後面沒有跟任何字串的Tag
-                if (token[i].matches(".*[:]$")) {
-                    int j = i + 1;
-                    if (j >= token.length) break;
-                    if (!token[j].equals("")) token[i] += "\n";
-                    else continue;
-                    while (!token[j].equals("")) {
-                        token[i] += token[j] + "\n";
-                        token[j] = "";
-                        if (j == token.length - 1) break;
-                        else j++;
-                    }
-                }
-            }
-        }
-        //TLD為 .ua的另外處理
-        if (TLD.matches("ua")) {
-            for (int i = 0; i < token.length; i++) {
-                //移除 % 開頭且非 :結尾的字串及只有%開頭的字串
-                if (token[i].matches("^%.*[^:]$|%")) {
-                    token[i] = "";
-                }
-
-            }
-            //移除空字串
-            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
-            arrayList.removeIf(item -> item.equals(""));
-            token = arrayList.toArray(new String[0]);
-            //開始處理field
-            for (int i = 0; i < token.length; i++) {
-                //判斷標籤，若符合 % 開頭且 : 結尾的字串就是Tag
-                if (token[i].matches("^%.*[:]$")) {
-                    //把標籤前的 %和空白移除
-                    token[i] = token[i].replaceAll("%\\s*", "");
-                    int j = i + 1;
-                    if (j >= token.length) break; //若超過index就break
-//                    //若字串符合開頭非 % 開頭的字串
-                    if (token[j].matches("^[^%].*")) token[i] += "\n";
-                    else continue;
-                    while (token[j].matches("^[^%].*")) {
-                        token[i] += token[j] + "\n";
-                        token[j] = "";
-                        if (j == token.length - 1) break; //不超過index(因為.ua底下不會再有其他說明等等，所以避免陷入無限迴圈)
-                        else j++;
-                    }
-                }
-            }
-
-
-        }
-        //針對.gov, .net, .cc做特殊處理(不需要做串接)
-        else if (TLD.matches("gov|net|cc|tv|com")) {
-            /* 只把 % 開頭的字串移除 */
-            for (int i = 0; i < token.length; i++) {
-                token[i] = token[i].trim(); //去除字串頭尾空白
-                if (token[i].matches("^%.*")) {
-                    token[i] = "";
-                }
-            }
-        }
-        //對 .br 做特殊串接處理
-        else if (TLD.matches("br")) {
-            //先清除前面有 %的字串
-            for (int i = 0; i < token.length; i++) {
-                if (token[i].matches("^%.*")) {
-                    token[i] = "";
-                }
-            }
-            //清除空字串
-            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
-            arrayList.removeIf(item -> item.equals(""));
-            token = arrayList.toArray(new String[0]);
-            //字串串接
-            for (int i = 0; i < token.length; i++) {
-                if (token[i].matches("nic-hdl-br.*")) {
-                    int j = i + 1;
-                    if (j >= token.length) break;
-                    if (!token[j].matches("nic-hdl-br.*")) token[i] += "\n";
-                    while (!token[j].matches("nic-hdl-br.*")) {
-                        token[i] += token[j] + "\n";
-                        token[j] = "";
-                        if (j == token.length - 1) break;
-                        else j++;
-                    }
-
-                }
-            }
-        }
-        //.pl 處理完後會跳至這個區塊接續處理
-        //處理非例外TLD的字串
-        else {
-            for (int i = 0; i < token.length; i++) {
-                /* 把前面有 #和 % 的字串清空，或單一開頭為 %、# (多餘字串)*/
-                if (token[i].matches("^%.*") || token[i].matches("^#.*")) {
-                    token[i] = "";
-                }
-            }
-            //移除空字串
-            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
-            arrayList.removeIf(item -> item.equals(""));
-            token = arrayList.toArray(new String[0]);
-            //串接
-            for (int i = 0; i < token.length; i++) {
-                /* 先找標籤，並判斷標籤後的字串是否前面有無數空格 */
-                if (token[i].matches(".+:.+|.+:")) { //Tag後面有無東西(.pl TLD Tag後面有東西)
-                    int j = i + 1; // next index
-                    if (j >= token.length) break; // 判斷有無超過index
-                    //判斷是否需要串接 前面有空格且結尾不為:的字串
-                    if (token[j].matches("\\s{2,}.+[^:)]$")) token[i] += "\n";
-                    else continue;
-                    while (token[j].matches("\\s{2,}.+[^:)]$")) { // 匹配前面多個空格(\\s{2,}兩個以上空格，多個可視字元.+)
-                        token[i] += token[j] + "\n";
-                        token[j] = "";
-                        if (j == token.length - 1) break; //不超過index
-                        else j++;
-                    }
-                }
-            }
-        }
-
-        //將空白標籤刪除，並將頭尾空白去除
-        for (int i = 0; i < token.length; i++) {
-            token[i] = token[i].trim();
-            //移除空白標籤和不含標籤資訊
-            if (token[i].matches(".*[:]$") || !token[i].contains(":")) {
-                token[i] = "";
-            }
-        }
-        //移除所有空字串
-        ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
-        arrayList.removeIf(item -> item.equals(""));
-        token = arrayList.toArray(new String[0]);
-
-        //印出所有field
-        System.out.println("\n########################################################");
-        System.out.println("Field切割狀態:");
-        arrayList.forEach(a -> System.out.println("-----------------------\n" + a));
-
-//        //測試，列印標籤用以對照用
-//        System.out.println("列出去除空白的所有標籤：");
-//        for(int i=0;i<token.length;i++){
-//            String tag = token[i].substring(0,token[i].indexOf(':'));
-//            tag = tag.replaceAll("\\s+",""); //把所有空白置換掉
-//            tag = tag.replaceAll("-",""); //把-置換掉
-//            System.out.println(tag);
+//    public Map<String, String> getIP2WHOIS(String URL_text) throws IOException {
+//
+//        Map<String, String> data_map = new LinkedHashMap<String, String>();
+//
+//        String result = null;
+//        String key = "TZ6JJY5XVPJH5TOI6R2KQIVD9Y9IB2UX"; //My api key
+//        Hashtable<String, String> data = new Hashtable<String, String>();
+//        String domain = InternetDomainName.from(new URL(URL_text).getHost()).topDomainUnderRegistrySuffix().toString(); /* 得到 Domain name */
+//        data.put("domain", domain);
+//        data.put("format", "xml");
+//        String datastr = "";
+//        for (Map.Entry<String, String> entry : data.entrySet()) {
+//            datastr += "&" + entry.getKey() + "=" + URLEncoder.encode(entry.getValue(), "UTF-8");
 //        }
-        System.out.println("\n########################################\n回傳結果：\n");
-
-        //抓取關鍵字並印出
-        String TLD_id = "(sponsoring)*"; //TLD為.id的特殊開頭
-        String registrar_parameter = "(URL|Organization|City|(State//)*Province|Phone|Email|Country|Handle)*";
-        String registrant_parameter = "(Name|Street|City|(State//)*Province|Country|Phone)*";
-        String ua_parameter = "(Registrar|URL|Organization|City|(State//)*Province|Phone|Email|Country|Handle|Address|Phone)";
-
-        for (int i = 0; i < token.length; i++) {
-            String tag = token[i].substring(0, token[i].indexOf(':'));
-            tag = tag.replaceAll("\\s+", ""); //把所有空白置換掉
-            tag = tag.replaceAll("-", ""); //把-置換掉
-            if (tag.matches("(?i)domain(name)*")) {
-                System.out.println(token[i]);
-            }
-            //Registrar
-            if (tag.matches("(?i)" + TLD_id + "registrar" + registrar_parameter) || tag.matches("(?i)Owner")) {
-                //對.ua的Registrar做特別處理
-                if (TLD.matches("ua")) {
-                    String[] temp = token[i].split("\n");
-                    System.out.println(temp[0]); //印出Title(主Tag)
-                    for (int j = 1; j < temp.length; j++) {
-                        String temp_tag = temp[j].substring(0, temp[j].indexOf(':'));
-                        if (temp_tag.matches("(?i)" + ua_parameter)) {
-                            System.out.println("\t\t" + temp[j]);
-                        }
-                    }
-                } else System.out.println(token[i]);
-            }
-            //Registrant
-            if (tag.matches("(?i)registrant" + registrant_parameter)) {
-                //對.ua的Registrant做特別處理
-                if (TLD.matches("ua")) {
-                    String[] temp = token[i].split("\n");
-                    System.out.println(temp[0]); //印出Title(主Tag)
-                    for (int j = 1; j < temp.length; j++) {
-                        String temp_tag = temp[j].substring(0, temp[j].indexOf(':'));
-                        if (temp_tag.matches("(?i)" + ua_parameter)) {
-                            System.out.println("\t\t" + temp[j]);
-                        }
-                    }
-                } else System.out.println(token[i]);
-            }
-            //Updated Date
-            if (tag.matches("(?i).*Updated.*") || tag.matches("(?i).*Modifi(ed|cation).*") ||
-                    tag.matches("(?i).*Changed.*") || tag.matches("(?i)RelevantDates")) {
-                System.out.println(token[i]);
-            }
-            //Creation Date
-            if (tag.matches("(?i).*Creation.*") || tag.matches("(?i).*Created.*") ||
-                    tag.matches("(?i)Registration(Date|Time)")) {
-                System.out.println(token[i]);
-            }
-            //Expiry Date
-            if (tag.matches("(?i).*Expir(y|es|ation).*") || tag.matches("(?i).*DateRegistered.*") ||
-                    tag.matches("(?i)PaidTill")) {
-                System.out.println(token[i]);
-            }
-        }
-
-    }
-
-    /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
-    public void Create_issuer_arrayList() {
-        /* 打開 aegis.json 轉換 && 解析JSON檔，並創建 issuer arraylist */
-        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
-        BufferedReader br;
-        String aegis_json_string = ""; /* File JSON檔轉為String */
-        JSONObject jsonObject; /* String再建立成jsonObject */
-        JSONArray jsonArray;   /* 用來解析jsonObject */
-        issuer = new ArrayList<>(); /* 利用ArrayList儲存issuer */
-        try {
-            /* 讀取 file轉換成String，因為JDK版本關係要用 BufferedReader轉(用BufferedReader是因為讀取效率高) */
-            br = new BufferedReader(new FileReader(f));
-            while (br.ready()) {
-                aegis_json_string += br.readLine();
-            }
-            br.close();
-            /* 創立並解析 JSON物件 */
-            jsonObject = new JSONObject(aegis_json_string);
-            jsonObject = jsonObject.getJSONObject("db");
-            jsonArray = jsonObject.getJSONArray("entries");
-            for (int i = 0; i < jsonArray.length(); i++) {
-                jsonObject = jsonArray.getJSONObject(i);
-                issuer.add(jsonObject.get("issuer").toString().toLowerCase()); /* issuer轉換成小寫放入arrayList */
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-
-    }
+//        //建立連線
+//        URL url = new URL("https://api.ip2whois.com/v2?key=" + key + datastr);
+//        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+//        conn.setRequestMethod("GET");
+//        conn.setRequestProperty("Accept", "application/json");
+//
+//        if (conn.getResponseCode() != 200) {
+//            throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
+//        }
+//        result = getData(conn.getInputStream());
+//        conn.disconnect();
+//
+//        Document doc = Jsoup.parse(result);
+//        String[] tag = {"domain", "create_date", "update_date", "expire_date", "domain_age", "error_code"};
+//        for (String s : tag) {
+//            Element element = doc.getElementsByTag(s).first();
+//            String element_str = (element == null) ? null : element.text();  //判斷式 ？ 若判斷為真執行區塊 ： 若判斷為假執行區塊
+//            data_map.put(s, element_str);
+//
+//        }
+//
+//        return data_map;
+//    }
+//
+//
+//    //VirusTotal返回結果
+//    public Map<String, Integer> getAalysisResult(String URL_text) throws JSONException, IOException, InterruptedException {
+//        String analysisID = getAnalysisID(URL_text);
+//        String x_apikey = "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714";
+//        String status = null;
+//        JSONObject jsonObject = null;
+//        Map<String, Integer> data_map = new LinkedHashMap<>();
+//
+//        //建立連線
+//        HttpURLConnection connection = (HttpURLConnection) new URL("https://www.virustotal.com/api/v3/analyses/" + analysisID).openConnection();
+//        connection.setRequestMethod("GET");
+//        connection.setRequestProperty("Accept", "application/json");
+//        connection.setRequestProperty("x-apikey", x_apikey);
+//        System.out.println("建立連線");
+//        connection.connect();
+//        if (200 == connection.getResponseCode()) {
+//            String result = getData(connection.getInputStream());
+//            jsonObject = new JSONObject(result).getJSONObject("data").getJSONObject("attributes");
+//            status = jsonObject.getString("status");
+//            data_map.put("status", status.equals("completed") ? 1 : 0); //若 complete status=1, 其他則 status = 0
+//            //放入鍵和鍵值
+//            jsonObject = jsonObject.getJSONObject("stats");
+//            Iterator<String> iterator = jsonObject.keys();
+//            while (iterator.hasNext()) {
+//                String key = iterator.next();
+//                data_map.put(key, jsonObject.getInt(key));
+//            }
+//        } else System.out.println(getData(connection.getErrorStream()));
+//
+//        connection.disconnect();
+//        return data_map;
+//    }
+//
+//    //VirusTotal得到分析ID
+//    public String getAnalysisID(String URL_text) throws IOException, JSONException {
+//        String x_apikey = "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714";
+//        String analysisID = null;
+//        HttpURLConnection connection = (HttpURLConnection) new URL("https://www.virustotal.com/api/v3/urls").openConnection();
+//        connection.setDoOutput(true);
+//        connection.setDoInput(true);
+//        connection.setRequestMethod("POST");
+//        connection.setRequestProperty("Accept", "application/json");
+//        connection.setRequestProperty("x-apikey", x_apikey);
+//        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+//        connection.setUseCaches(false);
+//        //需要先寫入流再做connection
+//        DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
+//        String parameter = "url=" + URLEncoder.encode(URL_text, "UTF-8");
+//        outputStream.write(parameter.getBytes(StandardCharsets.UTF_8));
+//        connection.connect();
+//        if (200 == connection.getResponseCode()) {
+//            String result = getData(connection.getInputStream());
+//            analysisID = new JSONObject(result).getJSONObject("data").getString("id");
+//        } else {
+//            System.out.println(getData(connection.getErrorStream()));
+//
+//        }
+//        outputStream.close(); //關閉寫入流
+//        connection.disconnect(); //關閉連接
+//        return analysisID;
+//    }
+//
+//    /* 在 XML 中找 whois server */
+//    public String get_whois_server(String xdot_text) {
+//
+//        String whois_server = null;
+//        /* 利用 resources讀取 res/xml中檔案 */
+//        XmlResourceParser server_file = getResources().getXml(R.xml.whois_server);
+//        boolean isFind = false;
+//        try {
+//            int event = server_file.getEventType(); /* 得到現在光標的位置 */
+//            while (event != XmlPullParser.END_DOCUMENT) { /* 當光標還未到文件結尾 */
+//                if (event == XmlPullParser.TEXT) { /* 若得到的是文字(非 XmlPullParser.START_TAG <XXX></XXX> ) */
+//                    if (isFind) {
+//                        whois_server = server_file.getText(); /* 找到的server給whois_server, whois_server就不為空了 */
+//                        break;
+//                    }
+//                    if (xdot_text.equalsIgnoreCase(server_file.getText())) {
+//                        isFind = true;
+//                    }
+//                }
+//
+//                if (whois_server != null) break;
+//                event = server_file.next(); /* 移動光標 */
+//            }
+//        } catch (IOException | XmlPullParserException e) {
+//            e.printStackTrace();
+//        }
+//
+//
+//        return whois_server;
+//
+//    }
+//
+//    /* information欄位切割 (註：若非英文的information 將不欄位處理，但會進行翻譯)*/
+//    @RequiresApi(api = Build.VERSION_CODES.N)
+//    public void splitting_filed(String TLD, String msg) {
+//
+//        System.out.println("############################################\n原始訊息:\n" + msg);
+//
+//
+//        /* 先將可以處理的大致處理 */
+//        msg = msg.replaceAll("_", " ");
+//        msg = msg.replaceAll("\\.{2,}", ""); //匹配一長串..... .no TLD
+//        msg = msg.replaceAll("\r", ""); //把 \r置換(\r是將光標移動到行首)
+////        System.out.println("\n\nReplace過後:\n"+msg+"\n----------------------------");
+//
+//        /* 分割字串 */
+////        System.out.println("\n\n=================================================================================\n");
+//
+//        String[] token = msg.split("\n");
+//        //TLD 為.pl的另外處理，但.pl的REGISTRAR 還要再處理其他前面有空白的欄位。所以會在下面 if判斷.ua錯誤，執行 else再把其他欄位處理好
+//        if (TLD.equals("pl")) {
+//            //處理 REGISTRAR field
+//            for (int i = 0; i < token.length; i++) {
+//                //找後面沒有跟任何字串的Tag
+//                if (token[i].matches(".*[:]$")) {
+//                    int j = i + 1;
+//                    if (j >= token.length) break;
+//                    if (!token[j].equals("")) token[i] += "\n";
+//                    else continue;
+//                    while (!token[j].equals("")) {
+//                        token[i] += token[j] + "\n";
+//                        token[j] = "";
+//                        if (j == token.length - 1) break;
+//                        else j++;
+//                    }
+//                }
+//            }
+//        }
+//        //TLD為 .ua的另外處理
+//        if (TLD.matches("ua")) {
+//            for (int i = 0; i < token.length; i++) {
+//                //移除 % 開頭且非 :結尾的字串及只有%開頭的字串
+//                if (token[i].matches("^%.*[^:]$|%")) {
+//                    token[i] = "";
+//                }
+//
+//            }
+//            //移除空字串
+//            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
+//            arrayList.removeIf(item -> item.equals(""));
+//            token = arrayList.toArray(new String[0]);
+//            //開始處理field
+//            for (int i = 0; i < token.length; i++) {
+//                //判斷標籤，若符合 % 開頭且 : 結尾的字串就是Tag
+//                if (token[i].matches("^%.*[:]$")) {
+//                    //把標籤前的 %和空白移除
+//                    token[i] = token[i].replaceAll("%\\s*", "");
+//                    int j = i + 1;
+//                    if (j >= token.length) break; //若超過index就break
+////                    //若字串符合開頭非 % 開頭的字串
+//                    if (token[j].matches("^[^%].*")) token[i] += "\n";
+//                    else continue;
+//                    while (token[j].matches("^[^%].*")) {
+//                        token[i] += token[j] + "\n";
+//                        token[j] = "";
+//                        if (j == token.length - 1) break; //不超過index(因為.ua底下不會再有其他說明等等，所以避免陷入無限迴圈)
+//                        else j++;
+//                    }
+//                }
+//            }
+//
+//
+//        }
+//        //針對.gov, .net, .cc做特殊處理(不需要做串接)
+//        else if (TLD.matches("gov|net|cc|tv|com")) {
+//            /* 只把 % 開頭的字串移除 */
+//            for (int i = 0; i < token.length; i++) {
+//                token[i] = token[i].trim(); //去除字串頭尾空白
+//                if (token[i].matches("^%.*")) {
+//                    token[i] = "";
+//                }
+//            }
+//        }
+//        //對 .br 做特殊串接處理
+//        else if (TLD.matches("br")) {
+//            //先清除前面有 %的字串
+//            for (int i = 0; i < token.length; i++) {
+//                if (token[i].matches("^%.*")) {
+//                    token[i] = "";
+//                }
+//            }
+//            //清除空字串
+//            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
+//            arrayList.removeIf(item -> item.equals(""));
+//            token = arrayList.toArray(new String[0]);
+//            //字串串接
+//            for (int i = 0; i < token.length; i++) {
+//                if (token[i].matches("nic-hdl-br.*")) {
+//                    int j = i + 1;
+//                    if (j >= token.length) break;
+//                    if (!token[j].matches("nic-hdl-br.*")) token[i] += "\n";
+//                    while (!token[j].matches("nic-hdl-br.*")) {
+//                        token[i] += token[j] + "\n";
+//                        token[j] = "";
+//                        if (j == token.length - 1) break;
+//                        else j++;
+//                    }
+//
+//                }
+//            }
+//        }
+//        //.pl 處理完後會跳至這個區塊接續處理
+//        //處理非例外TLD的字串
+//        else {
+//            for (int i = 0; i < token.length; i++) {
+//                /* 把前面有 #和 % 的字串清空，或單一開頭為 %、# (多餘字串)*/
+//                if (token[i].matches("^%.*") || token[i].matches("^#.*")) {
+//                    token[i] = "";
+//                }
+//            }
+//            //移除空字串
+//            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
+//            arrayList.removeIf(item -> item.equals(""));
+//            token = arrayList.toArray(new String[0]);
+//            //串接
+//            for (int i = 0; i < token.length; i++) {
+//                /* 先找標籤，並判斷標籤後的字串是否前面有無數空格 */
+//                if (token[i].matches(".+:.+|.+:")) { //Tag後面有無東西(.pl TLD Tag後面有東西)
+//                    int j = i + 1; // next index
+//                    if (j >= token.length) break; // 判斷有無超過index
+//                    //判斷是否需要串接 前面有空格且結尾不為:的字串
+//                    if (token[j].matches("\\s{2,}.+[^:)]$")) token[i] += "\n";
+//                    else continue;
+//                    while (token[j].matches("\\s{2,}.+[^:)]$")) { // 匹配前面多個空格(\\s{2,}兩個以上空格，多個可視字元.+)
+//                        token[i] += token[j] + "\n";
+//                        token[j] = "";
+//                        if (j == token.length - 1) break; //不超過index
+//                        else j++;
+//                    }
+//                }
+//            }
+//        }
+//
+//        //將空白標籤刪除，並將頭尾空白去除
+//        for (int i = 0; i < token.length; i++) {
+//            token[i] = token[i].trim();
+//            //移除空白標籤和不含標籤資訊
+//            if (token[i].matches(".*[:]$") || !token[i].contains(":")) {
+//                token[i] = "";
+//            }
+//        }
+//        //移除所有空字串
+//        ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
+//        arrayList.removeIf(item -> item.equals(""));
+//        token = arrayList.toArray(new String[0]);
+//
+//        //印出所有field
+//        System.out.println("\n########################################################");
+//        System.out.println("Field切割狀態:");
+//        arrayList.forEach(a -> System.out.println("-----------------------\n" + a));
+//
+////        //測試，列印標籤用以對照用
+////        System.out.println("列出去除空白的所有標籤：");
+////        for(int i=0;i<token.length;i++){
+////            String tag = token[i].substring(0,token[i].indexOf(':'));
+////            tag = tag.replaceAll("\\s+",""); //把所有空白置換掉
+////            tag = tag.replaceAll("-",""); //把-置換掉
+////            System.out.println(tag);
+////        }
+//        System.out.println("\n########################################\n回傳結果：\n");
+//
+//        //抓取關鍵字並印出
+//        String TLD_id = "(sponsoring)*"; //TLD為.id的特殊開頭
+//        String registrar_parameter = "(URL|Organization|City|(State//)*Province|Phone|Email|Country|Handle)*";
+//        String registrant_parameter = "(Name|Street|City|(State//)*Province|Country|Phone)*";
+//        String ua_parameter = "(Registrar|URL|Organization|City|(State//)*Province|Phone|Email|Country|Handle|Address|Phone)";
+//
+//        for (int i = 0; i < token.length; i++) {
+//            String tag = token[i].substring(0, token[i].indexOf(':'));
+//            tag = tag.replaceAll("\\s+", ""); //把所有空白置換掉
+//            tag = tag.replaceAll("-", ""); //把-置換掉
+//            if (tag.matches("(?i)domain(name)*")) {
+//                System.out.println(token[i]);
+//            }
+//            //Registrar
+//            if (tag.matches("(?i)" + TLD_id + "registrar" + registrar_parameter) || tag.matches("(?i)Owner")) {
+//                //對.ua的Registrar做特別處理
+//                if (TLD.matches("ua")) {
+//                    String[] temp = token[i].split("\n");
+//                    System.out.println(temp[0]); //印出Title(主Tag)
+//                    for (int j = 1; j < temp.length; j++) {
+//                        String temp_tag = temp[j].substring(0, temp[j].indexOf(':'));
+//                        if (temp_tag.matches("(?i)" + ua_parameter)) {
+//                            System.out.println("\t\t" + temp[j]);
+//                        }
+//                    }
+//                } else System.out.println(token[i]);
+//            }
+//            //Registrant
+//            if (tag.matches("(?i)registrant" + registrant_parameter)) {
+//                //對.ua的Registrant做特別處理
+//                if (TLD.matches("ua")) {
+//                    String[] temp = token[i].split("\n");
+//                    System.out.println(temp[0]); //印出Title(主Tag)
+//                    for (int j = 1; j < temp.length; j++) {
+//                        String temp_tag = temp[j].substring(0, temp[j].indexOf(':'));
+//                        if (temp_tag.matches("(?i)" + ua_parameter)) {
+//                            System.out.println("\t\t" + temp[j]);
+//                        }
+//                    }
+//                } else System.out.println(token[i]);
+//            }
+//            //Updated Date
+//            if (tag.matches("(?i).*Updated.*") || tag.matches("(?i).*Modifi(ed|cation).*") ||
+//                    tag.matches("(?i).*Changed.*") || tag.matches("(?i)RelevantDates")) {
+//                System.out.println(token[i]);
+//            }
+//            //Creation Date
+//            if (tag.matches("(?i).*Creation.*") || tag.matches("(?i).*Created.*") ||
+//                    tag.matches("(?i)Registration(Date|Time)")) {
+//                System.out.println(token[i]);
+//            }
+//            //Expiry Date
+//            if (tag.matches("(?i).*Expir(y|es|ation).*") || tag.matches("(?i).*DateRegistered.*") ||
+//                    tag.matches("(?i)PaidTill")) {
+//                System.out.println(token[i]);
+//            }
+//        }
+//
+//    }
+//
+//    /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
+//    public void Create_issuer_arrayList() {
+//        /* 打開 aegis.json 轉換 && 解析JSON檔，並創建 issuer arraylist */
+//        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
+//        BufferedReader br;
+//        String aegis_json_string = ""; /* File JSON檔轉為String */
+//        JSONObject jsonObject; /* String再建立成jsonObject */
+//        JSONArray jsonArray;   /* 用來解析jsonObject */
+//        issuer = new ArrayList<>(); /* 利用ArrayList儲存issuer */
+//        try {
+//            /* 讀取 file轉換成String，因為JDK版本關係要用 BufferedReader轉(用BufferedReader是因為讀取效率高) */
+//            br = new BufferedReader(new FileReader(f));
+//            while (br.ready()) {
+//                aegis_json_string += br.readLine();
+//            }
+//            br.close();
+//            /* 創立並解析 JSON物件 */
+//            jsonObject = new JSONObject(aegis_json_string);
+//            jsonObject = jsonObject.getJSONObject("db");
+//            jsonArray = jsonObject.getJSONArray("entries");
+//            for (int i = 0; i < jsonArray.length(); i++) {
+//                jsonObject = jsonArray.getJSONObject(i);
+//                issuer.add(jsonObject.get("issuer").toString().toLowerCase()); /* issuer轉換成小寫放入arrayList */
+//            }
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
+//
+//
+//    }
 
 }
 
