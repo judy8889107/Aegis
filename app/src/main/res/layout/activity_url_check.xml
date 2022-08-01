@@ -98,21 +98,27 @@
                     android:id="@+id/scan_qrcode_button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="掃描OR code以輸入網址" />
+                    android:text="掃描OR code以輸入網址"
+                    android:backgroundTint="@color/button_color"
+                    />
+
 
                 <Button
                     android:id="@+id/url_check"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="網址檢查" />
+                    android:text="網址檢查"
+                    android:backgroundTint="@color/button_color2"
+                    />
 
                 <Button
                     android:id="@+id/set_safe_url"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="設定安全網址" />
+                    android:text="設定安全網址"
+                    android:backgroundTint="@color/button_color2" />
 
             </LinearLayout>
 

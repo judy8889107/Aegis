@@ -398,6 +398,7 @@
     <string name="safeURL">This is a secure website, you can log in with confidence</string>
     <string name="parseFail">Parsing failed: Not a URL pattern, please try again</string>
     <string name="intro_2FA">How to use 2FA</string>
+    <string name="intro_Url_Check">How to use url_check</string>
     <string name="intro_2FA_third">There are three ways in total</string>
     <string name="intro_2FA_second">Press the plus sign in the lower right corner</string>
     <string name="intro_2FA_fourth">Manual setting: first enter the program name and the key inside the program</string>

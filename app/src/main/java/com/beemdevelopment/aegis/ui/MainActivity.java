@@ -613,6 +613,11 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
                 startActivity(intent);
                 return true;
             }
+            case R.id.action_intro_Url_Check: {
+                Intent intent = new Intent(this, IntroUrlCheckActivity.class);
+                startActivity(intent);
+                return true;
+            }
             default:
                 if (item.getGroupId() == R.id.action_sort_category) {
                     item.setChecked(true);

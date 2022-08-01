@@ -14,6 +14,6 @@ public class Intro2FA_five extends SlideFragment {
     private Button btn;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_main_five, container, false);
+        return inflater.inflate(R.layout.fragment_main_first, container, false);
     }
 }

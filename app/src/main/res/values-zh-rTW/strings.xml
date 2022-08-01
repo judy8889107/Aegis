@@ -289,6 +289,7 @@
     <string name="safeURL">這是安全的網站，您可以放心登錄</string>
     <string name="parseFail">解析失敗：非網址格式，請重新嘗試</string>
     <string name="intro_2FA">如何使用 2FA</string>
+    <string name="intro_Url_Check">如何使用網址檢查</string>
     <string name="intro_2FA_third">總共可以分成三種方式</string>
     <string name="intro_2FA_second">按右下角的加號</string>
     <string name="intro_2FA_fourth">手動設定:先輸入程式名稱及程式內部的金鑰</string>

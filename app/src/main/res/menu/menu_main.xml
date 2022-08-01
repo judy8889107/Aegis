@@ -7,6 +7,10 @@
         android:title="@string/intro_2FA"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/action_intro_Url_Check"
+        android:title="@string/intro_Url_Check"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/action_lock"
         android:icon="@drawable/ic_lock"
         android:title="@string/lock"
