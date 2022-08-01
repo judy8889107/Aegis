@@ -142,11 +142,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         /* 初始化 */
         try {
             initialize();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        /*測試function*/
-        try {
             addMainURL("http://google.com");
             addMainURL("https://github.com/");
             addMainURL("http://www.eyny.com/");
@@ -154,6 +149,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             e.printStackTrace();
         }
 //        displayDatabase();
+
 
         //測試看看
         System.out.println("測試摺疊清單");
