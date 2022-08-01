@@ -146,19 +146,13 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             e.printStackTrace();
         }
         /*測試function*/
-//        try {
-//            addMainURL("https://www.google.com/");
-////            addsubURL("https://accounts2.google.com","0","basedomain");
-////            addsubURL("https://accounts3.google.com","0","basedomain");
-////            addsubURL("https://accounts.google.com","0","basedomain");
-////            matchDatabase("https://accounts.google.com");
-////            matchDatabase("http://google.com");
-////            matchDatabase("http://yahoo.com");
-////            deleteMainURL("0");
-////            matchDatabase("");
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+        try {
+            addMainURL("http://google.com");
+            addMainURL("https://github.com/");
+            addMainURL("http://www.eyny.com/");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 //        displayDatabase();
 
         //測試看看
@@ -166,6 +160,25 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         expandableListView = (ExpandableListView) this.findViewById(R.id.expand_listview);
         myAdapter = new MyBaseExpandableListAdapter(url_database_list,this);
         expandableListView.setAdapter(myAdapter);
+        expandableListView.setLongClickable(true);
+        expandableListView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
+            @Override
+            public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+                System.out.println("你點擊了 "+url_database_list.get(groupPosition).get(0).text);
+                if(expandableListView.isGroupExpanded(groupPosition))
+                    expandableListView.collapseGroup(groupPosition);
+                else expandableListView.expandGroup(groupPosition);
+                return true;
+            }
+        });
+        expandableListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
+            @Override
+            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
+                String message = myAdapter.child_list.get(groupPosition).get(childPosition).text;
+                System.out.println(message);
+                return true;
+            }
+        });
 
 
 
@@ -201,20 +214,16 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         clear_button.setOnClickListener(this);
         scan_qrcode_button.setOnClickListener(this);
         url_check.setOnClickListener(this);
-
-
         /* 創立 url database(目前為空) */
         Create_url_database_file();
-
-
         /* 建立所有 dialog 和 toast */
         buildAllDialog();
-
-        //讀資料庫
+        /* 讀資料庫 */
         loadDatabase();
 
 
     }
+
 
     /* Layout按鈕監聽器事件，實作 View.OnClickListener */
     @RequiresApi(api = Build.VERSION_CODES.N)

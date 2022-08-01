@@ -48,7 +48,7 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
 
     @Override
     public int getChildrenCount(int groupPosition) {
-        return child_list.size(); //回傳群組child個數
+        return child_list.get(groupPosition).size(); //回傳群組child個數
     }
 
     @Override
@@ -112,13 +112,8 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
         } else {
             viewHolderItem = (ViewHolderItem) convertView.getTag();
         }
-        //判斷是否無child
-        if(child_list.get(groupPosition).size()!=0){
-            String childItem = child_list.get(groupPosition).get(childPosition).text;
-            viewHolderItem.tv_child_item.setText(childItem);
-        }else{
-            viewHolderItem.tv_child_item.setText("");
-        }
+        String childItem = child_list.get(groupPosition).get(childPosition).text;
+        viewHolderItem.tv_child_item.setText(childItem);
         return convertView;
     }
 
