@@ -5,8 +5,11 @@ import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_NONE;
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_PASS;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 
 import com.beemdevelopment.aegis.R;
 import com.beemdevelopment.aegis.ThemeMap;
@@ -22,7 +25,7 @@ import com.beemdevelopment.aegis.vault.VaultRepositoryException;
 import com.beemdevelopment.aegis.vault.slots.BiometricSlot;
 import com.beemdevelopment.aegis.vault.slots.PasswordSlot;
 
-public class IntroActivity extends IntroBaseActivity {
+public class IntroActivity extends IntroBaseActivity  {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,6 +34,7 @@ public class IntroActivity extends IntroBaseActivity {
         addSlide(SecurityPickerSlide.class);
         addSlide(SecuritySetupSlide.class);
         addSlide(DoneSlide.class);
+
     }
 
     @Override
@@ -81,4 +85,5 @@ public class IntroActivity extends IntroBaseActivity {
         setResult(RESULT_OK);
         finish();
     }
+
 }

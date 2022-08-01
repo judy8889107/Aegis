@@ -292,5 +292,10 @@
     <string name="intro_2FA_third">總共可以分成三種方式</string>
     <string name="intro_2FA_second">按右下角的加號</string>
     <string name="intro_2FA_fourth">手動設定:先輸入程式名稱及程式內部的金鑰</string>
-    <string name="action_2FA">2FA使用介紹</string>
+    <string name="intro_2FA_one">接下來介紹如何獲取金鑰及QRcode，步驟 1按右上角</string>
+    <string name="intro_2FA_two">步驟 2 在設置和隱私中查找設置</string>
+    <string name="intro_2FA_three">步驟 3 找到密碼和帳戶安全</string>
+    <string name="intro_2FA_four">步驟 4 點選使用雙重驗證</string>
+    <string name="intro_2FA_five">QRcode可以掃描</string>
+    <string name="intro_2FA_five_2">金鑰可以手動輸入</string>
 </resources>
