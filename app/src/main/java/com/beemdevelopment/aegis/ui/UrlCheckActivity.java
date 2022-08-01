@@ -119,7 +119,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     private HashMap<Integer, ArrayList<TextView>> textViewList = new HashMap<>();
     private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
     private ExpandableListView expandableListView;
-    private MyBaseExpandableListAdapter myAdapter = null;
+    private MyBaseExpandableListAdapter myAdapter;
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
@@ -166,6 +166,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         expandableListView = (ExpandableListView) this.findViewById(R.id.expand_listview);
         myAdapter = new MyBaseExpandableListAdapter(url_database_list,this);
         expandableListView.setAdapter(myAdapter);
+
 
 
 
@@ -362,57 +363,57 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     //顯示資料庫 TODO:可折疊清單研究(防止資料量過大)
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    public void displayDatabase() {
-
-        LinearLayout scroll_block = this.findViewById(R.id.scroll_block);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.setMargins(0, 0, 0, 20);
-
-        for (int i = 0; i < url_database_list.size(); i++) {
-            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
-            ArrayList<TextView> textViews = new ArrayList<>();
-            for (int j = 0; j < urlObjects.size(); j++) {
-                Struct.urlObject urlObject = urlObjects.get(j);
-                String uuid = urlObject.uuid;
-                String tagName = urlObject.tagName;
-                String url = urlObject.text;
-
-                //TextView設定
-                TextView textView = new TextView(this);
-                textView.setText(url);
-                textView.setTextColor(Color.parseColor("#000000"));
-                textView.setTextSize(18);
-                textView.setOnClickListener(this);
-                textView.setSingleLine();//設定單行顯示
-                textView.setEllipsize(TextUtils.TruncateAt.END); //設定省略符號在尾端
-
-                //設定 tags資料
-                Map<String, String> tags = new HashMap<>();
-                tags.put("uuid", uuid);
-                tags.put("tagName", tagName);
-                if (tagName.equals("mainURL")) {
-                    textView.setId(i); //紀錄 groupID用
-                    textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
-                    textView.setTextSize(20);
-                    textView.setPaddingRelative(20, 0, 0, 0);
-                    textView.setLayoutParams(params); //設定 margin
-                    textView.setBackgroundColor(Color.parseColor("#FFFAFA"));
-                    tags.put("icon", "right_arrow");
-                }
-                if (tagName.equals("subURL")) {
-                    textView.setVisibility(View.GONE);
-                    textView.setPaddingRelative(60, 0, 0, 0);
-                }
-                textView.setTag(tags);
-                scroll_block.addView(textView);
-                textViews.add(textView);
-
-            }
-            textViewList.put(i, textViews);
-        }
-    }
+//    @RequiresApi(api = Build.VERSION_CODES.M)
+//    public void displayDatabase() {
+//
+//        LinearLayout scroll_block = this.findViewById(R.id.scroll_block);
+//        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+//                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+//        params.setMargins(0, 0, 0, 20);
+//
+//        for (int i = 0; i < url_database_list.size(); i++) {
+//            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
+//            ArrayList<TextView> textViews = new ArrayList<>();
+//            for (int j = 0; j < urlObjects.size(); j++) {
+//                Struct.urlObject urlObject = urlObjects.get(j);
+//                String uuid = urlObject.uuid;
+//                String tagName = urlObject.tagName;
+//                String url = urlObject.text;
+//
+//                //TextView設定
+//                TextView textView = new TextView(this);
+//                textView.setText(url);
+//                textView.setTextColor(Color.parseColor("#000000"));
+//                textView.setTextSize(18);
+//                textView.setOnClickListener(this);
+//                textView.setSingleLine();//設定單行顯示
+//                textView.setEllipsize(TextUtils.TruncateAt.END); //設定省略符號在尾端
+//
+//                //設定 tags資料
+//                Map<String, String> tags = new HashMap<>();
+//                tags.put("uuid", uuid);
+//                tags.put("tagName", tagName);
+//                if (tagName.equals("mainURL")) {
+//                    textView.setId(i); //紀錄 groupID用
+//                    textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
+//                    textView.setTextSize(20);
+//                    textView.setPaddingRelative(20, 0, 0, 0);
+//                    textView.setLayoutParams(params); //設定 margin
+//                    textView.setBackgroundColor(Color.parseColor("#FFFAFA"));
+//                    tags.put("icon", "right_arrow");
+//                }
+//                if (tagName.equals("subURL")) {
+//                    textView.setVisibility(View.GONE);
+//                    textView.setPaddingRelative(60, 0, 0, 0);
+//                }
+//                textView.setTag(tags);
+//                scroll_block.addView(textView);
+//                textViews.add(textView);
+//
+//            }
+//            textViewList.put(i, textViews);
+//        }
+//    }
 
     //讀取資料庫進入 url_database_list
     public void loadDatabase() throws Exception {

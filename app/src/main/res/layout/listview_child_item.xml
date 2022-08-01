@@ -5,15 +5,15 @@
     android:orientation="vertical">
 
     <TextView
-        android:id="@+id/tv_group_parent"
+        android:id="@+id/tv_group_child"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ellipsize="end"
-        android:padding="10dp"
+        android:paddingLeft="20dp"
+        android:paddingTop="5dp"
         android:singleLine="true"
         android:text="TextView"
         android:textColor="#000000"
-        android:background="#F5F5F5"
-        android:textSize="20sp" />
+        android:textSize="18sp" />
 
 </LinearLayout>

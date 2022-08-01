@@ -15,33 +15,50 @@ import java.util.HashMap;
 
 public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
 
-    public HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
+    public HashMap<Integer, ArrayList<Struct.urlObject>> group_list;
+    public HashMap<Integer, ArrayList<Struct.urlObject>> child_list;
     public Context content;
 
 
     public MyBaseExpandableListAdapter(HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list, Context content) {
-        this.url_database_list = url_database_list;
+        this.group_list = url_database_list;
+        this.preprocess();
         this.content = content;
+
+    }
+
+    //處理child_list, 若用 remove會影響到同一份物件(建立新物件並重新加入或實現深拷貝)
+    public void preprocess() {
+        this.child_list = new HashMap<>();
+        for (int i = 0; i < group_list.size(); i++) {
+            ArrayList<Struct.urlObject> oldObjects = group_list.get(i);
+            ArrayList<Struct.urlObject> newObjects = new ArrayList<>();
+            for (int j = 0; j < oldObjects.size(); j++) {
+                if (oldObjects.get(j).tagName.equals("mainURL")) continue;
+                newObjects.add(oldObjects.get(j));
+            }
+            this.child_list.put(i, newObjects);
+        }
     }
 
     @Override
     public int getGroupCount() {
-        return url_database_list.size();//回傳 parent個數
+        return group_list.size();// group個數
     }
 
     @Override
     public int getChildrenCount(int groupPosition) {
-        return url_database_list.get(groupPosition).size(); //回傳群組child個數
+        return child_list.size(); //回傳群組child個數
     }
 
     @Override
-    public Object getGroup(int groupPosition) {
-        return url_database_list.get(groupPosition);
+    public ArrayList<Struct.urlObject> getGroup(int groupPosition) {
+        return group_list.get(groupPosition);
     }
 
     @Override
-    public Object getChild(int groupPosition, int childPosition) {
-        return url_database_list.get(groupPosition).get(childPosition);
+    public Struct.urlObject getChild(int groupPosition, int childPosition) {
+        return child_list.get(groupPosition).get(childPosition);
     }
 
     @Override
@@ -71,8 +88,14 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
         } else {
             viewHolderGroup = (ViewHolderGroup) convertView.getTag();
         }
-        String parentItem = url_database_list.get(groupPosition).get(0).text;
+        String parentItem = group_list.get(groupPosition).get(0).text;
         viewHolderGroup.tv_parent_item.setText(parentItem);
+        //展開收合圖示變更
+        if (isExpanded) {
+            viewHolderGroup.tv_parent_item.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.down_arrow, 0);
+        } else {
+            viewHolderGroup.tv_parent_item.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
+        }
         return convertView;
     }
 
@@ -81,17 +104,21 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
         ViewHolderItem viewHolderItem;
         if (convertView == null) {
             convertView = LayoutInflater.from(content).inflate(
-                    R.layout.listview_parent_item, parent, false);
+                    R.layout.listview_child_item, parent, false);
             viewHolderItem = new ViewHolderItem();
-            viewHolderItem.tv_child_item = (TextView) convertView.findViewById(R.id.tv_group_parent);
+            viewHolderItem.tv_child_item = (TextView) convertView.findViewById(R.id.tv_group_child);
             convertView.setTag(viewHolderItem);
 
         } else {
             viewHolderItem = (ViewHolderItem) convertView.getTag();
         }
-
-        String childItem = url_database_list.get(groupPosition).get(childPosition).text;
-        viewHolderItem.tv_child_item.setText(childItem);
+        //判斷是否無child
+        if(child_list.get(groupPosition).size()!=0){
+            String childItem = child_list.get(groupPosition).get(childPosition).text;
+            viewHolderItem.tv_child_item.setText(childItem);
+        }else{
+            viewHolderItem.tv_child_item.setText("");
+        }
         return convertView;
     }
 
@@ -109,4 +136,5 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
     private static class ViewHolderItem {
         private TextView tv_child_item;
     }
+
 }
