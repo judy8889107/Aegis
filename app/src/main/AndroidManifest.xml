@@ -101,6 +101,9 @@
             android:name=".ui.Intro2FAActivity"
             android:screenOrientation="portrait"/>
         <activity
+            android:name=".ui.IntroUrlCheckActivity"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".ui.AuthActivity" />
         <activity
             android:name=".ui.PreferencesActivity"
