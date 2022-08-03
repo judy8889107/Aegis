@@ -1,22 +1,19 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="com.beemdevelopment.aegis.ui.MainActivity">
-    <item
-        android:id="@+id/action_2FA"
-        android:title="@string/intro_2FA"
-        app:showAsAction="ifRoom" />
+    tools:context="com.beemdevelopment.aegis.ui.UrlCheckActivity">
     <item
         android:id="@+id/action_intro_Url_Check"
         android:title="@string/intro_Url_Check"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="never" />
     <item
         android:id="@+id/import_export_btn"
-        android:icon="@drawable/ic_lock"
-        android:title="@string/lock"
-        app:showAsAction="ifRoom" />
+        android:icon="@drawable/import_export_icon"
+        android:title="匯入/匯出"
+        app:showAsAction="never" />
     <item
         android:id="@+id/search_btn"
+        android:icon="@drawable/search_icon"
         android:title="@string/search"
         app:showAsAction="always"
         app:actionViewClass="androidx.appcompat.widget.SearchView"/>
@@ -51,14 +48,5 @@
             </group>
         </menu>
     </item>
-    <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:title="@string/action_settings"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_about"
-        android:orderInCategory="110"
-        android:title="@string/action_about"
-        app:showAsAction="never" />
+
 </menu>

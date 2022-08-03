@@ -554,7 +554,7 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
             updateSortCategoryMenu();
         }
 
-        MenuItem searchViewMenuItem = menu.findItem(R.id.mi_search);
+        MenuItem searchViewMenuItem = menu.findItem(R.id.search_btn);
 
         _searchView = (SearchView) searchViewMenuItem.getActionView();
 
@@ -605,7 +605,7 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
                 startActivity(intent);
                 return true;
             }
-            case R.id.action_lock:
+            case R.id.import_export_btn:
                 _vaultManager.lock(true);
                 return true;
             case R.id.action_2FA: {
@@ -675,7 +675,7 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
     private void updateLockIcon() {
         // hide the lock icon if the vault is not unlocked
         if (_menu != null && _vaultManager.isVaultLoaded()) {
-            MenuItem item = _menu.findItem(R.id.action_lock);
+            MenuItem item = _menu.findItem(R.id.import_export_btn);
             item.setVisible(_vaultManager.getVault().isEncryptionEnabled());
         }
     }
