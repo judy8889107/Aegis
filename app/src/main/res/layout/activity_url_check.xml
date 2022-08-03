@@ -64,7 +64,7 @@
                             android:textSize="18dp" />
 
                         <ImageButton
-                            android:id="@+id/input_right_btn"
+                            android:id="@+id/local_input_right_btn"
                             android:layout_width="wrap_content"
                             android:layout_height="match_parent"
                             android:layout_alignBottom="@+id/url_input"

@@ -29,6 +29,8 @@ import android.view.View;
 import com.beemdevelopment.aegis.R;
 
 
+import com.beemdevelopment.aegis.ui.dialogs.Dialogs;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.net.InternetDomainName;
 
@@ -76,11 +78,8 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -93,11 +92,16 @@ class Struct {
 
 public class UrlCheckActivity extends AegisActivity implements Runnable, DialogInterface.OnClickListener {
     /* 變數宣告 */
-    EditText url_input;
+    EditText local_url_input;
+    EditText online_url_input;
     FloatingActionButton online_check_add_btn;
     ImageButton local_check_send_btn;
-    ImageButton input_right_btn;
+    ImageButton local_input_right_btn;
+    ImageButton online_input_right_btn;
     androidx.appcompat.widget.Toolbar toolbar;
+    InputMethodManager imm;
+    BottomSheetDialog dialog_online_check_add_entry;
+    View dialog_online_check_add_entry_view;
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
     private ArrayList<String> issuer;
@@ -109,7 +113,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
 
     private Toast dialog_toast;
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
-    String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
+    String URL_text = null; /* local_url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
     private HashMap<Integer, ArrayList<TextView>> textViewList = new HashMap<>();
     private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
@@ -175,18 +179,21 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
     /* 初始化 設定所有參數等等 */
     public void initialize() throws Exception {
         /* 設定參數 */
-        url_input = findViewById(R.id.url_input);
+        local_url_input = findViewById(R.id.url_input);
         online_check_add_btn = findViewById(R.id.online_check_add_btn);
         local_check_send_btn = findViewById(R.id.local_check_send_btn);
-        input_right_btn = findViewById(R.id.input_right_btn);
+        local_input_right_btn = findViewById(R.id.local_input_right_btn);
         toolbar = findViewById(R.id.toolbar);
+        imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         /* 監聽器設定 */
         setSupportActionBar(toolbar);
         toolbar.setOnMenuItemClickListener(new MyListener());
-        input_right_btn.setOnClickListener(new MyListener());
-        url_input.addTextChangedListener(new MyListener());
+        local_input_right_btn.setOnClickListener(new MyListener());
+        local_url_input.addTextChangedListener(new MyListener());
         online_check_add_btn.setOnClickListener(new MyListener());
         local_check_send_btn.setOnClickListener(new MyListener());
+        /* 設定Dialog view */
+        setDialog_online_check_add_entry();
         /* 創立 url database(目前為空) */
         Create_url_database_file();
         /* 建立所有 dialog 和 toast */
@@ -195,10 +202,21 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         loadDatabase();
     }
 
+    //設定dialog view
+    public void setDialog_online_check_add_entry() {
+        dialog_online_check_add_entry_view = getLayoutInflater().inflate(R.layout.mydialog_online_check_add_entry, null);
+        View view = dialog_online_check_add_entry_view;
+        online_url_input = view.findViewById(R.id.online_check_input);
+        online_input_right_btn = view.findViewById(R.id.online_check_input_right_btn);
+        online_url_input.addTextChangedListener(new MyListener());
+        view.findViewById(R.id.online_check_input_right_btn).setOnClickListener(new MyListener());
+        view.findViewById(R.id.online_check_send_btn).setOnClickListener(new MyListener());
+    }
+
 
     // 設定 toolbar&& 搜尋功能
     @Override
-    public boolean onCreateOptionsMenu(Menu menu){
+    public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_activity_url_check, menu);
         MenuItem menuSearchItem = menu.findItem(R.id.search_btn);
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
@@ -218,7 +236,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
             case Scan_QR_CODE:
                 URL_text = data.getStringExtra(pass_name);
                 /* 將網址輸入input text改為QRcode掃出的內容 */
-                url_input.setText(URL_text);
+                if (dialog_online_check_add_entry.isShowing()) {
+                    online_url_input.setText(URL_text);
+                } else {
+                    local_url_input.setText(URL_text);
+                }
+
                 break;
             default:
                 return;  //resultCode為 0 時，return回原本activity
@@ -267,6 +290,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
 
         dialog_toast = Toast.makeText(this.getApplicationContext(), "", Toast.LENGTH_LONG);
+
+        //底部dialog
+        dialog_online_check_add_entry = new BottomSheetDialog(this);
+        dialog_online_check_add_entry.setContentView(dialog_online_check_add_entry_view);
+        dialog_online_check_add_entry.setCanceledOnTouchOutside(true);
 
     }
 
@@ -859,50 +887,42 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
     }
 
     /* 建立 url database的檔案 */
-    public void Create_url_database_file() {
+    public void Create_url_database_file() throws Exception {
         /* Create file */
         File dir = getApplicationContext().getFilesDir();
         url_database = new File(dir, "url_database.xml");
         url_database.setWritable(true);  // 設為可讀寫
         url_database.setReadable(true);
-        try {
-            if (url_database.createNewFile()) {
-                //建立一個 Document類
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder db = factory.newDocumentBuilder();
-                //建立一個根節點，並且將根節點新增到Document物件中去
-                org.w3c.dom.Document doc = db.newDocument();
-                org.w3c.dom.Element root = doc.createElement("root");
-                doc.appendChild(root);
+        if (url_database.createNewFile()) {
+            //建立一個 Document類
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = factory.newDocumentBuilder();
+            //建立一個根節點，並且將根節點新增到Document物件中去
+            org.w3c.dom.Document doc = db.newDocument();
+            org.w3c.dom.Element root = doc.createElement("root");
+            doc.appendChild(root);
 
-                //開始把Document對映到檔案
-                TransformerFactory transFactory = TransformerFactory.newInstance();
-                Transformer transFormer = transFactory.newTransformer();
-                //設定輸出結果並且生成XML檔案
-                DOMSource domSource = new DOMSource(doc);
-                File file = url_database;
+            //開始把Document對映到檔案
+            TransformerFactory transFactory = TransformerFactory.newInstance();
+            Transformer transFormer = transFactory.newTransformer();
+            //設定輸出結果並且生成XML檔案
+            DOMSource domSource = new DOMSource(doc);
+            File file = url_database;
 
-                FileOutputStream out = new FileOutputStream(file);
-                StreamResult xmlResult = new StreamResult(out); //設定輸入源
-                transFormer.transform(domSource, xmlResult); //輸出xml檔案
-                out.close();
-                System.out.println("成功創建url_database 檔案");
-
-
-            } else {
-                System.out.println("url_database檔案已存在");
-            }
-        } catch (IOException | ParserConfigurationException | TransformerConfigurationException e) {
-            e.printStackTrace();
-        } catch (TransformerException e) {
-            e.printStackTrace();
+            FileOutputStream out = new FileOutputStream(file);
+            StreamResult xmlResult = new StreamResult(out); //設定輸入源
+            transFormer.transform(domSource, xmlResult); //輸出xml檔案
+            out.close();
+            System.out.println("成功創建url_database 檔案");
+        } else {
+            System.out.println("url_database檔案已存在");
         }
 
 
     }
 
     //實作各種監聽器
-    class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener,SearchView.OnQueryTextListener {
+    class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener {
         // input框監聽:打字事件
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -911,13 +931,24 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
 
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
-            if (count == 0) {
-                input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_qrcode_scan));
-                input_right_btn.setTag("ic_qrcode_scan");
+            if (dialog_online_check_add_entry.isShowing()) {
+                if (count == 0) {
+                    online_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_qrcode_scan));
+                    online_input_right_btn.setTag("ic_qrcode_scan");
+                } else {
+                    online_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_clear_button));
+                    online_input_right_btn.setTag("ic_clear_button");
+                }
             } else {
-                input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_clear_button));
-                input_right_btn.setTag("ic_clear_button");
+                if (count == 0) {
+                    local_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_qrcode_scan));
+                    local_input_right_btn.setTag("ic_qrcode_scan");
+                } else {
+                    local_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_clear_button));
+                    local_input_right_btn.setTag("ic_clear_button");
+                }
             }
+
         }
 
         @Override
@@ -928,21 +959,38 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         // Button事件監聽
         @Override
         public void onClick(View v) {
+            Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
+            String iconTag;
             switch (v.getId()) {
-                case R.id.online_check_add_btn:
-                    /* 按下set_safe_url就隱藏鍵盤 */
-                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(online_check_add_btn.getWindowToken(), 0);
-                    URL_text = url_input.getText().toString().trim();
-                    /* 執行 IPQS 檢查 */
-                    IPQSCheck();
+                case R.id.online_check_input_right_btn:
+                    iconTag = (String) online_input_right_btn.getTag();
+                    if(iconTag.equals("ic_clear_button")){
+                        online_url_input.setText("");
+                    }else{
+                        startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
+                    }
                     break;
-                case R.id.input_right_btn:
-                    String iconTag = (String) input_right_btn.getTag();
+                case R.id.online_check_send_btn:
+                    //TODO:按下online_check_send按鈕
+                    System.out.println("按下送出按鈕");
+                    URL_text = online_url_input.getText().toString().trim();
+                    imm.hideSoftInputFromWindow(dialog_online_check_add_entry.getWindow().getDecorView().getWindowToken(),0);
+                    System.out.println(URL_text);
+//                    IPQSCheck();
+                    break;
+                case R.id.online_check_add_btn:
+                    Dialogs.showSecureDialog(dialog_online_check_add_entry);
+//                    /* 按下set_safe_url就隱藏鍵盤 */
+//                    imm.hideSoftInputFromWindow(online_check_add_btn.getWindowToken(), 0);
+//                    URL_text = local_url_input.getText().toString().trim();
+//                    /* 執行 IPQS 檢查 */
+//                    IPQSCheck();
+                    break;
+                case R.id.local_input_right_btn:
+                    iconTag = (String) local_input_right_btn.getTag();
                     if (iconTag.equals("ic_clear_button")) { // clear icon 動作
-                        url_input.setText("");
+                        local_url_input.setText("");
                     } else { // qrcode_scan_icon 動作
-                        Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
                         startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
                     }
                     break;
@@ -951,7 +999,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
                     /* 按下url_check就隱藏鍵盤 */
                     imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                     imm.hideSoftInputFromWindow(local_check_send_btn.getWindowToken(), 0);
-                    URL_text = url_input.getText().toString().trim();
+                    URL_text = local_url_input.getText().toString().trim();
                     try {
                         matchDatabase(URL_text);
                     } catch (Exception e) {
@@ -990,6 +1038,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
             }
             return true;
         }
+
         //TODO:搜尋資料庫事件監聽
         @Override
         public boolean onQueryTextSubmit(String query) {
