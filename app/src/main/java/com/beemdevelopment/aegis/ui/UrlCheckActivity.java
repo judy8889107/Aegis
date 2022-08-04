@@ -92,7 +92,7 @@ class Struct {
     }
 }
 
-public class UrlCheckActivity extends AegisActivity implements Runnable, DialogInterface.OnClickListener {
+public class UrlCheckActivity extends AegisActivity implements Runnable {
     /* 變數宣告 */
     EditText local_url_input;
     EditText online_url_input;
@@ -113,8 +113,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
     private AlertDialog alert_dialog; /* 警告diaolog */
     private AlertDialog IPQS_search_dialog; /* 搜尋 IPQS dialog */
     private ProgressDialog progressDialog; /* 加載 dialog */
-    private AlertDialog IPQS_message_dialog; /* 顯示網站資訊 IPQS dialog */
-    private AlertDialog message_dialog; /* 顯示提示訊息 dialog */
 
     private Toast dialog_toast;
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
@@ -351,35 +349,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
 
     /* 設定所有dialog */
     public void buildAllDialog() {
-        /* alert dialog */
-        AlertDialog.Builder alert_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        alert_dialog_builder.setTitle(R.string.warning);
-        /* 設定按鈕監聽器 */
-        alert_dialog_builder.setPositiveButton(R.string.yes, this);
-        alert_dialog_builder.setNegativeButton(R.string.no, this);
-        alert_dialog = alert_dialog_builder.create();
-        alert_dialog.dismiss();
-        /* IPQS search dialog */
-        AlertDialog.Builder IPQS_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        IPQS_dialog_builder.setTitle(R.string.warning);
-        /* 設定按鈕監聽器 */
-        IPQS_dialog_builder.setPositiveButton(R.string.yes, this);
-        IPQS_dialog_builder.setNegativeButton(R.string.no, this);
-        IPQS_search_dialog = IPQS_dialog_builder.create();
-        IPQS_search_dialog.dismiss();
-
-
-        progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("");
-        progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-
-        dialog_toast = Toast.makeText(this.getApplicationContext(), "", Toast.LENGTH_LONG);
-
         //底部dialog
         buttomDialog = new BottomSheetDialog(this);
         buttomDialog.setContentView(dialog_online_check_add_entry_view);
         buttomDialog.setCanceledOnTouchOutside(true);
-
     }
 
     //讀取資料庫進入 url_database_list
@@ -414,75 +387,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         System.out.println("讀取資料庫...完畢");
     }
 
-    /* 實作dialog按鈕監聽 */
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    @Override
-    public void onClick(DialogInterface dialog, int which) {
-        /* 先判斷哪個dialog */
 
-        /* IPQS_search_dialog */
-        if (dialog.equals(IPQS_search_dialog)) {
-            /* 判斷哪個按鈕被按下 */
-            switch (which) {
-                /* 是 */
-                case BUTTON_POSITIVE:
-                    /* int which = -1 */
-                    /* 啟動 whois thread 檢查 */
-                    IPQS_search_dialog.dismiss(); //隱藏 dialog再啟動 Thread
-                    Thread IPQS_thread = new Thread(this);
-                    IPQS_thread.setName("IPQS_thread");
-                    progressDialog.setMessage("網址正在IPQS進行檢查中，請稍後...");
-                    progressDialog.show();
-                    IPQS_thread.start();
-                    break;
-                case BUTTON_NEGATIVE:
-                    /* int which = -2 */
-                    alert_dialog.setMessage(URL_text + "\n" + R.string.unsafeURL);
-                    alert_dialog.show();
-                    break;
-            }
-        }
-        /* IPQS message dialog */
-        if (dialog.equals(IPQS_message_dialog)) {
-            /* 判斷哪個按鈕被按下 */
-            switch (which) {
-                /* 是 */
-                case BUTTON_POSITIVE:
-                    /* int which = -1 */
-                    dialog.dismiss();
-                    alert_dialog.setMessage(URL_text + "\n" + "請問是否要將此網址加入安全網址資料庫中?");
-                    alert_dialog.show();
-                    break;
-            }
-        }
-        /* 警告dialog */
-        if (dialog.equals(alert_dialog)) {
-            /* 判斷哪個按鈕被按下 */
-            switch (which) {
-                /* 是 */
-                case BUTTON_POSITIVE:
-                    /* int which = -1 */
-                    try {
-                        dialog.dismiss();
-                        addMainURL(URL_text);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    dialog_toast.setText(R.string.addURL); /* 此網址已添加到安全名單 */
-                    dialog_toast.show();
-                    break;
-                case BUTTON_NEGATIVE:
-                    /* int which = -2 */
-                    dialog.dismiss();
-                    dialog_toast.setText("不添加此網址到安全名單中"); /* 此網址不會添加到安全名單 */
-                    dialog_toast.show();
-                    break;
-            }
-
-        }
-
-
-    }
 
 
     // 設定安全網址 - mainURL加入網址到資料庫中
