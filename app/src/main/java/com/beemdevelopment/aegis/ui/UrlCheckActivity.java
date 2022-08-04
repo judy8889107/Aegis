@@ -13,6 +13,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 
 import android.graphics.Color;
+import android.graphics.drawable.AnimationDrawable;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -30,6 +31,7 @@ import com.beemdevelopment.aegis.R;
 
 
 import com.beemdevelopment.aegis.ui.dialogs.Dialogs;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.net.InternetDomainName;
@@ -100,8 +102,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
     ImageButton online_input_right_btn;
     androidx.appcompat.widget.Toolbar toolbar;
     InputMethodManager imm;
-    BottomSheetDialog dialog_online_check_add_entry;
+    BottomSheetDialog buttomDialog;
     View dialog_online_check_add_entry_view;
+    View dialog_progress_view;
+    View dialog_online_check_result;
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
     private ArrayList<String> issuer;
@@ -193,7 +197,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         online_check_add_btn.setOnClickListener(new MyListener());
         local_check_send_btn.setOnClickListener(new MyListener());
         /* 設定Dialog view */
-        setDialog_online_check_add_entry();
+        setAllView();
         /* 創立 url database(目前為空) */
         Create_url_database_file();
         /* 建立所有 dialog 和 toast */
@@ -202,15 +206,69 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         loadDatabase();
     }
 
-    //設定dialog view
-    public void setDialog_online_check_add_entry() {
+    //TODO:設定dialog view
+    public void setAllView() {
         dialog_online_check_add_entry_view = getLayoutInflater().inflate(R.layout.mydialog_online_check_add_entry, null);
+        dialog_progress_view = getLayoutInflater().inflate(R.layout.mydialog_progress_view, null);
+        dialog_online_check_result = getLayoutInflater().inflate(R.layout.mydialog_online_check_result,null);
+        //設定 view id
+        dialog_online_check_add_entry_view.setId((int)R.layout.mydialog_online_check_add_entry);
+        dialog_progress_view.setId((int)R.layout.mydialog_progress_view);
+        dialog_online_check_result.setId((int)R.layout.mydialog_online_check_result);
+        //設定 dialog_online_check_add_entry_view 元件
         View view = dialog_online_check_add_entry_view;
         online_url_input = view.findViewById(R.id.online_check_input);
         online_input_right_btn = view.findViewById(R.id.online_check_input_right_btn);
         online_url_input.addTextChangedListener(new MyListener());
         view.findViewById(R.id.online_check_input_right_btn).setOnClickListener(new MyListener());
         view.findViewById(R.id.online_check_send_btn).setOnClickListener(new MyListener());
+        //設定dialog_progress_view 元件
+        ImageView imageView = dialog_progress_view.findViewById(R.id.progress_dot_img);
+        AnimationDrawable ani = (AnimationDrawable) imageView.getDrawable();
+        ani.start();
+        //設定 dialog_online_check_result元件
+        View view1 = dialog_online_check_result;
+        view1.findViewById(R.id.ipqs_yes_btn).setOnClickListener(new MyListener());
+        view1.findViewById(R.id.ipqs_no_btn).setOnClickListener(new MyListener());
+
+    }
+
+    //TODO:setButtomDialog(根據不同view作處理)
+    public void setButtomDialog(View view, boolean isTouchCanceled, String... addition) {
+        BottomSheetBehavior buttomDialogbehavior;
+        switch (view.getId()){
+            case R.layout.mydialog_progress_view:
+                buttomDialog.setContentView(view);
+                buttomDialogbehavior = BottomSheetBehavior.from((View)dialog_progress_view.getParent());
+                buttomDialogbehavior.setHideable(false);
+                buttomDialog.setCanceledOnTouchOutside(isTouchCanceled);
+                break;
+            case R.layout.mydialog_online_check_result:
+                TextView ipqs_score = view.findViewById(R.id.ipqs_score);
+                TextView ipqs_msg = view.findViewById(R.id.ipqs_msg);
+                TextView ipqs_url = view.findViewById(R.id.ipqs_url);
+                String score = addition[0];
+                String msg = addition[1].trim();
+                ipqs_score.setText(score);
+                ipqs_msg.setText(msg);
+                ipqs_url.setText(URL_text);
+                int _score = Integer.valueOf(score);
+                //設定文字顏色
+                if (0 <= _score && _score <= 20) ipqs_score.setTextColor(Color.parseColor("#457c0d"));
+                else if (21 <= _score && _score <= 40) ipqs_score.setTextColor(Color.parseColor("#78c430"));
+                else if (41 <= _score && _score <= 60) ipqs_score.setTextColor(Color.parseColor("#fec721"));
+                else if (61 <= _score && _score <= 80) ipqs_score.setTextColor(Color.parseColor("#f65922"));
+                else ipqs_score.setTextColor(Color.parseColor("#d63839"));
+                // bottomDialog完全展開
+                buttomDialog.setContentView(dialog_online_check_result);
+                buttomDialogbehavior = BottomSheetBehavior.from((View)dialog_online_check_result.getParent());
+                buttomDialogbehavior.setState(BottomSheetBehavior.STATE_EXPANDED); //完全展開
+                buttomDialogbehavior.setDraggable(false); //不能拖曳dialog
+                buttomDialogbehavior.setHideable(false);  //無法隱藏
+                buttomDialog.setCanceledOnTouchOutside(isTouchCanceled);
+                break;
+                
+        }
     }
 
 
@@ -236,7 +294,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
             case Scan_QR_CODE:
                 URL_text = data.getStringExtra(pass_name);
                 /* 將網址輸入input text改為QRcode掃出的內容 */
-                if (dialog_online_check_add_entry.isShowing()) {
+                if (buttomDialog.isShowing()) {
                     online_url_input.setText(URL_text);
                 } else {
                     local_url_input.setText(URL_text);
@@ -248,7 +306,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         }
     }
 
-    //設定 message dialog顯示圖片&&文字(重建以更新UI)
+    //TODO:設定 message dialog顯示圖片&&文字(重建以更新UI)
     public void setMessageDialog(int id, String msg, boolean enable_no_button) {
         AlertDialog.Builder message_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
         message_dialog_builder.setPositiveButton(R.string.yes, this);
@@ -292,9 +350,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         dialog_toast = Toast.makeText(this.getApplicationContext(), "", Toast.LENGTH_LONG);
 
         //底部dialog
-        dialog_online_check_add_entry = new BottomSheetDialog(this);
-        dialog_online_check_add_entry.setContentView(dialog_online_check_add_entry_view);
-        dialog_online_check_add_entry.setCanceledOnTouchOutside(true);
+        buttomDialog = new BottomSheetDialog(this);
+        buttomDialog.setContentView(dialog_online_check_add_entry_view);
+        buttomDialog.setCanceledOnTouchOutside(true);
 
     }
 
@@ -417,7 +475,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         }
         //若此網址從未添加過才寫入xml檔
         if (!isExist) {
-
             //創建 url Object加入到 list中
             Struct.urlObject urlObject = new Struct.urlObject();
             //設定 urlObject
@@ -708,8 +765,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
             /* 啟動IPQS thread送出請求 */
             Thread IPQS_thread = new Thread(this);
             IPQS_thread.setName("IPQS_thread");
-            progressDialog.setMessage("網址正在IPQS進行檢查中，請稍後...");
-            progressDialog.show();
+            setButtomDialog(dialog_progress_view, false); //顯示處理 dialog
             IPQS_thread.start();
         } else {
             dialog_toast.setText(R.string.parseFail);
@@ -822,34 +878,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
         return result;
     }
 
-    public void setIPQSDialog(String risk_score, String msg) {
-        int score;
-        /* IPQS資訊 dialog */
-        AlertDialog.Builder IPQS_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        /* 設定按鈕監聽器 */
-        IPQS_message_builder.setPositiveButton(R.string.yes, this);
-        LayoutInflater layoutInflater = LayoutInflater.from(this);
-        View view = layoutInflater.inflate(R.layout.mydialog_online_check, null);
-        TextView ipqs_score = view.findViewById(R.id.ipqs_score);
-        TextView ipqs_msg = view.findViewById(R.id.ipqs_msg);
-        ipqs_score.setText(risk_score);
-        ipqs_msg.setText(msg);
-        /* 評判風險分數並換顏色 */
-        score = Integer.valueOf(risk_score);
-        if (0 <= score && score <= 20)
-            ipqs_score.setTextColor(Color.parseColor("#457c0d"));
-        else if (21 <= score && score <= 40)
-            ipqs_score.setTextColor(Color.parseColor("#78c430"));
-        else if (41 <= score && score <= 60)
-            ipqs_score.setTextColor(Color.parseColor("#fec721"));
-        else if (61 <= score && score <= 80)
-            ipqs_score.setTextColor(Color.parseColor("#f65922"));
-        else
-            ipqs_score.setTextColor(Color.parseColor("#d63839"));
-        IPQS_message_builder.setView(view);
-        IPQS_message_dialog = IPQS_message_builder.create();
-        IPQS_message_dialog.dismiss();
-    }
 
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 IPQS search */
@@ -873,9 +901,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    progressDialog.dismiss();
-                    setIPQSDialog(risk_score, message);
-                    IPQS_message_dialog.show();
+                    buttomDialog.dismiss();
+                    setButtomDialog(dialog_online_check_result,false, risk_score, message);
+                    buttomDialog.show();
                 }
             });
         } catch (NullPointerException e) {
@@ -931,7 +959,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
 
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
-            if (dialog_online_check_add_entry.isShowing()) {
+            if (buttomDialog.isShowing()) {
                 if (count == 0) {
                     online_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_qrcode_scan));
                     online_input_right_btn.setTag("ic_qrcode_scan");
@@ -962,29 +990,39 @@ public class UrlCheckActivity extends AegisActivity implements Runnable, DialogI
             Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
             String iconTag;
             switch (v.getId()) {
+                case R.id.ipqs_yes_btn:
+                    //TODO:添加網址進入資料庫
+                    buttomDialog.dismiss();
+                    try {
+                        addMainURL(URL_text);
+                    } catch (Exception e) {
+                        System.out.println(e.getMessage());
+                    }
+                    dialog_toast.setText("已添加此網址至資料庫中");
+                    dialog_toast.show();
+                    break;
+                case R.id.ipqs_no_btn:
+                    buttomDialog.dismiss();
+                    dialog_toast.setText("取消添加此網址到資料庫中");
+                    dialog_toast.show();
+                    break;
                 case R.id.online_check_input_right_btn:
                     iconTag = (String) online_input_right_btn.getTag();
-                    if(iconTag.equals("ic_clear_button")){
+                    if (iconTag.equals("ic_clear_button")) {
                         online_url_input.setText("");
-                    }else{
+                    } else {
                         startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
                     }
                     break;
                 case R.id.online_check_send_btn:
-                    //TODO:按下online_check_send按鈕
                     System.out.println("按下送出按鈕");
                     URL_text = online_url_input.getText().toString().trim();
-                    imm.hideSoftInputFromWindow(dialog_online_check_add_entry.getWindow().getDecorView().getWindowToken(),0);
-                    System.out.println(URL_text);
-//                    IPQSCheck();
+                    imm.hideSoftInputFromWindow(buttomDialog.getWindow().getDecorView().getWindowToken(), 0);
+                    IPQSCheck();
                     break;
                 case R.id.online_check_add_btn:
-                    Dialogs.showSecureDialog(dialog_online_check_add_entry);
-//                    /* 按下set_safe_url就隱藏鍵盤 */
-//                    imm.hideSoftInputFromWindow(online_check_add_btn.getWindowToken(), 0);
-//                    URL_text = local_url_input.getText().toString().trim();
-//                    /* 執行 IPQS 檢查 */
-//                    IPQSCheck();
+                    setButtomDialog(dialog_online_check_add_entry_view,true);
+                    Dialogs.showSecureDialog(buttomDialog);
                     break;
                 case R.id.local_input_right_btn:
                     iconTag = (String) local_input_right_btn.getTag();
