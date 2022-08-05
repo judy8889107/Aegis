@@ -19,7 +19,10 @@ import android.os.Bundle;
 
 
 import android.text.Editable;
+import android.text.Html;
+import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
+import android.text.style.ForegroundColorSpan;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -41,6 +44,7 @@ import java.io.IOException;
 import android.view.inputmethod.InputMethodManager;
 
 /* 使用EditText */
+import android.widget.Button;
 import android.widget.EditText;
 /* 控制鍵盤 */
 /* ImageButton的import */
@@ -204,6 +208,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         /* 讀資料庫 */
         loadDatabase();
     }
+
     public void setAllView() {
         dialog_online_check_add_entry_view = getLayoutInflater().inflate(R.layout.mydialog_online_check_add_entry, null);
         dialog_progress_view = getLayoutInflater().inflate(R.layout.mydialog_progress_view, null);
@@ -229,7 +234,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         View view1 = dialog_online_check_result;
         view1.findViewById(R.id.ipqs_yes_btn).setOnClickListener(new MyListener());
         view1.findViewById(R.id.ipqs_no_btn).setOnClickListener(new MyListener());
-        //TODO:設定 dialog_local_check_result 確定/取消按鈕
+        View view2 = dialog_local_check_result;
+        view2.findViewById(R.id.local_check_yes_btn).setOnClickListener(new MyListener());
+        view2.findViewById(R.id.local_check_no_btn).setOnClickListener(new MyListener());
 
     }
 
@@ -274,37 +281,33 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             case R.layout.mydialog_local_check:
                 int safe_scale = Integer.valueOf(addition[0]);
                 ImageView safe_scale_img = view.findViewById(R.id.safe_scale);
+                TextView result_title = view.findViewById(R.id.local_check_title);
                 TextView result_msg = view.findViewById(R.id.dialog_message_box);
-                String _msg = "此網址安全層級為%s級\n%s此網址不在資料庫中，請問是否要加入資料庫？";
-                String hint = "(低於三級網址建議登入後小心使用)\n";
+                Button yes_btn = view.findViewById(R.id.local_check_yes_btn);
+                Button no_btn = view.findViewById(R.id.local_check_no_btn);
+                //設定輸出訊息 && 按鈕 tag
+                String title = "此網址安全層級為<font color='%s'><u>%s星</u></font>";
+                String _msg = "%s此網址不在資料庫中，請問是否要加入資料庫？";
+                String hint = "低於三星網址建議登入後小心使用<br>";
+                int[] drawableID = {0, R.drawable.mydrawble_star_scale1, R.drawable.mydrawble_star_scale2, R.drawable.mydrawble_star_scale3, R.drawable.mydrawble_star_scale4, R.drawable.mydrawble_star_scale5};
+                String[] numText = {"", "一", "二", "三", "四", "五"};
+                String[] textColor = {"", "#d63839", "#f65922", "#fec721", "#78c430", "#457c0d"};
+                title = String.format(title, textColor[safe_scale], numText[safe_scale]);
+                if (safe_scale == 1)
+                    _msg = "此網址在資料庫中<font color='#d63839'><u>無任何匹配</u></font><br>是否進一步檢查此網址？";
+                if (safe_scale == 2 || safe_scale == 3) _msg = String.format(_msg, hint);
+                if (safe_scale == 4) _msg = String.format(_msg, "");
+                if (safe_scale == 5) _msg = "此為<font color='#457c0d'><u>安全網址</u></font>，可以放心登入";
+                //設定按鈕
+                yes_btn.setTag(safe_scale == 1 ? "ipqs_search" : "add_url"); //若 scale==1則設定 tag為ipqs_search
+                no_btn.setTag(safe_scale == 1 ? "ipqs_search" : "add_url");
+                yes_btn.setVisibility(safe_scale == 5 ? View.GONE : View.VISIBLE);
+                no_btn.setVisibility(safe_scale == 5 ? View.GONE : View.VISIBLE);
+                //輸出到widget
+                safe_scale_img.setImageDrawable(getDrawable(drawableID[safe_scale]));
+                result_title.setText(Html.fromHtml(title));
+                result_msg.setText(Html.fromHtml(_msg));
                 //TODO:setButtomDialog(根據不同view作處理)
-                switch (safe_scale) {
-                    case 1:
-                        _msg = "此網址在資料庫中無任何匹配\n是否進一步檢查此網址？";
-                        result_msg.setText(_msg);
-                        safe_scale_img.setImageDrawable(getDrawable(R.drawable.mydrawble_star_scale1));
-                        break;
-                    case 2:
-                        _msg = String.format(_msg,"二","");
-                        result_msg.setText(_msg);
-                        safe_scale_img.setImageDrawable(getDrawable(R.drawable.mydrawble_star_scale2));
-                        break;
-                    case 3:
-                        _msg = String.format(_msg,"三",hint);
-                        result_msg.setText(_msg);
-                        safe_scale_img.setImageDrawable(getDrawable(R.drawable.mydrawble_star_scale3));
-                        break;
-                    case 4:
-                        _msg = String.format(_msg,"四",hint);
-                        result_msg.setText(_msg);
-                        safe_scale_img.setImageDrawable(getDrawable(R.drawable.mydrawble_star_scale4));
-                        break;
-                    case 5:
-                        _msg = "此為安全網址，可以放心登入";
-                        result_msg.setText(_msg);
-                        safe_scale_img.setImageDrawable(getDrawable(R.drawable.mydrawble_star_scale5));
-                        break;
-                }
                 buttomDialog.setContentView(dialog_local_check_result);
                 buttomDialog.setCanceledOnTouchOutside(isTouchCanceled);
                 break;
@@ -386,8 +389,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
         System.out.println("讀取資料庫...完畢");
     }
-
-
 
 
     // 設定安全網址 - mainURL加入網址到資料庫中
@@ -532,7 +533,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         System.out.println("mainURL配對完畢...比對結果為: " + format);
 
         // mainURL全無匹配
-        //TODO:設定dialog並顯示
         if (format == null) {
             setButtomDialog(dialog_local_check_result, false, "1");
             Dialogs.showSecureDialog(buttomDialog);
@@ -555,33 +555,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                         break;
                 }
                 Dialogs.showSecureDialog(buttomDialog);
-//
-                /* 詢問是否加入subURL(監聽器製作) */
-//                final int final_groupID = groupID;
-//                final String final_format = format;
-//                message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
-//                    @Override
-//                    public void onClick(View v) {
-//                        message_dialog.dismiss();
-//                        dialog_toast.setText("取消添加此網址到資料庫中");
-//                        dialog_toast.show();
-//
-//                    }
-//                });
-//                message_dialog.getButton(BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
-//                    @Override
-//                    public void onClick(View v) {
-//                        try {
-//                            message_dialog.dismiss();
-//                            addsubURL(final_groupID, url, final_format);
-//                            dialog_toast.setText("此網址已加入資料庫");
-//                            dialog_toast.show();
-//                        } catch (Exception e) {
-//                            System.out.println(e.getMessage());
-//                            e.printStackTrace();
-//                        }
-//                    }
-//                });
             }
 
         }
@@ -902,6 +875,24 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
             String iconTag;
             switch (v.getId()) {
+                case R.id.local_check_yes_btn:
+                    if(v.getTag().equals("add_url")){
+                        //TODO:groupID參數傳遞
+                    }else{ //ipqs_search
+                        //TODO:ipqs_layout串接
+                    }
+                    buttomDialog.dismiss();
+                    break;
+                case R.id.local_check_no_btn:
+                    if(v.getTag().equals("add_url")){
+                        dialog_toast.setText("已取消添加此網址至資料庫中");
+                        dialog_toast.show();
+                    }else{ //ipqs_search
+                        dialog_toast.setText("取消進一步檢查此網址");
+                        dialog_toast.show();
+                    }
+                    buttomDialog.dismiss();
+                    break;
                 case R.id.ipqs_yes_btn:
                     buttomDialog.dismiss();
                     try {
