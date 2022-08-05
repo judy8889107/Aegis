@@ -98,6 +98,7 @@ class Struct {
 
 public class UrlCheckActivity extends AegisActivity implements Runnable {
     /* 變數宣告 */
+    MyListener myListener;
     EditText local_url_input;
     EditText online_url_input;
     FloatingActionButton online_check_add_btn;
@@ -113,11 +114,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     View dialog_local_check_result;
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
-    private ArrayList<String> issuer;
-    private AlertDialog alert_dialog; /* 警告diaolog */
-    private AlertDialog IPQS_search_dialog; /* 搜尋 IPQS dialog */
-    private ProgressDialog progressDialog; /* 加載 dialog */
-
     private Toast dialog_toast;
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* local_url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
@@ -161,8 +157,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         myAdapter = new MyBaseExpandableListAdapter(url_database_list, this);
         expandableListView.setAdapter(myAdapter);
         expandableListView.setLongClickable(true);
-        expandableListView.setOnGroupClickListener(new MyListener());
-        expandableListView.setOnChildClickListener(new MyListener());
+        expandableListView.setOnGroupClickListener(myListener);
+        expandableListView.setOnChildClickListener(myListener);
 
 
     }
@@ -186,6 +182,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     /* 初始化 設定所有參數等等 */
     public void initialize() throws Exception {
         /* 設定參數 */
+        myListener = new MyListener();
         local_url_input = findViewById(R.id.url_input);
         online_check_add_btn = findViewById(R.id.online_check_add_btn);
         local_check_send_btn = findViewById(R.id.local_check_send_btn);
@@ -194,11 +191,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         /* 監聽器設定 */
         setSupportActionBar(toolbar);
-        toolbar.setOnMenuItemClickListener(new MyListener());
-        local_input_right_btn.setOnClickListener(new MyListener());
-        local_url_input.addTextChangedListener(new MyListener());
-        online_check_add_btn.setOnClickListener(new MyListener());
-        local_check_send_btn.setOnClickListener(new MyListener());
+        toolbar.setOnMenuItemClickListener(myListener);
+        local_input_right_btn.setOnClickListener(myListener);
+        local_url_input.addTextChangedListener(myListener);
+        online_check_add_btn.setOnClickListener(myListener);
+        local_check_send_btn.setOnClickListener(myListener);
         /* 設定Dialog view */
         setAllView();
         /* 創立 url database(目前為空) */
@@ -223,20 +220,20 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         View view = dialog_online_check_add_entry_view;
         online_url_input = view.findViewById(R.id.online_check_input);
         online_input_right_btn = view.findViewById(R.id.online_check_input_right_btn);
-        online_url_input.addTextChangedListener(new MyListener());
-        view.findViewById(R.id.online_check_input_right_btn).setOnClickListener(new MyListener());
-        view.findViewById(R.id.online_check_send_btn).setOnClickListener(new MyListener());
+        online_url_input.addTextChangedListener(myListener);
+        view.findViewById(R.id.online_check_input_right_btn).setOnClickListener(myListener);
+        view.findViewById(R.id.online_check_send_btn).setOnClickListener(myListener);
         //設定dialog_progress_view 元件
         ImageView imageView = dialog_progress_view.findViewById(R.id.progress_dot_img);
         AnimationDrawable ani = (AnimationDrawable) imageView.getDrawable();
         ani.start();
         //設定 dialog_online_check_result元件
         View view1 = dialog_online_check_result;
-        view1.findViewById(R.id.ipqs_yes_btn).setOnClickListener(new MyListener());
-        view1.findViewById(R.id.ipqs_no_btn).setOnClickListener(new MyListener());
+        view1.findViewById(R.id.ipqs_yes_btn).setOnClickListener(myListener);
+        view1.findViewById(R.id.ipqs_no_btn).setOnClickListener(myListener);
         View view2 = dialog_local_check_result;
-        view2.findViewById(R.id.local_check_yes_btn).setOnClickListener(new MyListener());
-        view2.findViewById(R.id.local_check_no_btn).setOnClickListener(new MyListener());
+        view2.findViewById(R.id.local_check_yes_btn).setOnClickListener(myListener);
+        view2.findViewById(R.id.local_check_no_btn).setOnClickListener(myListener);
 
     }
 
@@ -244,6 +241,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     public void setButtomDialog(View view, boolean isTouchCanceled, String... addition) {
         BottomSheetBehavior buttomDialogbehavior;
         switch (view.getId()) {
+            case R.layout.mydialog_online_check_add_entry:
+                buttomDialog.setContentView(view);
+                buttomDialog.setCanceledOnTouchOutside(true);
+                break;
             case R.layout.mydialog_progress_view:
                 buttomDialog.setContentView(view);
                 buttomDialogbehavior = BottomSheetBehavior.from((View) dialog_progress_view.getParent());
@@ -307,7 +308,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 safe_scale_img.setImageDrawable(getDrawable(drawableID[safe_scale]));
                 result_title.setText(Html.fromHtml(title));
                 result_msg.setText(Html.fromHtml(_msg));
-                //TODO:setButtomDialog(根據不同view作處理)
                 buttomDialog.setContentView(dialog_local_check_result);
                 buttomDialog.setCanceledOnTouchOutside(isTouchCanceled);
                 break;
@@ -324,7 +324,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
         SearchView searchView = (SearchView) menuSearchItem.getActionView();
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-        searchView.setOnQueryTextListener(new MyListener());
+        searchView.setOnQueryTextListener(myListener);
         return true;
     }
 
@@ -352,6 +352,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     /* 設定所有dialog */
     public void buildAllDialog() {
+        //toast宣告
+        dialog_toast = Toast.makeText(this,"",Toast.LENGTH_LONG);
         //底部dialog
         buttomDialog = new BottomSheetDialog(this);
         buttomDialog.setContentView(dialog_online_check_add_entry_view);
@@ -405,6 +407,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 break;
             }
         }
+        myListener.pass_params(isExist);
         //若此網址從未添加過才寫入xml檔
         if (!isExist) {
             //創建 url Object加入到 list中
@@ -417,7 +420,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             urlObjects.add(urlObject);
             //檢查 groupID有無沒被用到的,有的話就先放, 沒有則放入hashmap最後
             for (int i = 0; i < url_database_list.size() + 1; i++) {
-                System.out.println(url_database_list.containsKey(i) + " " + i);
                 if (!url_database_list.containsKey(i)) {
                     url_database_list.put(i, urlObjects);
                     break;
@@ -431,7 +433,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
 
     }
-
     //寫入xml檔案
     public void writeXml(org.w3c.dom.Document doc) throws Exception {
         //開始把 Document對映到檔案
@@ -531,12 +532,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             if (format != null) break;
         }
         System.out.println("mainURL配對完畢...比對結果為: " + format);
-
         // mainURL全無匹配
         if (format == null) {
             setButtomDialog(dialog_local_check_result, false, "1");
             Dialogs.showSecureDialog(buttomDialog);
         } else {  /* 有匹配到 mainURL */
+            myListener.pass_params(groupID,url,format);
             /* 比對 subURL */
             if (format.equals("exact") || matchSubURL(groupID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
                 setButtomDialog(dialog_local_check_result, true, "5");
@@ -815,17 +816,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             org.w3c.dom.Element root = doc.createElement("root");
             doc.appendChild(root);
 
-            //開始把Document對映到檔案
-            TransformerFactory transFactory = TransformerFactory.newInstance();
-            Transformer transFormer = transFactory.newTransformer();
-            //設定輸出結果並且生成XML檔案
-            DOMSource domSource = new DOMSource(doc);
-            File file = url_database;
-
-            FileOutputStream out = new FileOutputStream(file);
-            StreamResult xmlResult = new StreamResult(out); //設定輸入源
-            transFormer.transform(domSource, xmlResult); //輸出xml檔案
-            out.close();
+            writeXml(doc);
             System.out.println("成功創建url_database 檔案");
         } else {
             System.out.println("url_database檔案已存在");
@@ -835,7 +826,23 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     }
 
     //實作各種監聽器
-    class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener {
+    class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener{
+
+        private int groupID;
+        private String url, format;
+        private boolean isExist; //addMainURL使用
+
+        //pass變數用
+        public void pass_params(Object... objects){
+            if(objects.length==1){
+                isExist = objects[0].getClass() == Boolean.class? (boolean)objects[0]:null;
+            }
+            if(objects.length==3){
+                groupID = objects[0].getClass() == Integer.class? (int)objects[0]:null;
+                url = objects[1].getClass() == String.class? (String) objects[1]:null;
+                format = objects[2].getClass() == String.class? (String) objects[2]:null;
+            }
+        }
         // input框監聽:打字事件
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -877,11 +884,17 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             switch (v.getId()) {
                 case R.id.local_check_yes_btn:
                     if(v.getTag().equals("add_url")){
-                        //TODO:groupID參數傳遞
+                        try {
+                            buttomDialog.dismiss();
+                            addsubURL(groupID,url,format);
+                            dialog_toast.setText("已添加此網址至資料庫中");
+                            dialog_toast.show();
+                        } catch (Exception e) {
+                            System.out.println(e.getMessage());
+                        }
                     }else{ //ipqs_search
-                        //TODO:ipqs_layout串接
+                        IPQSCheck();
                     }
-                    buttomDialog.dismiss();
                     break;
                 case R.id.local_check_no_btn:
                     if(v.getTag().equals("add_url")){
@@ -894,14 +907,16 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     buttomDialog.dismiss();
                     break;
                 case R.id.ipqs_yes_btn:
-                    buttomDialog.dismiss();
                     try {
+                        buttomDialog.dismiss();
                         addMainURL(URL_text);
+                        if(!isExist){
+                            dialog_toast.setText("已添加此網址至資料庫中");
+                            dialog_toast.show();
+                        }
                     } catch (Exception e) {
                         System.out.println(e.getMessage());
                     }
-                    dialog_toast.setText("已添加此網址至資料庫中");
-                    dialog_toast.show();
                     break;
                 case R.id.ipqs_no_btn:
                     buttomDialog.dismiss();
@@ -925,6 +940,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 case R.id.online_check_add_btn:
                     setButtomDialog(dialog_online_check_add_entry_view, true);
                     Dialogs.showSecureDialog(buttomDialog);
+                    online_url_input.setText("");
                     break;
                 case R.id.local_input_right_btn:
                     iconTag = (String) local_input_right_btn.getTag();
