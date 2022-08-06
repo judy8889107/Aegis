@@ -10,9 +10,10 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:paddingLeft="20dp"
-        android:paddingTop="5dp"
+        android:paddingVertical="5dp"
         android:singleLine="true"
         android:text="TextView"
+        android:gravity="center_vertical"
         android:textColor="#000000"
         android:textSize="18sp" />
 

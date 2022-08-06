@@ -12,6 +12,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 
+import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.drawable.AnimationDrawable;
 import android.os.Build;
@@ -27,6 +28,7 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 
 
@@ -118,7 +120,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* local_url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
-    private HashMap<Integer, ArrayList<TextView>> textViewList = new HashMap<>();
     private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
     private ExpandableListView expandableListView;
     private MyBaseExpandableListAdapter myAdapter;
@@ -152,13 +153,15 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             System.out.println(e.getMessage());
         }
         //測試
-        System.out.println("測試摺疊清單");
-        expandableListView = (ExpandableListView) this.findViewById(R.id.expand_listview);
-        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this);
-        expandableListView.setAdapter(myAdapter);
-        expandableListView.setLongClickable(true);
-        expandableListView.setOnGroupClickListener(myListener);
-        expandableListView.setOnChildClickListener(myListener);
+//        System.out.println("測試摺疊清單");
+//        expandableListView = (ExpandableListView) this.findViewById(R.id.expand_listview);
+//        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this);
+//        expandableListView.setAdapter(myAdapter);
+
+        //TODO:摺疊清單監聽
+//        expandableListView.setLongClickable(true);
+//        expandableListView.setOnGroupClickListener(myListener);
+//        expandableListView.setOnChildClickListener(myListener);
 
 
     }
@@ -178,6 +181,19 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         return super.onKeyDown(keyCode, event);
     }
 
+    // TODO:点击空白区域 自动隐藏软键盘(dialog事件處理)
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (this.getCurrentFocus() != null) {
+            imm.hideSoftInputFromWindow(this.getCurrentFocus().getWindowToken(), 0);
+            if (buttomDialog.isShowing()){
+                imm.hideSoftInputFromWindow(buttomDialog.getWindow().getDecorView().getWindowToken(), 0);
+            }
+
+        }
+
+        return super.dispatchTouchEvent(event);
+    }
 
     /* 初始化 設定所有參數等等 */
     public void initialize() throws Exception {
@@ -188,6 +204,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         local_check_send_btn = findViewById(R.id.local_check_send_btn);
         local_input_right_btn = findViewById(R.id.local_input_right_btn);
         toolbar = findViewById(R.id.toolbar);
+        expandableListView = (ExpandableListView) findViewById(R.id.expand_listview);
         imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         /* 監聽器設定 */
         setSupportActionBar(toolbar);
@@ -315,6 +332,15 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
     }
 
+    public HashMap<Integer, ArrayList<Struct.urlObject>> getUrl_database_list() {
+        return url_database_list;
+    }
+
+    //刷新database UI
+    public void refreshUI() {
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this);
+        expandableListView.setAdapter(myAdapter);
+    }
 
     // 設定 toolbar&& 搜尋功能
     @Override
@@ -353,7 +379,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     /* 設定所有dialog */
     public void buildAllDialog() {
         //toast宣告
-        dialog_toast = Toast.makeText(this,"",Toast.LENGTH_LONG);
+        dialog_toast = Toast.makeText(this, "", Toast.LENGTH_LONG);
         //底部dialog
         buttomDialog = new BottomSheetDialog(this);
         buttomDialog.setContentView(dialog_online_check_add_entry_view);
@@ -390,12 +416,16 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
         }
         System.out.println("讀取資料庫...完畢");
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this);
+        expandableListView.setAdapter(myAdapter);
+        System.out.println("創建UI清單...完畢");
     }
 
 
     // 設定安全網址 - mainURL加入網址到資料庫中
     public void addMainURL(String url) throws Exception {
         Boolean isExist = false;
+        int groupID = 0;
         System.out.println("要加入mainURL的資料: " + url);
         //先檢查有無重複網址
         for (int i = 0; i < url_database_list.size(); i++) {
@@ -422,6 +452,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             for (int i = 0; i < url_database_list.size() + 1; i++) {
                 if (!url_database_list.containsKey(i)) {
                     url_database_list.put(i, urlObjects);
+                    groupID = i;
                     break;
                 }
             }
@@ -431,8 +462,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             dialog_toast.setText("此網址已存在於資料庫中");
             dialog_toast.show();
         }
+        refreshUI(); //刷新 UI
+
 
     }
+
     //寫入xml檔案
     public void writeXml(org.w3c.dom.Document doc) throws Exception {
         //開始把 Document對映到檔案
@@ -537,7 +571,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             setButtomDialog(dialog_local_check_result, false, "1");
             Dialogs.showSecureDialog(buttomDialog);
         } else {  /* 有匹配到 mainURL */
-            myListener.pass_params(groupID,url,format);
+            myListener.pass_params(groupID, url, format);
             /* 比對 subURL */
             if (format.equals("exact") || matchSubURL(groupID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
                 setButtomDialog(dialog_local_check_result, true, "5");
@@ -616,6 +650,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         url_database_list.put(groupID, urlObjects); //hashMap鍵更新鍵值
         System.out.println(String.format("%s 已成功加入資料庫中!", url));
 //        write_url_database();
+        refreshUI();//刷新 UI
     }
 
     //比對 subURL有無 exact
@@ -826,23 +861,24 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     }
 
     //實作各種監聽器
-    class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener{
+    class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener {
 
         private int groupID;
         private String url, format;
         private boolean isExist; //addMainURL使用
 
         //pass變數用
-        public void pass_params(Object... objects){
-            if(objects.length==1){
-                isExist = objects[0].getClass() == Boolean.class? (boolean)objects[0]:null;
+        public void pass_params(Object... objects) {
+            if (objects.length == 1) {
+                isExist = objects[0].getClass() == Boolean.class ? (boolean) objects[0] : null;
             }
-            if(objects.length==3){
-                groupID = objects[0].getClass() == Integer.class? (int)objects[0]:null;
-                url = objects[1].getClass() == String.class? (String) objects[1]:null;
-                format = objects[2].getClass() == String.class? (String) objects[2]:null;
+            if (objects.length == 3) {
+                groupID = objects[0].getClass() == Integer.class ? (int) objects[0] : null;
+                url = objects[1].getClass() == String.class ? (String) objects[1] : null;
+                format = objects[2].getClass() == String.class ? (String) objects[2] : null;
             }
         }
+
         // input框監聽:打字事件
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -883,24 +919,24 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             String iconTag;
             switch (v.getId()) {
                 case R.id.local_check_yes_btn:
-                    if(v.getTag().equals("add_url")){
+                    if (v.getTag().equals("add_url")) {
                         try {
                             buttomDialog.dismiss();
-                            addsubURL(groupID,url,format);
+                            addsubURL(groupID, url, format);
                             dialog_toast.setText("已添加此網址至資料庫中");
                             dialog_toast.show();
                         } catch (Exception e) {
                             System.out.println(e.getMessage());
                         }
-                    }else{ //ipqs_search
+                    } else { //ipqs_search
                         IPQSCheck();
                     }
                     break;
                 case R.id.local_check_no_btn:
-                    if(v.getTag().equals("add_url")){
+                    if (v.getTag().equals("add_url")) {
                         dialog_toast.setText("已取消添加此網址至資料庫中");
                         dialog_toast.show();
-                    }else{ //ipqs_search
+                    } else { //ipqs_search
                         dialog_toast.setText("取消進一步檢查此網址");
                         dialog_toast.show();
                     }
@@ -910,7 +946,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     try {
                         buttomDialog.dismiss();
                         addMainURL(URL_text);
-                        if(!isExist){
+                        if (!isExist) {
                             dialog_toast.setText("已添加此網址至資料庫中");
                             dialog_toast.show();
                         }
@@ -968,7 +1004,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         //TODO:摺疊式清單事件監聽
         @Override
         public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
-            System.out.println("你點擊了 " + url_database_list.get(groupPosition).get(0).text);
+
             if (expandableListView.isGroupExpanded(groupPosition))
                 expandableListView.collapseGroup(groupPosition);
             else expandableListView.expandGroup(groupPosition);
@@ -1007,6 +1043,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             //只要有文字變動就會有的string
             return true;
         }
+
+
     }
 
 }

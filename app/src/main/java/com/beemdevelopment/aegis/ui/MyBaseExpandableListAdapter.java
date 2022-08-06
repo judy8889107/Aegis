@@ -1,6 +1,9 @@
 package com.beemdevelopment.aegis.ui;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +15,7 @@ import com.beemdevelopment.aegis.R;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.logging.LogRecord;
 
 public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
 
@@ -26,6 +30,7 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
         this.content = content;
 
     }
+
 
     //處理child_list, 若用 remove會影響到同一份物件(建立新物件並重新加入或實現深拷貝)
     public void preprocess() {
