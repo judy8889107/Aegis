@@ -6,6 +6,15 @@
     android:orientation="vertical"
     >
 
+    <ImageButton
+        android:id="@+id/online_check_close_btn"
+        android:layout_width="46dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:layout_marginTop="10dp"
+        android:background="@android:color/transparent"
+        app:srcCompat="@drawable/mydrawble_clear_icon" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="220dp"

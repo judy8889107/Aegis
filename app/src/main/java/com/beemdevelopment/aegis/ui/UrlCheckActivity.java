@@ -5,9 +5,12 @@ package com.beemdevelopment.aegis.ui;
 import static android.content.DialogInterface.BUTTON_NEGATIVE;
 import static android.content.DialogInterface.BUTTON_POSITIVE;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -46,6 +49,7 @@ import java.io.IOException;
 import android.view.inputmethod.InputMethodManager;
 
 /* 使用EditText */
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 /* 控制鍵盤 */
@@ -123,6 +127,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
     private ExpandableListView expandableListView;
     private MyBaseExpandableListAdapter myAdapter;
+    private ClipboardManager cmb;
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
@@ -152,16 +157,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             e.printStackTrace();
             System.out.println(e.getMessage());
         }
-        //測試
-//        System.out.println("測試摺疊清單");
-//        expandableListView = (ExpandableListView) this.findViewById(R.id.expand_listview);
-//        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this);
-//        expandableListView.setAdapter(myAdapter);
-
-        //TODO:摺疊清單監聽
-//        expandableListView.setLongClickable(true);
-//        expandableListView.setOnGroupClickListener(myListener);
-//        expandableListView.setOnChildClickListener(myListener);
 
 
     }
@@ -181,17 +176,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         return super.onKeyDown(keyCode, event);
     }
 
-    // TODO:点击空白区域 自动隐藏软键盘(dialog事件處理)
+    //点击空白区域 自动隐藏软键盘
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
         if (this.getCurrentFocus() != null) {
             imm.hideSoftInputFromWindow(this.getCurrentFocus().getWindowToken(), 0);
-            if (buttomDialog.isShowing()){
-                imm.hideSoftInputFromWindow(buttomDialog.getWindow().getDecorView().getWindowToken(), 0);
-            }
-
         }
-
         return super.dispatchTouchEvent(event);
     }
 
@@ -206,6 +196,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         toolbar = findViewById(R.id.toolbar);
         expandableListView = (ExpandableListView) findViewById(R.id.expand_listview);
         imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        cmb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         /* 監聽器設定 */
         setSupportActionBar(toolbar);
         toolbar.setOnMenuItemClickListener(myListener);
@@ -213,6 +204,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         local_url_input.addTextChangedListener(myListener);
         online_check_add_btn.setOnClickListener(myListener);
         local_check_send_btn.setOnClickListener(myListener);
+        //TODO:摺疊清單監聽
+        expandableListView.setOnGroupClickListener(myListener);
+        expandableListView.setOnChildClickListener(myListener);
+        expandableListView.setOnLongClickListener(myListener);
+        expandableListView.setOnItemLongClickListener(myListener);
         /* 設定Dialog view */
         setAllView();
         /* 創立 url database(目前為空) */
@@ -240,6 +236,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         online_url_input.addTextChangedListener(myListener);
         view.findViewById(R.id.online_check_input_right_btn).setOnClickListener(myListener);
         view.findViewById(R.id.online_check_send_btn).setOnClickListener(myListener);
+        view.findViewById(R.id.online_check_close_btn).setOnClickListener(myListener);
+        view.setOnTouchListener(myListener);
         //設定dialog_progress_view 元件
         ImageView imageView = dialog_progress_view.findViewById(R.id.progress_dot_img);
         AnimationDrawable ani = (AnimationDrawable) imageView.getDrawable();
@@ -260,7 +258,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         switch (view.getId()) {
             case R.layout.mydialog_online_check_add_entry:
                 buttomDialog.setContentView(view);
-                buttomDialog.setCanceledOnTouchOutside(true);
+                buttomDialog.setCanceledOnTouchOutside(isTouchCanceled);
                 break;
             case R.layout.mydialog_progress_view:
                 buttomDialog.setContentView(view);
@@ -384,6 +382,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         buttomDialog = new BottomSheetDialog(this);
         buttomDialog.setContentView(dialog_online_check_add_entry_view);
         buttomDialog.setCanceledOnTouchOutside(true);
+
     }
 
     //讀取資料庫進入 url_database_list
@@ -861,7 +860,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     }
 
     //實作各種監聽器
-    class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener {
+    class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener, View.OnTouchListener, View.OnLongClickListener, AdapterView.OnItemLongClickListener {
 
         private int groupID;
         private String url, format;
@@ -918,6 +917,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
             String iconTag;
             switch (v.getId()) {
+                case R.id.online_check_close_btn:
+                    buttomDialog.dismiss();
+                    break;
                 case R.id.local_check_yes_btn:
                     if (v.getTag().equals("add_url")) {
                         try {
@@ -974,7 +976,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     IPQSCheck();
                     break;
                 case R.id.online_check_add_btn:
-                    setButtomDialog(dialog_online_check_add_entry_view, true);
+                    setButtomDialog(dialog_online_check_add_entry_view, false);
                     Dialogs.showSecureDialog(buttomDialog);
                     online_url_input.setText("");
                     break;
@@ -1001,22 +1003,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             }
         }
 
-        //TODO:摺疊式清單事件監聽
-        @Override
-        public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
 
-            if (expandableListView.isGroupExpanded(groupPosition))
-                expandableListView.collapseGroup(groupPosition);
-            else expandableListView.expandGroup(groupPosition);
-            return true;
-        }
-
-        @Override
-        public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
-            String message = myAdapter.child_list.get(groupPosition).get(childPosition).text;
-            System.out.println(message);
-            return true;
-        }
 
         //TODO:Menu按鈕監聽
         @Override
@@ -1045,6 +1032,46 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
 
 
+        // 鍵盤點擊 dialog空白處收起事件
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            if (online_url_input.isFocused())
+                imm.hideSoftInputFromWindow(buttomDialog.getWindow().getDecorView().getWindowToken(), 0);
+            return true;
+        }
+
+        //TODO:摺疊式清單事件監聽(判斷點擊箭頭或文字)
+        @Override
+        public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+            String text = url_database_list.get(groupPosition).get(0).text;
+            cmb.setPrimaryClip(ClipData.newPlainText(null,text));
+            if (expandableListView.isGroupExpanded(groupPosition))
+                expandableListView.collapseGroup(groupPosition);
+            else expandableListView.expandGroup(groupPosition);
+            dialog_toast.setText("已複製至剪貼簿");
+            dialog_toast.show();
+            return true;
+        }
+
+        @Override
+        public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
+            String text = myAdapter.child_list.get(groupPosition).get(childPosition).text;
+            cmb.setPrimaryClip(ClipData.newPlainText(null,text));
+            dialog_toast.setText("已複製至剪貼簿");
+            dialog_toast.show();
+            return true;
+        }
+
+        //TODO:摺疊清單長按
+        //父
+        @Override
+        public boolean onLongClick(View v) {
+            return false;
+        }
+        @Override
+        public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+            return false;
+        }
     }
 
 }
