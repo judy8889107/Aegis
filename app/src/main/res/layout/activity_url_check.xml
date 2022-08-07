@@ -111,8 +111,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="450dp"
                         android:nestedScrollingEnabled="true"
-                        android:scrollbars="none">
-
+                        android:scrollbars="none"
+                        android:groupIndicator="@null">
                     </ExpandableListView>
                 </LinearLayout>
 

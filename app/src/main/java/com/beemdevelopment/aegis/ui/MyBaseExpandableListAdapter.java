@@ -1,13 +1,16 @@
 package com.beemdevelopment.aegis.ui;
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.beemdevelopment.aegis.R;
@@ -22,11 +25,13 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
     public HashMap<Integer, ArrayList<Struct.urlObject>> group_list;
     public HashMap<Integer, ArrayList<Struct.urlObject>> child_list;
     public Context content;
+    public UrlCheckActivity.MyListener myListener;
 
 
-    public MyBaseExpandableListAdapter(HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list, Context content) {
+    public MyBaseExpandableListAdapter(HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener) {
         this.group_list = url_database_list;
         this.preprocess();
+        this.myListener = myListener;
         this.content = content;
 
     }
@@ -89,17 +94,25 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
                     R.layout.listview_parent_item, parent, false);
             viewHolderGroup = new ViewHolderGroup();
             viewHolderGroup.tv_parent_item = (TextView) convertView.findViewById(R.id.tv_group_parent);
+            viewHolderGroup.parent_item_icon = convertView.findViewById(R.id.parent_item_icon);
+            viewHolderGroup.parent_item_icon.setTag(groupPosition); //傳遞資訊
+            viewHolderGroup.parent_item_icon.setOnClickListener(myListener);
             convertView.setTag(viewHolderGroup);
         } else {
             viewHolderGroup = (ViewHolderGroup) convertView.getTag();
         }
         String parentItem = group_list.get(groupPosition).get(0).text;
         viewHolderGroup.tv_parent_item.setText(parentItem);
+
         //展開收合圖示變更
         if (isExpanded) {
-            viewHolderGroup.tv_parent_item.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.down_arrow, 0);
+            Drawable down_arrow = convertView.getResources().getDrawable(R.drawable.down_arrow);
+            viewHolderGroup.parent_item_icon.setImageDrawable(down_arrow);
+            viewHolderGroup.parent_item_icon.setTag(groupPosition); //傳遞位置資訊
         } else {
-            viewHolderGroup.tv_parent_item.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
+            Drawable right_arrow = convertView.getResources().getDrawable(R.drawable.right_arrow);
+            viewHolderGroup.parent_item_icon.setImageDrawable(right_arrow);
+            viewHolderGroup.parent_item_icon.setTag(groupPosition); //傳遞位置資訊
         }
         return convertView;
     }
@@ -131,6 +144,7 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
 
     private static class ViewHolderGroup {
         private TextView tv_parent_item;
+        private ImageButton parent_item_icon;
     }
 
     private static class ViewHolderItem {
