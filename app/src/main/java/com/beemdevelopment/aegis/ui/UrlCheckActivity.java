@@ -887,10 +887,15 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
             if (buttomDialog.isShowing()) {
+                ImageButton close_btn = dialog_online_check_add_entry_view.findViewById(R.id.online_check_close_btn);
                 if (count == 0) {
+                    buttomDialog.setCanceledOnTouchOutside(true);
+                    close_btn.setVisibility(View.GONE);
                     online_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_qrcode_scan));
                     online_input_right_btn.setTag("ic_qrcode_scan");
                 } else {
+                    buttomDialog.setCanceledOnTouchOutside(false);
+                    close_btn.setVisibility(View.VISIBLE);
                     online_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_clear_button));
                     online_input_right_btn.setTag("ic_clear_button");
                 }
@@ -976,7 +981,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     IPQSCheck();
                     break;
                 case R.id.online_check_add_btn:
-                    setButtomDialog(dialog_online_check_add_entry_view, false);
+                    setButtomDialog(dialog_online_check_add_entry_view, true);
                     Dialogs.showSecureDialog(buttomDialog);
                     online_url_input.setText("");
                     break;
