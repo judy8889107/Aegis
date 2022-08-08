@@ -5,11 +5,14 @@ import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.provider.ContactsContract;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.CheckBox;
+import android.widget.CheckedTextView;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
@@ -33,7 +36,6 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
         this.preprocess();
         this.myListener = myListener;
         this.content = content;
-
     }
 
 
@@ -125,15 +127,21 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
                     R.layout.listview_child_item, parent, false);
             viewHolderItem = new ViewHolderItem();
             viewHolderItem.tv_child_item = (TextView) convertView.findViewById(R.id.tv_group_child);
+            viewHolderItem.del_child_item = (ImageButton)convertView.findViewById(R.id.del_child_item);
+            viewHolderItem.del_child_item.setOnClickListener(myListener);
             convertView.setTag(viewHolderItem);
 
         } else {
             viewHolderItem = (ViewHolderItem) convertView.getTag();
         }
         String childItem = child_list.get(groupPosition).get(childPosition).text;
+        String uuid = child_list.get(groupPosition).get(childPosition).uuid;
         viewHolderItem.tv_child_item.setText(childItem);
+        viewHolderItem.del_child_item.setTag(uuid);
         return convertView;
     }
+
+
 
     //设置子列表是否可选中
     @Override
@@ -149,6 +157,8 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
 
     private static class ViewHolderItem {
         private TextView tv_child_item;
+        private ImageButton del_child_item;
+
     }
 
 }
