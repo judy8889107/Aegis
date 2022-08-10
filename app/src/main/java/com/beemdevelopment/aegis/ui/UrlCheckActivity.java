@@ -9,6 +9,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
+import android.app.Service;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -18,12 +19,14 @@ import android.content.Intent;
 import android.content.res.TypedArray;
 import android.database.Cursor;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 
 
+import android.os.Vibrator;
 import android.text.Editable;
 import android.text.Html;
 import android.text.SpannableStringBuilder;
@@ -42,9 +45,11 @@ import com.beemdevelopment.aegis.R;
 
 
 import com.beemdevelopment.aegis.ui.dialogs.Dialogs;
+import com.google.android.gms.vision.text.Text;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
@@ -63,6 +68,7 @@ import android.widget.ExpandableListView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -83,6 +89,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 /* JSON */
 
 import org.apache.commons.validator.routines.UrlValidator;
@@ -127,13 +134,17 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
     private Toast dialog_toast;
+    private Snackbar snackbar;
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* local_url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
     private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
+    private ArrayList<Struct.urlObject> PD_urlObjects;
     private ExpandableListView expandableListView;
     private MyBaseExpandableListAdapter myAdapter;
     private ClipboardManager cmb;
+    private Vibrator myVibrator;
+    private long firstPressedTime;
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
@@ -171,13 +182,33 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if ((keyCode == KeyEvent.KEYCODE_BACK)) {
-            try {
-                write_url_database();
-                this.finish();
-            } catch (Exception e) {
-                e.printStackTrace();
+            //TODO:長按返回事件
+            if (myListener.isLongClick) {
+                if (PD_urlObjects.size() == 0 || (System.currentTimeMillis() - firstPressedTime < 2000)) {
+                    myListener.isLongClick = false;
+                    online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
+                    online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
+                    refreshUI();
+                    setSnackbar("已退出操作", "", Snackbar.LENGTH_SHORT);
+                    snackbar.show();
+                    PD_urlObjects.clear();
+                    return false;
+                } else { //當選擇數目不為 0 時
+                    myVibrator.vibrate(300);
+                    setSnackbar("請重新按下返回鍵以退出", "", Snackbar.LENGTH_INDEFINITE);
+                    firstPressedTime = System.currentTimeMillis();
+                    return false;
+                }
+            } else {
+                try {
+                    write_url_database();
+                    this.finish();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return true;
             }
-            return true;
+
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -202,11 +233,14 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         local_input_right_btn = findViewById(R.id.local_input_right_btn);
         toolbar = findViewById(R.id.toolbar);
         expandableListView = (ExpandableListView) findViewById(R.id.expand_listview);
-
         imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         cmb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        /* 監聽器設定 */
+        myVibrator = (Vibrator) getSystemService(Service.VIBRATOR_SERVICE);
+        PD_urlObjects = new ArrayList<>();
+        /* 其他變數設定 */
         setSupportActionBar(toolbar);
+        online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
+        /* 監聽器設定 */
         toolbar.setOnMenuItemClickListener(myListener);
         local_input_right_btn.setOnClickListener(myListener);
         local_url_input.addTextChangedListener(myListener);
@@ -337,13 +371,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
     }
 
-    public HashMap<Integer, ArrayList<Struct.urlObject>> getUrl_database_list() {
-        return url_database_list;
-    }
 
     //刷新database UI
-    public void refreshUI() {
-        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener);
+    public void refreshUI(boolean... addition) {
+        boolean isDelClick = false;
+        if (addition.length != 0) isDelClick = addition[0]; //isDelClick:true
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener, isDelClick);
         expandableListView.setAdapter(myAdapter);
     }
 
@@ -385,10 +418,23 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     public void buildAllDialog() {
         //toast宣告
         dialog_toast = Toast.makeText(this, "", Toast.LENGTH_LONG);
+
+        //TODO:Snakerbar宣告
+        snackbar = Snackbar.make(this.findViewById(R.id.activity_url_check), "", Snackbar.LENGTH_SHORT)
+                .setAction("已複製", myListener)
+                .setActionTextColor(Color.parseColor("#FF60AF"));
         //底部dialog
         buttomDialog = new BottomSheetDialog(this);
         buttomDialog.setContentView(dialog_online_check_add_entry_view);
         buttomDialog.setCanceledOnTouchOutside(true);
+
+    }
+
+    //TODO:設定snackbar
+    public void setSnackbar(String text, String action, int duration) {
+        snackbar.setText(text);
+        snackbar.setAction(action, myListener);
+        snackbar.setDuration(duration);
 
     }
 
@@ -402,6 +448,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         NodeList nodeList = doc.getElementsByTagName("token");
 
         url_database_list = new HashMap<>();
+
         for (int i = 0; i < nodeList.getLength(); i++) {
             Node tokenNode = nodeList.item(i);
             String groupID = tokenNode.getAttributes().getNamedItem("id").getNodeValue();
@@ -416,13 +463,16 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 urlObject.text = node.getTextContent();
                 if (node.getNodeName().equals("subURL"))
                     urlObject.format = node.getAttributes().getNamedItem("format").getNodeValue();
+
+
                 groupList.add(urlObject);
             }
+
             url_database_list.put(Integer.valueOf(groupID), groupList);
 
         }
         System.out.println("讀取資料庫...完畢");
-        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener);
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener, false);
         expandableListView.setAdapter(myAdapter);
         System.out.println("創建UI清單...完畢");
     }
@@ -872,6 +922,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         private int groupID;
         private String url, format;
         private boolean isExist; //addMainURL使用
+        private boolean isLongClick = false;
 
         //pass變數用
         public void pass_params(Object... objects) {
@@ -929,15 +980,31 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
             String iconTag;
             switch (v.getId()) {
-                case R.id.del_child_item:
-                    String uuid = (String) v.getTag();
-                    System.out.println(uuid);
-                    break;
                 case R.id.parent_item_icon: /*展開收合清單*/
                     int groupPosition = (int) v.getTag();
-                    if (!expandableListView.isGroupExpanded(groupPosition))
-                        expandableListView.expandGroup(groupPosition);
-                    else expandableListView.collapseGroup(groupPosition);
+                    //還未長按時可以收合清單
+                    //長按後不可收合清單
+                    if (!isLongClick) {
+                        if (!expandableListView.isGroupExpanded(groupPosition)) {
+                            expandableListView.expandGroup(groupPosition);
+
+                        } else {
+                            //收合清單時，將textView也收合(設為singleLine)
+                            if (!this.isLongClick) {
+                                for (int i = 0; i < expandableListView.getChildCount(); i++) {
+                                    View view = expandableListView.getChildAt(i);
+                                    TextView textView = null;
+                                    textView = view.findViewById(R.id.tv_group_child);
+                                    textView = textView == null ? view.findViewById(R.id.tv_group_parent) : textView;
+                                    if (textView != null) {
+                                        textView.setSingleLine(true);
+                                    }
+                                }
+                            }
+                            expandableListView.collapseGroup(groupPosition);
+                        }
+                    }
+
                     break;
                 case R.id.online_check_close_btn: /*關閉buttomDialog(X)*/
                     buttomDialog.dismiss();
@@ -998,9 +1065,20 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     IPQSCheck();
                     break;
                 case R.id.online_check_add_btn:
-                    setButtomDialog(dialog_online_check_add_entry_view, true);
-                    Dialogs.showSecureDialog(buttomDialog);
-                    online_url_input.setText("");
+                    int iconID = (int) online_check_add_btn.getTag();
+                    switch (iconID) {
+                        case R.drawable.ic_add_black_24dp:
+                            setButtomDialog(dialog_online_check_add_entry_view, true);
+                            Dialogs.showSecureDialog(buttomDialog);
+                            online_url_input.setText("");
+                            break;
+                        case R.drawable.mydrawble_arrow_back:
+                            //TODO:返回按紐[待刪除]
+                            break;
+                        case R.drawable.ic_delete_black_24dp:
+                            //TODO:刪除按鈕
+                            break;
+                    }
                     break;
                 case R.id.local_input_right_btn:
                     iconTag = (String) local_input_right_btn.getTag();
@@ -1033,6 +1111,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             switch (item.getItemId()) {
                 case R.id.action_intro_Url_Check:
                     break;
+                case R.id.action_delete:
+                    //TODO:delete鍵按下
+                    refreshUI(true); //isLongClick:true
+                    break;
                 case R.id.import_export_btn:
                     break;
             }
@@ -1061,33 +1143,107 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             return true;
         }
 
-        @RequiresApi(api = Build.VERSION_CODES.N)
+        @RequiresApi(api = Build.VERSION_CODES.Q)
         @Override
         public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
             TextView parent_item = v.findViewById(R.id.tv_group_parent);
-            String text = parent_item.getText().toString();
-            cmb.setPrimaryClip(ClipData.newPlainText(null, text));
-            dialog_toast.setText("已複製至剪貼簿");
-            dialog_toast.show();
+            if (this.isLongClick) {
+                //parent item設定
+                parent_item.setSingleLine(false);
+                parent_item.setSelected(!parent_item.isSelected()); //state_select轉換
+                toggleStrike(parent_item);
+                //child item設定
+                int child_position = expandableListView.getPositionForView(v) + 1;
+                for (int i = 0; i < myAdapter.getChildrenCount(groupPosition); i++) {
+                    View view = expandableListView.getChildAt(child_position);
+                    TextView child_item = view.findViewById(R.id.tv_group_child);
+                    child_item.setSingleLine(false);
+                    child_item.setSelected(parent_item.isSelected());
+                    toggleStrike(child_item);
+                    child_position++;
+                }
+                //加入待刪除清單
+                ArrayList<Struct.urlObject> urlObjects = (ArrayList<Struct.urlObject>) parent_item.getTag();
+                for (Struct.urlObject item : urlObjects) {
+                    if (parent_item.isSelected()) { //若parent item被選中
+                        if (!PD_urlObjects.contains(item)) PD_urlObjects.add(item);
+                    } else { //若parent item沒選中
+                        if (PD_urlObjects.contains(item)) PD_urlObjects.remove(item);
+                    }
+                }
+                setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
+
+            } else {
+                //輕觸展開並複製
+                parent_item.setSingleLine(false);
+                String text = parent_item.getText().toString();
+                String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
+                //不重新複製
+                if (!text.equals(pre_text))
+                    cmb.setPrimaryClip(ClipData.newPlainText(null, text)); //刪除線轉換
+                setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
+                snackbar.show();
+            }
+
             return true;
         }
 
+        //TODO:輕點即可展開複製
+        @RequiresApi(api = Build.VERSION_CODES.Q)
         @Override
         public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
             TextView child_item = v.findViewById(R.id.tv_group_child);
-            String text = child_item.getText().toString();
-            cmb.setPrimaryClip(ClipData.newPlainText(null, text));
-            dialog_toast.setText("已複製至剪貼簿");
-            dialog_toast.show();
+            if (isLongClick) { //長按事件
+                child_item.setSingleLine(false);
+                child_item.setSelected(!child_item.isSelected());//state_select轉換
+                toggleStrike(child_item);
+                //添加移除toggle
+                if (PD_urlObjects.contains(child_item.getTag()))
+                    PD_urlObjects.remove(child_item.getTag());
+                else PD_urlObjects.add((Struct.urlObject) child_item.getTag());
+                setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
+            } else { //輕觸複製事件
+                //輕觸展開並複製
+                child_item.setSingleLine(false);
+                String text = child_item.getText().toString();
+                String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
+                //不重新複製
+                if (!text.equals(pre_text)) cmb.setPrimaryClip(ClipData.newPlainText(null, text));
+                setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
+                snackbar.show();
+
+            }
             return true;
         }
 
-        //TODO:摺疊清單長按操作刪除群組
-
+        //TODO:長按事件
         @Override
         public boolean onItemLongClick(AdapterView<?> parent, View v, int position, long id) {
+            //長按事件觸發一次
+            if (!this.isLongClick) {
+                this.isLongClick = true;
+                myVibrator.vibrate(500);
+                //長按展開所有清單
+                for (int i = 0; i < myAdapter.getGroupCount(); i++) {
+                    expandableListView.expandGroup(i);
+                }
+                //floating button 設定
+                online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_delete_black_24dp));
+                online_check_add_btn.setTag(R.drawable.ic_delete_black_24dp);
+                //snackbar 設定
+                setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
+                snackbar.show();
+            }
 
             return true;
+        }
+
+        public void toggleStrike(TextView item) {
+            int strike_line_show = (item.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+            int strike_line_hide = (item.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+            if (item.isSelected())
+                item.setPaintFlags(strike_line_show);
+            else item.setPaintFlags(strike_line_hide);
         }
 
 

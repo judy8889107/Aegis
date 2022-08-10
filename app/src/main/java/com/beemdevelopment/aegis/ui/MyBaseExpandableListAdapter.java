@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.provider.ContactsContract;
+import android.text.TextUtils;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,14 +30,19 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
     public HashMap<Integer, ArrayList<Struct.urlObject>> child_list;
     public Context content;
     public UrlCheckActivity.MyListener myListener;
+    boolean isDelClick;
 
 
-    public MyBaseExpandableListAdapter(HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener) {
+    public MyBaseExpandableListAdapter(HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener, boolean isDelClick) {
         this.group_list = url_database_list;
         this.preprocess();
         this.myListener = myListener;
         this.content = content;
+        this.isDelClick = isDelClick;
+
     }
+
+
 
 
     //處理child_list, 若用 remove會影響到同一份物件(建立新物件並重新加入或實現深拷貝)
@@ -105,15 +111,16 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
         }
         String parentItem = group_list.get(groupPosition).get(0).text;
         viewHolderGroup.tv_parent_item.setText(parentItem);
+        //添加 Tag
+        ArrayList<Struct.urlObject> urlObjects = group_list.get(groupPosition);
+        viewHolderGroup.tv_parent_item.setTag(urlObjects);
 
         //展開收合圖示變更
         if (isExpanded) {
-            Drawable down_arrow = convertView.getResources().getDrawable(R.drawable.down_arrow);
-            viewHolderGroup.parent_item_icon.setImageDrawable(down_arrow);
+            viewHolderGroup.parent_item_icon.setPressed(true);
             viewHolderGroup.parent_item_icon.setTag(groupPosition); //傳遞位置資訊
         } else {
-            Drawable right_arrow = convertView.getResources().getDrawable(R.drawable.right_arrow);
-            viewHolderGroup.parent_item_icon.setImageDrawable(right_arrow);
+            viewHolderGroup.parent_item_icon.setPressed(false);
             viewHolderGroup.parent_item_icon.setTag(groupPosition); //傳遞位置資訊
         }
         return convertView;
@@ -127,17 +134,16 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
                     R.layout.listview_child_item, parent, false);
             viewHolderItem = new ViewHolderItem();
             viewHolderItem.tv_child_item = (TextView) convertView.findViewById(R.id.tv_group_child);
-            viewHolderItem.del_child_item = (ImageButton)convertView.findViewById(R.id.del_child_item);
-            viewHolderItem.del_child_item.setOnClickListener(myListener);
             convertView.setTag(viewHolderItem);
 
         } else {
             viewHolderItem = (ViewHolderItem) convertView.getTag();
         }
-        String childItem = child_list.get(groupPosition).get(childPosition).text;
-        String uuid = child_list.get(groupPosition).get(childPosition).uuid;
+        Struct.urlObject urlObject = child_list.get(groupPosition).get(childPosition);
+        String childItem = urlObject.text;
         viewHolderItem.tv_child_item.setText(childItem);
-        viewHolderItem.del_child_item.setTag(uuid);
+        viewHolderItem.tv_child_item.setTag(urlObject);
+
         return convertView;
     }
 
@@ -157,7 +163,6 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
 
     private static class ViewHolderItem {
         private TextView tv_child_item;
-        private ImageButton del_child_item;
 
     }
 

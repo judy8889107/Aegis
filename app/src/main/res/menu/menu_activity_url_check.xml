@@ -7,6 +7,10 @@
         android:title="@string/intro_Url_Check"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_delete"
+        android:title="刪除網址"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/import_export_btn"
         android:icon="@drawable/import_export_icon"
         android:title="匯入/匯出"
@@ -15,36 +19,36 @@
         android:id="@+id/search_btn"
         android:icon="@drawable/search_icon"
         android:title="@string/search"
-        app:showAsAction="always"
-        app:actionViewClass="androidx.appcompat.widget.SearchView"/>
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always" />
     <item
         android:id="@+id/action_sort"
         android:icon="@drawable/ic_action_sort"
-        app:showAsAction="always"
-        android:title="@string/sort">
+        android:title="@string/sort"
+        app:showAsAction="always">
         <menu>
             <group
                 android:id="@+id/action_sort_category"
                 android:checkableBehavior="single">
                 <item
                     android:id="@+id/menu_sort_custom"
-                    android:title="@string/sort_custom"
-                    android:checked="true" />
+                    android:checked="true"
+                    android:title="@string/sort_custom" />
                 <item
                     android:id="@+id/menu_sort_alphabetically_name"
-                    android:title="@string/sort_alphabetically_name"/>
+                    android:title="@string/sort_alphabetically_name" />
                 <item
                     android:id="@+id/menu_sort_alphabetically_name_reverse"
-                    android:title="@string/sort_alphabetically_name_reverse"/>
+                    android:title="@string/sort_alphabetically_name_reverse" />
                 <item
                     android:id="@+id/menu_sort_alphabetically"
-                    android:title="@string/sort_alphabetically"/>
+                    android:title="@string/sort_alphabetically" />
                 <item
                     android:id="@+id/menu_sort_alphabetically_reverse"
-                    android:title="@string/sort_alphabetically_reverse"/>
+                    android:title="@string/sort_alphabetically_reverse" />
                 <item
                     android:id="@+id/menu_sort_usage_count"
-                    android:title="@string/sort_usage_count"/>
+                    android:title="@string/sort_usage_count" />
             </group>
         </menu>
     </item>
