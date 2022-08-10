@@ -156,14 +156,13 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
     }
 
 
-    private static class ViewHolderGroup {
-        private TextView tv_parent_item;
+    public static class ViewHolderGroup {
+        public TextView tv_parent_item;
         private ImageButton parent_item_icon;
     }
 
-    private static class ViewHolderItem {
-        private TextView tv_child_item;
-
+    public static class ViewHolderItem {
+        public TextView tv_child_item;
     }
 
 }

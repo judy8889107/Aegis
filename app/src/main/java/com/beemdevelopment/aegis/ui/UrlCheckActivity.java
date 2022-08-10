@@ -987,24 +987,21 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     if (!isLongClick) {
                         if (!expandableListView.isGroupExpanded(groupPosition)) {
                             expandableListView.expandGroup(groupPosition);
-
                         } else {
-                            //收合清單時，將textView也收合(設為singleLine)
-                            if (!this.isLongClick) {
-                                for (int i = 0; i < expandableListView.getChildCount(); i++) {
-                                    View view = expandableListView.getChildAt(i);
-                                    TextView textView = null;
-                                    textView = view.findViewById(R.id.tv_group_child);
-                                    textView = textView == null ? view.findViewById(R.id.tv_group_parent) : textView;
-                                    if (textView != null) {
-                                        textView.setSingleLine(true);
-                                    }
-                                }
+                            //TODO:->groupPosition而非全部!!收合清單時，將textView也收合(設為singleLine)
+                            for (int i = 0; i < expandableListView.getChildCount(); i++) {
+                                View view = expandableListView.getChildAt(i);
+                                TextView textView = view.findViewById(R.id.tv_group_child);
+                                if (textView == null)
+                                    textView = view.findViewById(R.id.tv_group_parent);
+                                if (textView != null) textView.setSingleLine(true);
                             }
                             expandableListView.collapseGroup(groupPosition);
                         }
+                    } else { //長按後不可收合清單
+                        ImageButton imgBtn = (ImageButton) v;
+                        imgBtn.setImageDrawable(getDrawable(R.drawable.down_arrow));
                     }
-
                     break;
                 case R.id.online_check_close_btn: /*關閉buttomDialog(X)*/
                     buttomDialog.dismiss();
@@ -1165,11 +1162,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 //加入待刪除清單
                 ArrayList<Struct.urlObject> urlObjects = (ArrayList<Struct.urlObject>) parent_item.getTag();
                 for (Struct.urlObject item : urlObjects) {
-                    if (parent_item.isSelected()) { //若parent item被選中
-                        if (!PD_urlObjects.contains(item)) PD_urlObjects.add(item);
-                    } else { //若parent item沒選中
-                        if (PD_urlObjects.contains(item)) PD_urlObjects.remove(item);
-                    }
+                    //若parent item選中
+                    if (parent_item.isSelected() && !PD_urlObjects.contains(item))
+                        PD_urlObjects.add(item);
+                    else PD_urlObjects.remove(item);  //若parent item沒選中
                 }
                 setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
 
@@ -1198,9 +1194,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 child_item.setSelected(!child_item.isSelected());//state_select轉換
                 toggleStrike(child_item);
                 //添加移除toggle
-                if (PD_urlObjects.contains(child_item.getTag()))
-                    PD_urlObjects.remove(child_item.getTag());
-                else PD_urlObjects.add((Struct.urlObject) child_item.getTag());
+                if (child_item.isSelected() && !PD_urlObjects.contains(child_item))
+                    PD_urlObjects.add((Struct.urlObject) child_item.getTag());
+                else PD_urlObjects.remove(child_item.getTag());
                 setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
             } else { //輕觸複製事件
                 //輕觸展開並複製
