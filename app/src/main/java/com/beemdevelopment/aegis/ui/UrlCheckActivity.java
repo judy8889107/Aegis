@@ -987,20 +987,23 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     if (!isLongClick) {
                         if (!expandableListView.isGroupExpanded(groupPosition)) {
                             expandableListView.expandGroup(groupPosition);
+
                         } else {
-                            //TODO:->groupPosition而非全部!!收合清單時，將textView也收合(設為singleLine)
-                            for (int i = 0; i < expandableListView.getChildCount(); i++) {
-                                View view = expandableListView.getChildAt(i);
-                                TextView textView = view.findViewById(R.id.tv_group_child);
-                                if (textView == null)
-                                    textView = view.findViewById(R.id.tv_group_parent);
-                                if (textView != null) textView.setSingleLine(true);
+                            //收合清單前先收合textView(單行設置)
+                            int view_position = expandableListView.getPositionForView(v);
+                            for (int i = 0; i < myAdapter.getChildrenCount(groupPosition)+1; i++,view_position++) {
+                                Object obj_tag = expandableListView.getChildAt(view_position).getTag();
+                                TextView textView = null;
+                                if (obj_tag.getClass() == MyBaseExpandableListAdapter.ViewHolderGroup.class)
+                                     textView = ((MyBaseExpandableListAdapter.ViewHolderGroup) obj_tag).tv_parent_item;
+                                else textView = ((MyBaseExpandableListAdapter.ViewHolderItem) obj_tag).tv_child_item;
+                                textView.setSingleLine(true); //收合某群組時,設置單行
                             }
                             expandableListView.collapseGroup(groupPosition);
                         }
                     } else { //長按後不可收合清單
                         ImageButton imgBtn = (ImageButton) v;
-                        imgBtn.setImageDrawable(getDrawable(R.drawable.down_arrow));
+                        imgBtn.setImageDrawable(getDrawable(R.drawable.down_arrow)); //改變圖標方向
                     }
                     break;
                 case R.id.online_check_close_btn: /*關閉buttomDialog(X)*/
@@ -1013,6 +1016,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                             addsubURL(groupID, url, format);
                             dialog_toast.setText("已添加此網址至資料庫中");
                             dialog_toast.show();
+                            local_url_input.setText("");
                         } catch (Exception e) {
                             System.out.println(e.getMessage());
                         }
@@ -1056,7 +1060,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     }
                     break;
                 case R.id.online_check_send_btn:
-                    System.out.println("按下送出按鈕");
+//                    System.out.println("按下送出按鈕");
                     URL_text = online_url_input.getText().toString().trim();
                     imm.hideSoftInputFromWindow(buttomDialog.getWindow().getDecorView().getWindowToken(), 0);
                     IPQSCheck();
@@ -1069,11 +1073,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                             Dialogs.showSecureDialog(buttomDialog);
                             online_url_input.setText("");
                             break;
-                        case R.drawable.mydrawble_arrow_back:
-                            //TODO:返回按紐[待刪除]
-                            break;
                         case R.drawable.ic_delete_black_24dp:
-                            //TODO:刪除按鈕
+                            //TODO:刪除操作
+                            if (PD_urlObjects.size() == 0) {
+                                setSnackbar("待刪除清單沒有任何東西", "已選擇0", Snackbar.LENGTH_INDEFINITE);
+                                myVibrator.vibrate(300);
+                            }
                             break;
                     }
                     break;
@@ -1171,14 +1176,17 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
             } else {
                 //輕觸展開並複製
-                parent_item.setSingleLine(false);
+                parent_item.setSingleLine(!parent_item.isSingleLine()); //網址展開過長切換
                 String text = parent_item.getText().toString();
                 String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
-                //不重新複製
-                if (!text.equals(pre_text))
-                    cmb.setPrimaryClip(ClipData.newPlainText(null, text)); //刪除線轉換
-                setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
-                snackbar.show();
+                if (!text.equals(pre_text)){ //不重新複製
+                    cmb.setPrimaryClip(ClipData.newPlainText(null, text));
+                    setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
+                    snackbar.show();
+                }else{ //若已複製過
+                    if(!snackbar.isShown()) snackbar.show();
+                }
+
             }
 
             return true;
@@ -1200,13 +1208,16 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
             } else { //輕觸複製事件
                 //輕觸展開並複製
-                child_item.setSingleLine(false);
+                child_item.setSingleLine(!child_item.isSingleLine()); //網址過長展開切換
                 String text = child_item.getText().toString();
                 String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
-                //不重新複製
-                if (!text.equals(pre_text)) cmb.setPrimaryClip(ClipData.newPlainText(null, text));
-                setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
-                snackbar.show();
+                if (!text.equals(pre_text)){ //不重新複製
+                    cmb.setPrimaryClip(ClipData.newPlainText(null, text));
+                    setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
+                    snackbar.show();
+                }else{ //若已複製過
+                    if(!snackbar.isShown()) snackbar.show();
+                }
 
             }
             return true;
