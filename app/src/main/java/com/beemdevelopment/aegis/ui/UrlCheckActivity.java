@@ -32,6 +32,7 @@ import android.text.Html;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
+import android.util.Pair;
 import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -79,6 +80,7 @@ import androidx.appcompat.widget.Toolbar;
 
 
 import java.io.*;
+import java.lang.annotation.Target;
 import java.net.HttpURLConnection;
 import java.net.URL;
 /* 輸入流 */
@@ -138,6 +140,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* local_url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
+    //FIXME:變更資料
+    private ArrayList<ArrayList<Struct.urlObject>> urls_database;
     private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
     private ArrayList<Struct.urlObject> PD_urlObjects;
     private ExpandableListView expandableListView;
@@ -478,22 +482,25 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     }
 
 
-    // 設定安全網址 - mainURL加入網址到資料庫中
+    /* 設定安全網址 - mainURL加入網址到資料庫中 */
     public void addMainURL(String url) throws Exception {
         Boolean isExist = false;
-        int groupID = 0;
         System.out.println("要加入mainURL的資料: " + url);
-        //先檢查有無重複網址
+        // 先檢查有無重複網址
+
+
+
         for (int i = 0; i < url_database_list.size(); i++) {
             ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
             String mainURL = urlObjects.get(0).text;
             if (mainURL.equals(url)) {
                 isExist = true;
-                System.out.println(url + " 已存在於資料庫中");
                 break;
             }
         }
         myListener.pass_params(isExist);
+
+
         //若此網址從未添加過才寫入xml檔
         if (!isExist) {
             //創建 url Object加入到 list中
@@ -504,11 +511,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             urlObject.uuid = Long.toHexString(System.currentTimeMillis());
             ArrayList<Struct.urlObject> urlObjects = new ArrayList<>();
             urlObjects.add(urlObject);
+
             //檢查 groupID有無沒被用到的,有的話就先放, 沒有則放入hashmap最後
             for (int i = 0; i < url_database_list.size() + 1; i++) {
                 if (!url_database_list.containsKey(i)) {
                     url_database_list.put(i, urlObjects);
-                    groupID = i;
                     break;
                 }
             }
