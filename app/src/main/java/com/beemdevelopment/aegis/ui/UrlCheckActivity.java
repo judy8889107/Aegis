@@ -32,6 +32,7 @@ import android.text.Html;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 import android.util.Pair;
 import android.util.TypedValue;
 import android.view.KeyEvent;
@@ -113,7 +114,8 @@ import javax.xml.transform.stream.StreamResult;
 
 class Struct {
     public static class urlObject {
-        public String tagName, uuid, text, format = "none";
+        public String tagName, uuid, text;
+        int format;
     }
 }
 
@@ -140,9 +142,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
     String URL_text = null; /* local_url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
-    //FIXME:變更資料
-    private ArrayList<ArrayList<Struct.urlObject>> urls_database;
-    private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
+    private ArrayList<ArrayList<Struct.urlObject>> url_database_list;
     private ArrayList<Struct.urlObject> PD_urlObjects;
     private ExpandableListView expandableListView;
     private MyBaseExpandableListAdapter myAdapter;
@@ -152,6 +152,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
+    final int unmatched = 1;
+    final int basedomain = 2;
+    final int host = 3;
+    final int startwith = 4;
+    final int exact = 5;
 
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -300,6 +305,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     public void setButtomDialog(View view, boolean isTouchCanceled, String... addition) {
         BottomSheetBehavior buttomDialogbehavior;
+        System.out.println((int) view.getId());
+        System.out.println(view.getId() == (int) R.layout.mydialog_local_check);
         switch (view.getId()) {
             case R.layout.mydialog_online_check_add_entry:
                 buttomDialog.setContentView(view);
@@ -451,7 +458,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         org.w3c.dom.Document doc = db.parse(url_database);
         NodeList nodeList = doc.getElementsByTagName("token");
 
-        url_database_list = new HashMap<>();
+        url_database_list = new ArrayList<>();
 
         for (int i = 0; i < nodeList.getLength(); i++) {
             Node tokenNode = nodeList.item(i);
@@ -466,13 +473,13 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 urlObject.uuid = node.getAttributes().getNamedItem("uuid").getNodeValue();
                 urlObject.text = node.getTextContent();
                 if (node.getNodeName().equals("subURL"))
-                    urlObject.format = node.getAttributes().getNamedItem("format").getNodeValue();
+                    urlObject.format = Integer.valueOf(node.getAttributes().getNamedItem("format").getNodeValue());
 
 
                 groupList.add(urlObject);
             }
 
-            url_database_list.put(Integer.valueOf(groupID), groupList);
+            url_database_list.add(Integer.valueOf(groupID), groupList);
 
         }
         System.out.println("讀取資料庫...完畢");
@@ -487,8 +494,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         Boolean isExist = false;
         System.out.println("要加入mainURL的資料: " + url);
         // 先檢查有無重複網址
-
-
 
         for (int i = 0; i < url_database_list.size(); i++) {
             ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
@@ -512,13 +517,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             ArrayList<Struct.urlObject> urlObjects = new ArrayList<>();
             urlObjects.add(urlObject);
 
-            //檢查 groupID有無沒被用到的,有的話就先放, 沒有則放入hashmap最後
-            for (int i = 0; i < url_database_list.size() + 1; i++) {
-                if (!url_database_list.containsKey(i)) {
-                    url_database_list.put(i, urlObjects);
-                    break;
-                }
-            }
+            //TODO:相關資料放一起?
+            url_database_list.add(urlObjects);
+
             System.out.println(url + " 成功新增mainURL");
 //            write_url_database(); //寫入xml檔案
         } else {
@@ -578,7 +579,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     case "subURL":
                         org.w3c.dom.Element subURL = doc.createElement("subURL");
                         subURL.setTextContent(urlObject.text);
-                        subURL.setAttribute("format", urlObject.format);
+                        subURL.setAttribute("format", String.valueOf(urlObject.format));
                         subURL.setAttribute("groupID", groupID);
                         subURL.setAttribute("uuid", urlObject.uuid);
                         subURL.setIdAttribute("uuid", true);
@@ -615,40 +616,60 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         writeXml(doc);
     }
 
-    // 解析並比對資料庫 - 檢查網址
+    // FIXME:解析並比對資料庫 - 檢查網址
     public void matchDatabase(String url) throws Exception {
         System.out.println(url + " 進入網址資料庫進行比對...");
         // 外部變數紀錄
-        String format = null;
-        int groupID = 0;
+        int format = 1;
+        int groupID = url_database_list.size();
+        //FIXME:配對第一層如果exact就返回,否則要記錄其他groupPosition和format
+        ArrayList<Pair<Integer, Integer>> record = new ArrayList<>();
         for (int i = 0; i < url_database_list.size(); i++) {
             Struct.urlObject urlObject = url_database_list.get(i).get(0);
             String mainURL = urlObject.text;
-            groupID = i;
-            format = getURLMatchFormat(url, mainURL);
-            if (format != null) break;
+            format = Math.max(format, getURLMatchFormat(url, mainURL)); //取最大值
+            if (format == 5) break;
+            if (1 < format && format < 5) //format在2,3,4級之間
+                record.add(new Pair<>(i, format)); //紀錄相關的mainURL位置和format
         }
+        Log.v("mydebug", "mainURL配對結果..." + format);
+        //TODO:第二層級比對
+        if (record.size() != 0) {
+            for (int i = 0; i < record.size(); i++) {
+                int r_groupID = record.get(i).first;
+                int r_format = record.get(i).second;
+                if (matchSubURL(r_groupID, url, r_format)) {
+                    format = exact;
+                    break;
+                }
+                format = Math.max(format, r_format); //挑出最大級數
+                //將網址加入在mainURL最大級數的地方(若級數同則添加到 groupID 較小的群組)
+                if (format == r_format) groupID = Math.min(groupID, r_groupID);
+            }
+        }
+        Log.v("mydebug", String.format("subURL最後配對結果...%d, 將要加入的群組...%d", format, groupID));
+
         System.out.println("mainURL配對完畢...比對結果為: " + format);
         // mainURL全無匹配
-        if (format == null) {
+        if (format == unmatched) {
             setButtomDialog(dialog_local_check_result, false, "1");
             Dialogs.showSecureDialog(buttomDialog);
         } else {  /* 有匹配到 mainURL */
             myListener.pass_params(groupID, url, format);
             /* 比對 subURL */
-            if (format.equals("exact") || matchSubURL(groupID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
+            if (format == exact) { /*若 mainURL為 exact或 subURL配對成功*/
                 setButtomDialog(dialog_local_check_result, true, "5");
                 Dialogs.showSecureDialog(buttomDialog);
             } else { /*配對失敗*/
                 // 比對級數配對
                 switch (format) {
-                    case "startwith":
+                    case startwith:
                         setButtomDialog(dialog_local_check_result, false, "4");
                         break;
-                    case "host":
+                    case host:
                         setButtomDialog(dialog_local_check_result, false, "3");
                         break;
-                    case "basedomain":
+                    case basedomain:
                         setButtomDialog(dialog_local_check_result, false, "2");
                         break;
                 }
@@ -660,12 +681,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     }
 
-    //四種比對模式
-    public String getURLMatchFormat(String url, String mainURL) throws Exception {
+    //FIXME:四種比對模式
+    public int getURLMatchFormat(String url, String mainURL) throws Exception {
         System.out.println();
         System.out.println("主URL:" + url);
         System.out.println("mainURL:" + mainURL);
-        String format = null;
         //變數
         String maj_basedomain = null;
         String tmp_basedomain = null;
@@ -693,15 +713,15 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         System.out.println(maj_host + " " + tmp_host);
         System.out.println(maj_port + " " + tmp_port);
         System.out.println(maj_path + " " + tmp_path);
-        if (url.equals(mainURL)) return "exact";
-        if (maj_startwith.contains(tmp_startwith)) return "startwith";
-        if (maj_hoststr.contains(tmp_hoststr)) return "host";
-        if (maj_basedomain.contains(tmp_basedomain)) return "basedomain";
-        return format;
+        if (url.equals(mainURL)) return exact;
+        if (maj_startwith.contains(tmp_startwith)) return startwith;
+        if (maj_hoststr.contains(tmp_hoststr)) return host;
+        if (maj_basedomain.contains(tmp_basedomain)) return basedomain;
+        return unmatched;
     }
 
     // 紀錄 subURL 到 database
-    public void addsubURL(final int groupID, String url, final String format) throws Exception {
+    public void addsubURL(final int groupID, String url, final int format) throws Exception {
         System.out.println(String.format("準備將 %s[格式%s]的網址加入群組%d中...", url, format, groupID));
         Struct.urlObject urlObject = new Struct.urlObject();
         urlObject.text = url;
@@ -710,20 +730,20 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         urlObject.uuid = Long.toHexString(System.currentTimeMillis());
         ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID); //加入清單中
         urlObjects.add(urlObject);
-        url_database_list.put(groupID, urlObjects); //hashMap鍵更新鍵值
+        url_database_list.set(groupID, urlObjects); //Arraylist更新元素
         System.out.println(String.format("%s 已成功加入資料庫中!", url));
 //        write_url_database();
         refreshUI();//刷新 UI
     }
 
-    //比對 subURL有無 exact
-    public boolean matchSubURL(int groupID, String url, String format) {
+    // FIXME:比對 subURL有無 exact
+    public boolean matchSubURL(int groupID, String url, int format) {
         System.out.println("準備在群組" + groupID + "中搜尋...");
         Boolean isMatch = false;
         ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID);
         for (int i = 0; i < urlObjects.size(); i++) {
             Struct.urlObject urlObject = urlObjects.get(i);
-            if (urlObject.format.equals(format)) {
+            if (urlObject.format == format) {
                 String subURL = urlObject.text;
                 if (subURL.equals(url)) {
                     isMatch = true;
@@ -927,7 +947,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener, View.OnTouchListener, AdapterView.OnItemLongClickListener {
 
         private int groupID;
-        private String url, format;
+        private String url;
+        private int format;
         private boolean isExist; //addMainURL使用
         private boolean isLongClick = false;
 
@@ -939,7 +960,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             if (objects.length == 3) {
                 groupID = objects[0].getClass() == Integer.class ? (int) objects[0] : null;
                 url = objects[1].getClass() == String.class ? (String) objects[1] : null;
-                format = objects[2].getClass() == String.class ? (String) objects[2] : null;
+                format = objects[2].getClass() == Integer.class ? (int) objects[2] : null;
             }
         }
 
@@ -998,12 +1019,13 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                         } else {
                             //收合清單前先收合textView(單行設置)
                             int view_position = expandableListView.getPositionForView(v);
-                            for (int i = 0; i < myAdapter.getChildrenCount(groupPosition)+1; i++,view_position++) {
+                            for (int i = 0; i < myAdapter.getChildrenCount(groupPosition) + 1; i++, view_position++) {
                                 Object obj_tag = expandableListView.getChildAt(view_position).getTag();
                                 TextView textView = null;
                                 if (obj_tag.getClass() == MyBaseExpandableListAdapter.ViewHolderGroup.class)
-                                     textView = ((MyBaseExpandableListAdapter.ViewHolderGroup) obj_tag).tv_parent_item;
-                                else textView = ((MyBaseExpandableListAdapter.ViewHolderItem) obj_tag).tv_child_item;
+                                    textView = ((MyBaseExpandableListAdapter.ViewHolderGroup) obj_tag).tv_parent_item;
+                                else
+                                    textView = ((MyBaseExpandableListAdapter.ViewHolderItem) obj_tag).tv_child_item;
                                 textView.setSingleLine(true); //收合某群組時,設置單行
                             }
                             expandableListView.collapseGroup(groupPosition);
@@ -1175,10 +1197,14 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 ArrayList<Struct.urlObject> urlObjects = (ArrayList<Struct.urlObject>) parent_item.getTag();
                 for (Struct.urlObject item : urlObjects) {
                     //若parent item選中
-                    if (parent_item.isSelected() && !PD_urlObjects.contains(item))
-                        PD_urlObjects.add(item);
-                    else PD_urlObjects.remove(item);  //若parent item沒選中
+                    if (parent_item.isSelected()) {
+                        if (!PD_urlObjects.contains(item)) //不重複添加
+                            PD_urlObjects.add(item);
+                    } else {
+                        PD_urlObjects.remove(item);  //若parent item沒選中
+                    }
                 }
+                Log.v("mydebug",PD_urlObjects.toString());
                 setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
 
             } else {
@@ -1186,12 +1212,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 parent_item.setSingleLine(!parent_item.isSingleLine()); //網址展開過長切換
                 String text = parent_item.getText().toString();
                 String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
-                if (!text.equals(pre_text)){ //不重新複製
+                if (!text.equals(pre_text)) { //不重新複製
                     cmb.setPrimaryClip(ClipData.newPlainText(null, text));
                     setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
                     snackbar.show();
-                }else{ //若已複製過
-                    if(!snackbar.isShown()) snackbar.show();
+                } else { //若已複製過
+                    if (!snackbar.isShown()) snackbar.show();
                 }
 
             }
@@ -1209,21 +1235,25 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 child_item.setSelected(!child_item.isSelected());//state_select轉換
                 toggleStrike(child_item);
                 //添加移除toggle
-                if (child_item.isSelected() && !PD_urlObjects.contains(child_item))
-                    PD_urlObjects.add((Struct.urlObject) child_item.getTag());
-                else PD_urlObjects.remove(child_item.getTag());
+                if (child_item.isSelected()) {
+                    if (!PD_urlObjects.contains(child_item.getTag())) //不重複添加
+                        PD_urlObjects.add((Struct.urlObject) child_item.getTag());
+                } else {
+                    PD_urlObjects.remove(child_item.getTag());
+                }
+                Log.v("mydebug",PD_urlObjects.toString());
                 setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
             } else { //輕觸複製事件
                 //輕觸展開並複製
                 child_item.setSingleLine(!child_item.isSingleLine()); //網址過長展開切換
                 String text = child_item.getText().toString();
                 String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
-                if (!text.equals(pre_text)){ //不重新複製
+                if (!text.equals(pre_text)) { //不重新複製
                     cmb.setPrimaryClip(ClipData.newPlainText(null, text));
                     setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
                     snackbar.show();
-                }else{ //若已複製過
-                    if(!snackbar.isShown()) snackbar.show();
+                } else { //若已複製過
+                    if (!snackbar.isShown()) snackbar.show();
                 }
 
             }

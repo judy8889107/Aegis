@@ -26,14 +26,14 @@ import java.util.logging.LogRecord;
 
 public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
 
-    public HashMap<Integer, ArrayList<Struct.urlObject>> group_list;
-    public HashMap<Integer, ArrayList<Struct.urlObject>> child_list;
+    public ArrayList<ArrayList<Struct.urlObject>> group_list;
+    public ArrayList<ArrayList<Struct.urlObject>> child_list;
     public Context content;
     public UrlCheckActivity.MyListener myListener;
     boolean isDelClick;
 
 
-    public MyBaseExpandableListAdapter(HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener, boolean isDelClick) {
+    public MyBaseExpandableListAdapter(ArrayList<ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener, boolean isDelClick) {
         this.group_list = url_database_list;
         this.preprocess();
         this.myListener = myListener;
@@ -47,7 +47,7 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
 
     //處理child_list, 若用 remove會影響到同一份物件(建立新物件並重新加入或實現深拷貝)
     public void preprocess() {
-        this.child_list = new HashMap<>();
+        this.child_list = new ArrayList<>();
         for (int i = 0; i < group_list.size(); i++) {
             ArrayList<Struct.urlObject> oldObjects = group_list.get(i);
             ArrayList<Struct.urlObject> newObjects = new ArrayList<>();
@@ -55,7 +55,7 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
                 if (oldObjects.get(j).tagName.equals("mainURL")) continue;
                 newObjects.add(oldObjects.get(j));
             }
-            this.child_list.put(i, newObjects);
+            this.child_list.add(newObjects);
         }
     }
 
