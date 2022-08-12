@@ -87,6 +87,7 @@ import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -111,6 +112,8 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+
+import kotlin.Triple;
 
 class Struct {
     public static class urlObject {
@@ -616,40 +619,50 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         writeXml(doc);
     }
 
-    // FIXME:解析並比對資料庫 - 檢查網址
+    //解析並比對資料庫 - 檢查網址
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public void matchDatabase(String url) throws Exception {
-        System.out.println(url + " 進入網址資料庫進行比對...");
         // 外部變數紀錄
-        int format = 1;
+        int format = unmatched;
+        int max_main_relative = unmatched;
+        int max_sub_relative = unmatched;
         int groupID = url_database_list.size();
-        //FIXME:配對第一層如果exact就返回,否則要記錄其他groupPosition和format
+        //配對第一層如果exact就返回,否則要記錄其他groupPosition和format, 以便進行第二層匹配
         ArrayList<Pair<Integer, Integer>> record = new ArrayList<>();
         for (int i = 0; i < url_database_list.size(); i++) {
             Struct.urlObject urlObject = url_database_list.get(i).get(0);
             String mainURL = urlObject.text;
-            format = Math.max(format, getURLMatchFormat(url, mainURL)); //取最大值
+            format = getURLMatchFormat(url, mainURL);
+            Log.v("mydebug [matchDatabase]", String.format("%s比對結果為...%d", mainURL, format));
             if (format == 5) break;
-            if (1 < format && format < 5) //format在2,3,4級之間
+            if (1 < format && format < 5) {
                 record.add(new Pair<>(i, format)); //紀錄相關的mainURL位置和format
+            }
         }
-        Log.v("mydebug", "mainURL配對結果..." + format);
-        //TODO:第二層級比對
-        if (record.size() != 0) {
+        if (format != 5) {// 不為exact, 則進行第二層級比對
+            Log.v("mydebug [matchDatabase]", "record: " + record.toString() + "...進入二級比對");
             for (int i = 0; i < record.size(); i++) {
                 int r_groupID = record.get(i).first;
                 int r_format = record.get(i).second;
-                if (matchSubURL(r_groupID, url, r_format)) {
-                    format = exact;
+                String mainURL = url_database_list.get(r_groupID).get(0).text;
+                //Triple:groupID, mainRelative, subRelative
+                Triple<Integer,Integer,Integer> matchTriple = matchSubURL(r_groupID,url,r_format);
+                if (matchTriple.getThird() == exact) {
+                    format = 5;
                     break;
                 }
-                format = Math.max(format, r_format); //挑出最大級數
-                //將網址加入在mainURL最大級數的地方(若級數同則添加到 groupID 較小的群組)
-                if (format == r_format) groupID = Math.min(groupID, r_groupID);
+                Log.v("mydebug [matchDatabase]", String.format("%s的主關聯性%d...群組%d:子關聯性%d", mainURL,matchTriple.getSecond(), matchTriple.getFirst(), matchTriple.getThird()));
+                if(matchTriple.getSecond() >= max_main_relative){
+                    max_main_relative = matchTriple.getSecond();
+                    format = max_main_relative;
+                    if(matchTriple.getThird() > max_sub_relative){
+                        max_sub_relative = matchTriple.getThird();
+                        groupID = matchTriple.getFirst();
+                    }
+                }
             }
         }
-        Log.v("mydebug", String.format("subURL最後配對結果...%d, 將要加入的群組...%d", format, groupID));
-
-        System.out.println("mainURL配對完畢...比對結果為: " + format);
+        Log.v("mydebug [matchDatabase]", String.format("最終配對結果,群組%d:格式%d:主相關性%d:子相關性%d", groupID, format, max_main_relative,max_sub_relative));
         // mainURL全無匹配
         if (format == unmatched) {
             setButtomDialog(dialog_local_check_result, false, "1");
@@ -737,26 +750,24 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     }
 
     // FIXME:比對 subURL有無 exact
-    public boolean matchSubURL(int groupID, String url, int format) {
-        System.out.println("準備在群組" + groupID + "中搜尋...");
-        Boolean isMatch = false;
+    public Triple<Integer,Integer,Integer> matchSubURL(int groupID, String url, int format) throws Exception {
+        Log.v("mydebug [matchSubURL]", String.format("準備在群組%d中搜尋...", groupID));
+        int _format = format;
         ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID);
         for (int i = 0; i < urlObjects.size(); i++) {
             Struct.urlObject urlObject = urlObjects.get(i);
+            if (urlObject.tagName.equals("mainURL")) continue; //跳過mainURL
+            String subURL = urlObject.text;
+            Log.v("mydebug [matchSubURL]", String.format("群組%d,第%d個..subURL為%s", groupID, i, subURL));
+            Log.v("mydebug [matchSubURL]", String.format("得到subURL比對層級...%d", getURLMatchFormat(url, subURL)));
+            _format = Math.max(_format, getURLMatchFormat(url, subURL));
             if (urlObject.format == format) {
-                String subURL = urlObject.text;
                 if (subURL.equals(url)) {
-                    isMatch = true;
-                    System.out.println("\n檢查subURL有無存在網址...檢查完畢");
-                    System.out.println("結果為..." + isMatch);
-                    return isMatch;
+                    return new Triple<>(groupID,format, exact);
                 }
             }
         }
-        System.out.println("\n檢查subURL有無存在網址...檢查完畢");
-        System.out.println("結果為..." + isMatch);
-        return isMatch;
-
+        return new Triple<>(groupID,format, _format);
     }
 
 
@@ -1003,6 +1014,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
 
         // Button事件監聽
+        @RequiresApi(api = Build.VERSION_CODES.N)
         @Override
         public void onClick(View v) {
             Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
@@ -1204,7 +1216,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                         PD_urlObjects.remove(item);  //若parent item沒選中
                     }
                 }
-                Log.v("mydebug",PD_urlObjects.toString());
+                Log.v("mydebug", PD_urlObjects.toString());
                 setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
 
             } else {
@@ -1241,7 +1253,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 } else {
                     PD_urlObjects.remove(child_item.getTag());
                 }
-                Log.v("mydebug",PD_urlObjects.toString());
+                Log.v("mydebug", PD_urlObjects.toString());
                 setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
             } else { //輕觸複製事件
                 //輕觸展開並複製

@@ -21,8 +21,6 @@
     <androidx.core.widget.NestedScrollView
         android:id="@+id/nestedScrollView"
         android:layout_width="match_parent"
-
-
         android:layout_height="wrap_content"
         app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
 
@@ -96,15 +94,15 @@
             </androidx.cardview.widget.CardView>
 
 
-            <ScrollView
-                android:id="@+id/scroll_view"
+            <androidx.core.widget.NestedScrollView
                 android:layout_width="match_parent"
-                android:layout_height="450dp">
+                android:layout_height="450dp"
+                android:fillViewport="true">
 
                 <LinearLayout
                     android:id="@+id/scroll_layout"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="450dp"
                     android:orientation="vertical">
 
                     <ExpandableListView
@@ -116,7 +114,7 @@
                         android:scrollbars="none"></ExpandableListView>
                 </LinearLayout>
 
-            </ScrollView>
+            </androidx.core.widget.NestedScrollView>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
