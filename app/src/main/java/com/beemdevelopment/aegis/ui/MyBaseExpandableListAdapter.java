@@ -30,15 +30,13 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
     public ArrayList<ArrayList<Struct.urlObject>> child_list;
     public Context content;
     public UrlCheckActivity.MyListener myListener;
-    boolean isDelClick;
 
 
-    public MyBaseExpandableListAdapter(ArrayList<ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener, boolean isDelClick) {
+    public MyBaseExpandableListAdapter(ArrayList<ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener) {
         this.group_list = url_database_list;
         this.preprocess();
         this.myListener = myListener;
         this.content = content;
-        this.isDelClick = isDelClick;
 
     }
 

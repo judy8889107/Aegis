@@ -96,19 +96,19 @@
 
             <androidx.core.widget.NestedScrollView
                 android:layout_width="match_parent"
-                android:layout_height="450dp"
+                android:layout_height="400dp"
                 android:fillViewport="true">
 
                 <LinearLayout
                     android:id="@+id/scroll_layout"
                     android:layout_width="match_parent"
-                    android:layout_height="450dp"
+                    android:layout_height="400dp"
                     android:orientation="vertical">
 
                     <ExpandableListView
                         android:id="@+id/expand_listview"
                         android:layout_width="match_parent"
-                        android:layout_height="450dp"
+                        android:layout_height="400dp"
                         android:groupIndicator="@null"
                         android:nestedScrollingEnabled="true"
                         android:scrollbars="none"></ExpandableListView>

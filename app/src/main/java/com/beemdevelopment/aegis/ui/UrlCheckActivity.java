@@ -387,10 +387,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
     //刷新database UI
-    public void refreshUI(boolean... addition) {
-        boolean isDelClick = false;
-        if (addition.length != 0) isDelClick = addition[0]; //isDelClick:true
-        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener, isDelClick);
+    public void refreshUI() {
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener);
         expandableListView.setAdapter(myAdapter);
     }
 
@@ -486,7 +484,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
         }
         System.out.println("讀取資料庫...完畢");
-        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener, false);
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener);
         expandableListView.setAdapter(myAdapter);
         System.out.println("創建UI清單...完畢");
     }
@@ -646,23 +644,23 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 int r_format = record.get(i).second;
                 String mainURL = url_database_list.get(r_groupID).get(0).text;
                 //Triple:groupID, mainRelative, subRelative
-                Triple<Integer,Integer,Integer> matchTriple = matchSubURL(r_groupID,url,r_format);
+                Triple<Integer, Integer, Integer> matchTriple = matchSubURL(r_groupID, url, r_format);
                 if (matchTriple.getThird() == exact) {
                     format = 5;
                     break;
                 }
-                Log.v("mydebug [matchDatabase]", String.format("%s的主關聯性%d...群組%d:子關聯性%d", mainURL,matchTriple.getSecond(), matchTriple.getFirst(), matchTriple.getThird()));
-                if(matchTriple.getSecond() >= max_main_relative){
+                Log.v("mydebug [matchDatabase]", String.format("%s的主關聯性%d...群組%d:子關聯性%d", mainURL, matchTriple.getSecond(), matchTriple.getFirst(), matchTriple.getThird()));
+                if (matchTriple.getSecond() >= max_main_relative) {
                     max_main_relative = matchTriple.getSecond();
                     format = max_main_relative;
-                    if(matchTriple.getThird() > max_sub_relative){
+                    if (matchTriple.getThird() > max_sub_relative) {
                         max_sub_relative = matchTriple.getThird();
                         groupID = matchTriple.getFirst();
                     }
                 }
             }
         }
-        Log.v("mydebug [matchDatabase]", String.format("最終配對結果,群組%d:格式%d:主相關性%d:子相關性%d", groupID, format, max_main_relative,max_sub_relative));
+        Log.v("mydebug [matchDatabase]", String.format("最終配對結果,群組%d:格式%d:主相關性%d:子相關性%d", groupID, format, max_main_relative, max_sub_relative));
         // mainURL全無匹配
         if (format == unmatched) {
             setButtomDialog(dialog_local_check_result, false, "1");
@@ -694,11 +692,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     }
 
-    //FIXME:四種比對模式
+    // 四種比對模式
     public int getURLMatchFormat(String url, String mainURL) throws Exception {
-        System.out.println();
-        System.out.println("主URL:" + url);
-        System.out.println("mainURL:" + mainURL);
+        Log.v("getURLMatchFormat", String.format("主URL: %s", url));
+        Log.v("getURLMatchFormat", String.format("Other-URL: %s", mainURL));
         //變數
         String maj_basedomain = null;
         String tmp_basedomain = null;
@@ -722,10 +719,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         String tmp_startwith = tmp_host + ":" + tmp_port + tmp_path;
         String maj_hoststr = maj_host + ":" + maj_port;
         String tmp_hoststr = tmp_host + ":" + tmp_port;
-        System.out.println(maj_basedomain + " " + tmp_basedomain);
-        System.out.println(maj_host + " " + tmp_host);
-        System.out.println(maj_port + " " + tmp_port);
-        System.out.println(maj_path + " " + tmp_path);
+        Log.v("getURLMatchFormat", String.format("Domain:[%s] [%s]", maj_basedomain, tmp_basedomain));
+        Log.v("getURLMatchFormat", String.format("Host:[%s] [%s]", maj_host, tmp_host));
+        Log.v("getURLMatchFormat", String.format("Port:[%s] [%s]", maj_port, tmp_port));
+        Log.v("getURLMatchFormat", String.format("Path:[%s] [%s]", maj_path, tmp_path));
         if (url.equals(mainURL)) return exact;
         if (maj_startwith.contains(tmp_startwith)) return startwith;
         if (maj_hoststr.contains(tmp_hoststr)) return host;
@@ -749,8 +746,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         refreshUI();//刷新 UI
     }
 
-    // FIXME:比對 subURL有無 exact
-    public Triple<Integer,Integer,Integer> matchSubURL(int groupID, String url, int format) throws Exception {
+    // 比對 subURL有無 exact
+    public Triple<Integer, Integer, Integer> matchSubURL(int groupID, String url, int format) throws Exception {
         Log.v("mydebug [matchSubURL]", String.format("準備在群組%d中搜尋...", groupID));
         int _format = format;
         ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID);
@@ -763,11 +760,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             _format = Math.max(_format, getURLMatchFormat(url, subURL));
             if (urlObject.format == format) {
                 if (subURL.equals(url)) {
-                    return new Triple<>(groupID,format, exact);
+                    return new Triple<>(groupID, format, exact);
                 }
             }
         }
-        return new Triple<>(groupID,format, _format);
+        return new Triple<>(groupID, format, _format);
     }
 
 
@@ -1115,10 +1112,30 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                             online_url_input.setText("");
                             break;
                         case R.drawable.ic_delete_black_24dp:
-                            //TODO:刪除操作
+                            //刪除操作
                             if (PD_urlObjects.size() == 0) {
                                 setSnackbar("待刪除清單沒有任何東西", "已選擇0", Snackbar.LENGTH_INDEFINITE);
                                 myVibrator.vibrate(300);
+                            } else {
+                                //移除要刪除的 item
+                                for (int i = 0; i < PD_urlObjects.size(); i++) {
+                                    Struct.urlObject urlObject = PD_urlObjects.get(i);
+                                    //每刪除一個元素就遍歷
+                                    for (int j = 0; j < url_database_list.size(); j++) {
+                                        ArrayList<Struct.urlObject> urlObjects = url_database_list.get(j);
+                                        if (urlObjects.contains(urlObject)) {
+                                            urlObjects.remove(urlObject);
+                                            url_database_list.set(j, urlObjects);
+                                        }
+                                    }
+                                }
+                                this.isLongClick = false;
+                                setSnackbar("已刪除選中項","成功",Snackbar.LENGTH_SHORT);
+                                snackbar.show();
+                                PD_urlObjects.clear();
+                                online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
+                                online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
+                                refreshUI(); //更新 UI
                             }
                             break;
                     }
@@ -1155,8 +1172,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 case R.id.action_intro_Url_Check:
                     break;
                 case R.id.action_delete:
-                    //TODO:delete鍵按下
-                    refreshUI(true); //isLongClick:true
+                    refreshUI(); //isLongClick:true
                     break;
                 case R.id.import_export_btn:
                     break;
