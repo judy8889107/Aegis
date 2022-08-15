@@ -7,6 +7,7 @@ import static android.content.DialogInterface.BUTTON_POSITIVE;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.app.Service;
@@ -21,6 +22,7 @@ import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -134,10 +136,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     androidx.appcompat.widget.Toolbar toolbar;
     InputMethodManager imm;
     BottomSheetDialog buttomDialog;
+    Dialog del_dialog;
     View dialog_online_check_add_entry_view;
     View dialog_progress_view;
     View dialog_online_check_result;
     View dialog_local_check_result;
+    View dialog_delete_dialog;
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
     private Toast dialog_toast;
@@ -277,6 +281,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         dialog_progress_view = getLayoutInflater().inflate(R.layout.mydialog_progress_view, null);
         dialog_online_check_result = getLayoutInflater().inflate(R.layout.mydialog_online_check_result, null);
         dialog_local_check_result = getLayoutInflater().inflate(R.layout.mydialog_local_check, null);
+        dialog_delete_dialog = getLayoutInflater().inflate(R.layout.mydialog_delete_dialog, null);
         //設定 view id
         dialog_online_check_add_entry_view.setId((int) R.layout.mydialog_online_check_add_entry);
         dialog_progress_view.setId((int) R.layout.mydialog_progress_view);
@@ -302,6 +307,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         View view2 = dialog_local_check_result;
         view2.findViewById(R.id.local_check_yes_btn).setOnClickListener(myListener);
         view2.findViewById(R.id.local_check_no_btn).setOnClickListener(myListener);
+        // 設定 delete dialog
+        View view3 = dialog_delete_dialog;
+        view3.findViewById(R.id.delete_no_btn).setOnClickListener(myListener);
+        view3.findViewById(R.id.delete_yes_btn).setOnClickListener(myListener);
 
     }
 
@@ -387,8 +396,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
     //刷新database UI
-    public void refreshUI() {
-        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener);
+    public void refreshUI(String... params) {
+        String search_str = null;
+        if(params.length!=0)
+            search_str = params[0];
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener, search_str);
         expandableListView.setAdapter(myAdapter);
     }
 
@@ -428,6 +440,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     /* 設定所有dialog */
     public void buildAllDialog() {
+
+        //del_dialog 宣告
+        del_dialog = new Dialog(this);
+        del_dialog.setContentView(dialog_delete_dialog);
+        del_dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
         //toast宣告
         dialog_toast = Toast.makeText(this, "", Toast.LENGTH_LONG);
 
@@ -1098,10 +1116,42 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     }
                     break;
                 case R.id.online_check_send_btn:
-//                    System.out.println("按下送出按鈕");
                     URL_text = online_url_input.getText().toString().trim();
                     imm.hideSoftInputFromWindow(buttomDialog.getWindow().getDecorView().getWindowToken(), 0);
                     IPQSCheck();
+                    break;
+                case R.id.delete_no_btn:
+                    del_dialog.dismiss();
+                    this.isLongClick = false;
+                    setSnackbar("已取消操作","成功",Snackbar.LENGTH_SHORT);
+                    snackbar.show();
+                    PD_urlObjects.clear();
+                    online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
+                    online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
+                    refreshUI();
+                    break;
+                case R.id.delete_yes_btn:
+                    del_dialog.dismiss();
+                    //移除要刪除的 item
+                    for (int i = 0; i < PD_urlObjects.size(); i++) {
+                        Struct.urlObject urlObject = PD_urlObjects.get(i);
+                        //每刪除一個元素就遍歷
+                        for (int j = 0; j < url_database_list.size(); j++) {
+                            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(j);
+                            if (urlObjects.contains(urlObject)) {
+                                urlObjects.remove(urlObject);
+                                url_database_list.set(j, urlObjects);
+                            }
+                        }
+                    }
+                    this.isLongClick = false;
+                    setSnackbar("已刪除選中項","成功",Snackbar.LENGTH_SHORT);
+                    snackbar.show();
+                    PD_urlObjects.clear();
+                    online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
+                    online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
+                    refreshUI(); //更新 UI
+                    //TODO:確認刪除事件
                     break;
                 case R.id.online_check_add_btn:
                     int iconID = (int) online_check_add_btn.getTag();
@@ -1117,25 +1167,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                                 setSnackbar("待刪除清單沒有任何東西", "已選擇0", Snackbar.LENGTH_INDEFINITE);
                                 myVibrator.vibrate(300);
                             } else {
-                                //移除要刪除的 item
-                                for (int i = 0; i < PD_urlObjects.size(); i++) {
-                                    Struct.urlObject urlObject = PD_urlObjects.get(i);
-                                    //每刪除一個元素就遍歷
-                                    for (int j = 0; j < url_database_list.size(); j++) {
-                                        ArrayList<Struct.urlObject> urlObjects = url_database_list.get(j);
-                                        if (urlObjects.contains(urlObject)) {
-                                            urlObjects.remove(urlObject);
-                                            url_database_list.set(j, urlObjects);
-                                        }
-                                    }
-                                }
-                                this.isLongClick = false;
-                                setSnackbar("已刪除選中項","成功",Snackbar.LENGTH_SHORT);
-                                snackbar.show();
-                                PD_urlObjects.clear();
-                                online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
-                                online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
-                                refreshUI(); //更新 UI
+                                //TODO:插入dialog
+                               del_dialog.show();
+
                             }
                             break;
                     }
@@ -1187,9 +1221,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             return true;
         }
 
+        //只要有文字變動就會有的string
         @Override
         public boolean onQueryTextChange(String newText) {
-            //只要有文字變動就會有的string
+           refreshUI(newText);
+            for (int i=0;i<myAdapter.getGroupCount();i++)
+                expandableListView.expandGroup(i);
             return true;
         }
 

@@ -30,13 +30,16 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
     public ArrayList<ArrayList<Struct.urlObject>> child_list;
     public Context content;
     public UrlCheckActivity.MyListener myListener;
+    public String search_str;
 
 
-    public MyBaseExpandableListAdapter(ArrayList<ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener) {
+    public MyBaseExpandableListAdapter(ArrayList<ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener, String... params) {
         this.group_list = url_database_list;
         this.preprocess();
         this.myListener = myListener;
         this.content = content;
+        if(params.length!=0)
+            this.search_str = params[0];
 
     }
 
@@ -113,6 +116,21 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
         ArrayList<Struct.urlObject> urlObjects = group_list.get(groupPosition);
         viewHolderGroup.tv_parent_item.setTag(urlObjects);
 
+        //search判斷
+        if(search_str!=null){
+            String text = viewHolderGroup.tv_parent_item.getText().toString();
+            if(text.contains(search_str)){
+                viewHolderGroup.tv_parent_item.setVisibility(View.VISIBLE);
+                viewHolderGroup.parent_item_icon.setVisibility(View.VISIBLE);
+            }
+            else{
+                viewHolderGroup.tv_parent_item.setVisibility(View.GONE);
+                viewHolderGroup.parent_item_icon.setVisibility(View.GONE);
+            }
+
+        }
+
+
         //展開收合圖示變更
         if (isExpanded) {
             viewHolderGroup.parent_item_icon.setPressed(true);
@@ -141,6 +159,28 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
         String childItem = urlObject.text;
         viewHolderItem.tv_child_item.setText(childItem);
         viewHolderItem.tv_child_item.setTag(urlObject);
+        switch (urlObject.format){
+            case 2:
+                viewHolderItem.tv_child_item.setCompoundDrawablesWithIntrinsicBounds(R.drawable.mylevel_2,0,0,0);
+                break;
+            case 3:
+                viewHolderItem.tv_child_item.setCompoundDrawablesWithIntrinsicBounds(R.drawable.mylevel_3,0,0,0);
+                break;
+            case 4:
+                viewHolderItem.tv_child_item.setCompoundDrawablesWithIntrinsicBounds(R.drawable.mylevel_4,0,0,0);
+                break;
+
+        }
+        //search判斷
+        if(search_str!=null){
+            String text = viewHolderItem.tv_child_item.getText().toString();
+            if(text.contains(search_str)){
+                viewHolderItem.tv_child_item.setVisibility(View.VISIBLE);
+            }
+            else{
+                viewHolderItem.tv_child_item.setVisibility(View.GONE);
+            }
+        }
 
         return convertView;
     }
