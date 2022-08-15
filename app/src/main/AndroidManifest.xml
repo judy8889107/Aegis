@@ -80,19 +80,20 @@
             android:screenOrientation="portrait" />
 
         <!-- J: 新增UrlCheckActivity，且新增 meta-data -->
-
-        <!-- Y:分享app-->
         <activity
             android:name=".ui.UrlCheckActivity"
+            android:label="@string/url_check"/>
+        <!-- Y:分享app-->
+        <activity
+            android:name=".ui.ShareActivity"
             android:label="@string/url_check"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/*" />
+                <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
-
         <activity
             android:name=".ui.IntroActivity"
             android:screenOrientation="portrait" />

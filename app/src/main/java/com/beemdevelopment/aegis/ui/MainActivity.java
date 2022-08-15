@@ -1,9 +1,11 @@
 package com.beemdevelopment.aegis.ui;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -87,6 +89,7 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
     private FabScrollHelper _fabScrollHelper;
 
     private ActionMode.Callback _actionModeCallbacks = new ActionModeCallbacks();
+    private int Preset;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -609,8 +612,40 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
                 _vaultManager.lock(true);
                 return true;
             case R.id.action_2FA: {
-                Intent intent = new Intent(this, Intro2FAActivity.class);
-                startActivity(intent);
+
+                String[] strings={"如何使用2FA","如何使用UrlCheck"};
+
+                AlertDialog.Builder builder=new AlertDialog.Builder(this);
+                builder.setSingleChoiceItems(strings,Preset, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Preset = which;//把預設值改成選擇的
+                    }
+                });
+                builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        switch (Preset){
+                            case 0:
+                                Intent intent = new Intent(MainActivity.this, Intro2FAActivity.class);
+                                startActivity(intent);
+                                break;
+                            case 1:
+                                Intent intent1 = new Intent(MainActivity.this, IntroUrlCheckActivity.class);
+                                startActivity(intent1);
+                                break;
+                        }
+                        dialog.dismiss();//結束對話框
+                    }
+                });
+
+                builder.setNeutralButton("略過", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();//結束對話框
+                    }
+                });
+                builder.show();
                 return true;
             }
             case R.id.action_intro_Url_Check: {

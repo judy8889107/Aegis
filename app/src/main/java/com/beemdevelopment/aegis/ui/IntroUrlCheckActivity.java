@@ -29,7 +29,8 @@ public class IntroUrlCheckActivity extends IntroBaseActivity {
         addSlide(IntroUrlCheck_fifth.class);
 
     }
-//呼叫按鈕activity_intro
+
+    //呼叫按鈕activity_intro
     @Override
     protected void onSetTheme() {
         setTheme(ThemeMap.NO_ACTION_BAR);

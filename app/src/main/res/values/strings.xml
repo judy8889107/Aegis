@@ -1,6 +1,6 @@
 <!--J:translate=false代表沒有其他語系的翻譯了-->
 <resources>
-    <string name="app_name" translatable="false">Aegis</string>
+    <string name="app_name" translatable="false">MyOTP</string>
     <string name="app_name_full" translatable="false">MyOTP Authenticator</string>
     <string name="org_name_full" translatable="false">Beem Development</string>
     <string name="action_settings">Settings</string>
@@ -402,11 +402,15 @@
     <string name="intro_2FA_third">There are three ways in total</string>
     <string name="intro_2FA_second">Press the plus sign in the lower right corner</string>
     <string name="intro_2FA_fourth">Manual setting: first enter the program name and the key inside the program</string>
-    <string name="intro_2FA_three">Step 3 Find Password and Account Security</string>
-    <string name="intro_2FA_four">Step 4 Click Use Two-Factor Authentication</string>
-    <string name="intro_2FA_five">The QRcode above can be scanned</string>
-    <string name="intro_2FA_two">Step 2 Find Settings in Settings and Privacy</string>
-    <string name="intro_2FA_five_2">Key can be entered manually</string>
-    <string name="intro_2FA_one">In the next step we will describe how to obtain the key and QR code. Step 1: Press the upper right corner</string>
+    <string name="intro_2FA_three">Step 3 Tap two-factor authentication</string>
+    <string name="intro_2FA_two">Step 2 Find security or account password security</string>
+    <string name="intro_2FA_four_2">Key can be entered manually</string>
+    <string name="intro_2FA_one">Step 1: Find Settings</string>
     <string name="action_2FA">Introduction to using 2FA</string>
+    <string name="intro_2FA_one_1">In the next step we will describe how to obtain the key</string>
+    <string name="intro2FA_setting">Setting</string>
+    <string name="intro_2FA_two_1">Security</string>
+    <string name="intro_2FA_three_1">Two-Factor Authentication</string>
+    <string name="intro_2FA_five">If you need a more detailed explanation,please click the image below</string>
+    <string name="intro_2FA_four">You can scan the QR code to get the key</string>
 </resources>

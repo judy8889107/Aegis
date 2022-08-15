@@ -5,7 +5,9 @@ import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_NONE;
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_PASS;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 
 import com.beemdevelopment.aegis.R;
@@ -39,14 +41,18 @@ public class Intro2FAActivity extends IntroBaseActivity {
         addSlide(Intro2FA_first.class);
         addSlide(Intro2FA_second.class);
         addSlide(Intro2FA_third.class);
+        addSlide(Intro2FA_fourth.class);
         addSlide(Intro2FA_one.class);
         addSlide(Intro2FA_two.class);
         addSlide(Intro2FA_three.class);
         addSlide(Intro2FA_four.class);
         addSlide(Intro2FA_five.class);
-        addSlide(Intro2FA_fourth.class);
+
+
+
     }
-//呼叫按鈕activity_intro
+
+    //判斷backgound顏色
     @Override
     protected void onSetTheme() {
         setTheme(ThemeMap.NO_ACTION_BAR);
@@ -61,12 +67,14 @@ public class Intro2FAActivity extends IntroBaseActivity {
         if (oldSlide == Intro2FA_second.class
                 && newSlide == Intro2FA_third.class
                 && getState().getInt("cryptType", CRYPT_TYPE_INVALID) == CRYPT_TYPE_NONE) {
-            skipToSlide(Intro2FA_fourth.class);
+
             return true;
         }
 
         return false;
     }
+
+
 
     @Override
     protected void onDonePressed() {
