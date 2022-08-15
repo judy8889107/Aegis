@@ -6,10 +6,7 @@
         android:id="@+id/action_intro_Url_Check"
         android:title="@string/intro_Url_Check"
         app:showAsAction="never" />
-    <item
-        android:id="@+id/action_delete"
-        android:title="刪除網址"
-        app:showAsAction="never" />
+
     <item
         android:id="@+id/import_export_btn"
         android:icon="@drawable/import_export_icon"
@@ -31,24 +28,24 @@
                 android:id="@+id/action_sort_category"
                 android:checkableBehavior="single">
                 <item
-                    android:id="@+id/menu_sort_custom"
+                    android:id="@+id/sort_old_to_new"
                     android:checked="true"
-                    android:title="@string/sort_custom" />
+                    android:title="時間(舊 到 新)" />
                 <item
-                    android:id="@+id/menu_sort_alphabetically_name"
-                    android:title="@string/sort_alphabetically_name" />
+                    android:id="@+id/sort_new_to_old"
+                    android:title="時間(新 到 舊)" />
                 <item
-                    android:id="@+id/menu_sort_alphabetically_name_reverse"
-                    android:title="@string/sort_alphabetically_name_reverse" />
+                    android:id="@+id/sort_a_to_z"
+                    android:title="網址(A 到 Z)" />
                 <item
-                    android:id="@+id/menu_sort_alphabetically"
-                    android:title="@string/sort_alphabetically" />
+                    android:id="@+id/sort_z_to_a"
+                    android:title="網址(Z 到 A)" />
                 <item
-                    android:id="@+id/menu_sort_alphabetically_reverse"
-                    android:title="@string/sort_alphabetically_reverse" />
+                    android:id="@+id/sort_unsafe_to_safe"
+                    android:title="安全性(低 到 高)" />
                 <item
-                    android:id="@+id/menu_sort_usage_count"
-                    android:title="@string/sort_usage_count" />
+                    android:id="@+id/sort_safe_to_unsafe"
+                    android:title="安全性(高 到 低)" />
             </group>
         </menu>
     </item>

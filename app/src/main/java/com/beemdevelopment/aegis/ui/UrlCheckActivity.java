@@ -89,6 +89,7 @@ import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -1199,22 +1200,96 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
         //TODO:Menu按鈕監聽
+        @RequiresApi(api = Build.VERSION_CODES.N)
         @Override
         public boolean onMenuItemClick(MenuItem item) {
             System.out.println(item.getItemId());
             switch (item.getItemId()) {
                 case R.id.action_intro_Url_Check:
                     break;
-                case R.id.action_delete:
-                    refreshUI(); //isLongClick:true
-                    break;
                 case R.id.import_export_btn:
+                    break;
+                    //排序
+                case R.id.sort_old_to_new:
+                    item.setChecked(true);
+                    for(ArrayList<Struct.urlObject> urlObjects:url_database_list)
+                        Collections.sort(urlObjects.subList(1, urlObjects.size()), new Comparator<Struct.urlObject>() {
+                            @Override
+                            public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                                return o1.uuid.compareTo(o2.uuid);
+                            }
+                        });
+                    Collections.sort(url_database_list, new Comparator<ArrayList<Struct.urlObject>>() {
+                        @Override
+                        public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                            return o1.get(0).uuid.compareTo(o2.get(0).uuid);
+                        }
+                    });
+                    refreshUI();
+                    break;
+                case R.id.sort_new_to_old:
+                    item.setChecked(true);
+                    for(ArrayList<Struct.urlObject> urlObjects:url_database_list)
+                        Collections.sort(urlObjects.subList(1,urlObjects.size()), new Comparator<Struct.urlObject>() {
+                            @Override
+                            public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                                return o1.uuid.compareTo(o2.uuid)*-1;
+                            }
+                        });
+                    Collections.sort(url_database_list, new Comparator<ArrayList<Struct.urlObject>>() {
+                        @Override
+                        public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                            return o1.get(0).uuid.compareTo(o2.get(0).uuid)*-1;
+                        }
+                    });
+                    refreshUI();
+                    break;
+                case R.id.sort_a_to_z:
+                    item.setChecked(true);
+                    for(ArrayList<Struct.urlObject> urlObjects:url_database_list)
+                        Collections.sort(urlObjects.subList(1, urlObjects.size()), new Comparator<Struct.urlObject>() {
+                            @Override
+                            public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                                return o1.text.compareTo(o2.text);
+                            }
+                        });
+                    Collections.sort(url_database_list, new Comparator<ArrayList<Struct.urlObject>>() {
+                        @Override
+                        public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                            return o1.get(0).text.compareTo(o2.get(0).text);
+                        }
+                    });
+                    refreshUI();
+                    break;
+                case R.id.sort_z_to_a:
+                    item.setChecked(true);
+                    for(ArrayList<Struct.urlObject> urlObjects:url_database_list)
+                        Collections.sort(urlObjects.subList(1, urlObjects.size()), new Comparator<Struct.urlObject>() {
+                            @Override
+                            public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                                return o1.text.compareTo(o2.text)*-1;
+                            }
+                        });
+                    Collections.sort(url_database_list, new Comparator<ArrayList<Struct.urlObject>>() {
+                        @Override
+                        public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                            return o1.get(0).text.compareTo(o2.get(0).text)*-1;
+                        }
+                    });
+                    refreshUI();
+                    break;
+                case R.id.sort_unsafe_to_safe:
+                    item.setChecked(true);
+                    //TODO:不安全到安全
+                    break;
+                case R.id.sort_safe_to_unsafe:
+                    item.setChecked(true);
+                    //TODO:安全到不安全
                     break;
             }
             return true;
         }
 
-        //TODO:搜尋資料庫事件監聽
         @Override
         public boolean onQueryTextSubmit(String query) {
             //按下搜尋後string
@@ -1357,6 +1432,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
     }
+
 
 }
 
