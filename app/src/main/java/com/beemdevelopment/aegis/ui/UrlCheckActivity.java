@@ -182,11 +182,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         this.setContentView(R.layout.activity_url_check);
         this.setSupportActionBar(findViewById(R.id.toolbar));
         /* 初始化 */
+
         try {
             initialize();
-//            addMainURL("http://google.com");
-//            addMainURL("https://github.com/");
-//            addMainURL("http://www.eyny.com/");
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println(e.getMessage());
@@ -194,6 +192,36 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
     }
+
+    // 獲取新intent值
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Log.v("share","新intent");
+        setIntent(intent);
+    }
+
+    // intent字串取得貼上Input框
+    public void shareAction(){
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        String type = intent.getType();
+        if (Intent.ACTION_SEND.equals(action) && type != null) {
+            String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
+            if(sharedText != null){
+                local_url_input.setText(sharedText);
+            }
+        }
+    }
+
+    //應用後臺執行 返回繼續
+    @Override
+    protected void onResume() {
+        super.onResume();
+        shareAction();
+    }
+
+
 
     //捕捉返回鍵, 寫入到外部記憶體後離開
     @Override
@@ -399,7 +427,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     //刷新database UI
     public void refreshUI(String... params) {
         String search_str = null;
-        if(params.length!=0)
+        if (params.length != 0)
             search_str = params[0];
         myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener, search_str);
         expandableListView.setAdapter(myAdapter);
@@ -978,6 +1006,19 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         private int format;
         private boolean isExist; //addMainURL使用
         private boolean isLongClick = false;
+        //Comparator
+        private Comparator sort_sub_old_to_new;
+        private Comparator sort_main_old_to_new;
+        private Comparator sort_sub_a_to_z;
+        private Comparator sort_main_a_to_z;
+        private Comparator sort_sub_unsafe_to_safe;
+        private Comparator sort_main_unsafe_to_safe;
+
+
+        //Constructor
+        public MyListener() {
+            initializeCmp();
+        }
 
         //pass變數用
         public void pass_params(Object... objects) {
@@ -1124,7 +1165,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 case R.id.delete_no_btn:
                     del_dialog.dismiss();
                     this.isLongClick = false;
-                    setSnackbar("已取消操作","成功",Snackbar.LENGTH_SHORT);
+                    setSnackbar("已取消操作", "成功", Snackbar.LENGTH_SHORT);
                     snackbar.show();
                     PD_urlObjects.clear();
                     online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
@@ -1146,7 +1187,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                         }
                     }
                     this.isLongClick = false;
-                    setSnackbar("已刪除選中項","成功",Snackbar.LENGTH_SHORT);
+                    setSnackbar("已刪除選中項", "成功", Snackbar.LENGTH_SHORT);
                     snackbar.show();
                     PD_urlObjects.clear();
                     online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
@@ -1169,7 +1210,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                                 myVibrator.vibrate(300);
                             } else {
                                 //TODO:插入dialog
-                               del_dialog.show();
+                                del_dialog.show();
 
                             }
                             break;
@@ -1204,87 +1245,96 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         @Override
         public boolean onMenuItemClick(MenuItem item) {
             System.out.println(item.getItemId());
+            int presort = R.id.sort_old_to_new;
             switch (item.getItemId()) {
                 case R.id.action_intro_Url_Check:
                     break;
                 case R.id.import_export_btn:
                     break;
-                    //排序
+                //排序
                 case R.id.sort_old_to_new:
                     item.setChecked(true);
-                    for(ArrayList<Struct.urlObject> urlObjects:url_database_list)
-                        Collections.sort(urlObjects.subList(1, urlObjects.size()), new Comparator<Struct.urlObject>() {
-                            @Override
-                            public int compare(Struct.urlObject o1, Struct.urlObject o2) {
-                                return o1.uuid.compareTo(o2.uuid);
-                            }
-                        });
-                    Collections.sort(url_database_list, new Comparator<ArrayList<Struct.urlObject>>() {
-                        @Override
-                        public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
-                            return o1.get(0).uuid.compareTo(o2.get(0).uuid);
-                        }
-                    });
+                    if (presort == R.id.sort_new_to_old) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排序
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), sort_sub_old_to_new);
+                        Collections.sort(url_database_list, sort_main_old_to_new);
+                    }
+                    presort = R.id.sort_old_to_new;
                     refreshUI();
                     break;
                 case R.id.sort_new_to_old:
                     item.setChecked(true);
-                    for(ArrayList<Struct.urlObject> urlObjects:url_database_list)
-                        Collections.sort(urlObjects.subList(1,urlObjects.size()), new Comparator<Struct.urlObject>() {
-                            @Override
-                            public int compare(Struct.urlObject o1, Struct.urlObject o2) {
-                                return o1.uuid.compareTo(o2.uuid)*-1;
-                            }
-                        });
-                    Collections.sort(url_database_list, new Comparator<ArrayList<Struct.urlObject>>() {
-                        @Override
-                        public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
-                            return o1.get(0).uuid.compareTo(o2.get(0).uuid)*-1;
-                        }
-                    });
+                    if (presort == R.id.sort_old_to_new) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排序
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(sort_sub_old_to_new));
+                        Collections.sort(url_database_list, Collections.reverseOrder(sort_main_old_to_new));
+                    }
+                    presort = R.id.sort_new_to_old;
                     refreshUI();
                     break;
                 case R.id.sort_a_to_z:
                     item.setChecked(true);
-                    for(ArrayList<Struct.urlObject> urlObjects:url_database_list)
-                        Collections.sort(urlObjects.subList(1, urlObjects.size()), new Comparator<Struct.urlObject>() {
-                            @Override
-                            public int compare(Struct.urlObject o1, Struct.urlObject o2) {
-                                return o1.text.compareTo(o2.text);
-                            }
-                        });
-                    Collections.sort(url_database_list, new Comparator<ArrayList<Struct.urlObject>>() {
-                        @Override
-                        public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
-                            return o1.get(0).text.compareTo(o2.get(0).text);
-                        }
-                    });
+                    if (presort == R.id.sort_z_to_a) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排列
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), sort_sub_a_to_z);
+                        Collections.sort(url_database_list, sort_main_a_to_z);
+                    }
+                    presort = R.id.sort_a_to_z;
                     refreshUI();
                     break;
                 case R.id.sort_z_to_a:
                     item.setChecked(true);
-                    for(ArrayList<Struct.urlObject> urlObjects:url_database_list)
-                        Collections.sort(urlObjects.subList(1, urlObjects.size()), new Comparator<Struct.urlObject>() {
-                            @Override
-                            public int compare(Struct.urlObject o1, Struct.urlObject o2) {
-                                return o1.text.compareTo(o2.text)*-1;
-                            }
-                        });
-                    Collections.sort(url_database_list, new Comparator<ArrayList<Struct.urlObject>>() {
-                        @Override
-                        public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
-                            return o1.get(0).text.compareTo(o2.get(0).text)*-1;
-                        }
-                    });
+                    if (presort == R.id.sort_a_to_z) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排列
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(sort_sub_a_to_z));
+                        Collections.sort(url_database_list, Collections.reverseOrder(sort_main_a_to_z));
+                    }
+                    presort = R.id.sort_z_to_a;
                     refreshUI();
                     break;
                 case R.id.sort_unsafe_to_safe:
                     item.setChecked(true);
-                    //TODO:不安全到安全
+                    if (presort == R.id.sort_safe_to_unsafe) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else {
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), sort_sub_unsafe_to_safe);
+                        Collections.sort(url_database_list, sort_main_unsafe_to_safe);
+                    }
+                    presort = R.id.sort_unsafe_to_safe;
+                    refreshUI();
                     break;
                 case R.id.sort_safe_to_unsafe:
                     item.setChecked(true);
-                    //TODO:安全到不安全
+                    if (presort == R.id.sort_unsafe_to_safe) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排序
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(sort_sub_unsafe_to_safe));
+                        Collections.sort(url_database_list, Collections.reverseOrder(sort_main_unsafe_to_safe));
+                    }
+                    presort = R.id.sort_safe_to_unsafe;
+                    refreshUI();
                     break;
             }
             return true;
@@ -1299,8 +1349,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         //只要有文字變動就會有的string
         @Override
         public boolean onQueryTextChange(String newText) {
-           refreshUI(newText);
-            for (int i=0;i<myAdapter.getGroupCount();i++)
+            refreshUI(newText);
+            for (int i = 0; i < myAdapter.getGroupCount(); i++)
                 expandableListView.expandGroup(i);
             return true;
         }
@@ -1430,7 +1480,53 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             else item.setPaintFlags(strike_line_hide);
         }
 
-
+        public void initializeCmp() {
+            // 時間(舊 - 新)
+            sort_sub_old_to_new = new Comparator<Struct.urlObject>() {
+                @Override
+                public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                    return o1.uuid.compareTo(o2.uuid);
+                }
+            };
+            sort_main_old_to_new = new Comparator<ArrayList<Struct.urlObject>>() {
+                @Override
+                public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                    return o1.get(0).uuid.compareTo(o2.get(0).uuid);
+                }
+            };
+            // 字母 a - z
+            sort_sub_a_to_z = new Comparator<Struct.urlObject>() {
+                @Override
+                public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                    return o1.text.compareTo(o2.text);
+                }
+            };
+            sort_main_a_to_z = new Comparator<ArrayList<Struct.urlObject>>() {
+                @Override
+                public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                    Log.v("sort", o1.get(0).text+" "+o2.get(0).text);
+                    Log.v("sort", String.valueOf(o1.get(0).text.compareTo(o2.get(0).text)));
+                    //FIXME 感覺排序有點怪
+                    return o1.get(0).text.compareTo(o2.get(0).text);
+                }
+            };
+            // 安全(低 - 高)
+            sort_sub_unsafe_to_safe = new Comparator<Struct.urlObject>() {
+                @Override
+                public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                    return o2.format - o1.format;
+                }
+            };
+            sort_main_unsafe_to_safe = new Comparator<ArrayList<Struct.urlObject>>() {
+                @Override
+                public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                    if(o1.size() == o2.size()){
+                        return o1.get(1).format - o2.get(1).format;
+                    }
+                    return o1.size() - o2.size();
+                }
+            };
+        }
     }
 
 
