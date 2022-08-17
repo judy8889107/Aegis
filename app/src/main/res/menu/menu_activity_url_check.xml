@@ -8,9 +8,14 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/import_export_btn"
+        android:id="@+id/export_btn"
         android:icon="@drawable/import_export_icon"
-        android:title="匯入/匯出"
+        android:title="匯出"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/import_btn"
+        android:icon="@drawable/import_export_icon"
+        android:title="匯入"
         app:showAsAction="never" />
     <item
         android:id="@+id/search_btn"
@@ -28,12 +33,12 @@
                 android:id="@+id/action_sort_category"
                 android:checkableBehavior="single">
                 <item
-                    android:id="@+id/sort_old_to_new"
-                    android:checked="true"
-                    android:title="時間(舊 到 新)" />
-                <item
                     android:id="@+id/sort_new_to_old"
+                    android:checked="true"
                     android:title="時間(新 到 舊)" />
+                <item
+                    android:id="@+id/sort_old_to_new"
+                    android:title="時間(舊 到 新)" />
                 <item
                     android:id="@+id/sort_a_to_z"
                     android:title="網址(A 到 Z)" />

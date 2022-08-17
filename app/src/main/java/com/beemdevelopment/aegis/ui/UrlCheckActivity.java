@@ -24,6 +24,7 @@ import android.graphics.Paint;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -121,7 +122,8 @@ import kotlin.Triple;
 class Struct {
     public static class urlObject {
         public String tagName, uuid, text;
-        int format;
+        int format = 0;
+        int safe_score = 0;
     }
 }
 
@@ -197,18 +199,18 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        Log.v("share","新intent");
+        Log.v("share", "新intent");
         setIntent(intent);
     }
 
     // intent字串取得貼上Input框
-    public void shareAction(){
+    public void shareAction() {
         Intent intent = getIntent();
         String action = intent.getAction();
         String type = intent.getType();
         if (Intent.ACTION_SEND.equals(action) && type != null) {
             String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
-            if(sharedText != null){
+            if (sharedText != null) {
                 local_url_input.setText(sharedText);
             }
         }
@@ -219,16 +221,15 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     protected void onResume() {
         super.onResume();
         shareAction();
+        refreshUI(); //修復bug(App後臺執行回到前台刷新list)
     }
-
 
 
     //捕捉返回鍵, 寫入到外部記憶體後離開
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if ((keyCode == KeyEvent.KEYCODE_BACK)) {
-            //TODO:長按返回事件
-            if (myListener.isLongClick) {
+            if (myListener.isLongClick) { //長按返回事件
                 if (PD_urlObjects.size() == 0 || (System.currentTimeMillis() - firstPressedTime < 2000)) {
                     myListener.isLongClick = false;
                     online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
@@ -246,6 +247,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 }
             } else {
                 try {
+                    for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                        Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(myListener.sort_sub_old_to_new));
+                    Collections.sort(url_database_list, Collections.reverseOrder(myListener.sort_main_old_to_new));
                     write_url_database();
                     this.finish();
                 } catch (Exception e) {
@@ -291,7 +295,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         local_url_input.addTextChangedListener(myListener);
         online_check_add_btn.setOnClickListener(myListener);
         local_check_send_btn.setOnClickListener(myListener);
-        //TODO:摺疊清單監聽
+        //摺疊清單監聽
         expandableListView.setOnGroupClickListener(myListener);
         expandableListView.setOnChildClickListener(myListener);
         expandableListView.setOnItemLongClickListener(myListener);
@@ -478,7 +482,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         //toast宣告
         dialog_toast = Toast.makeText(this, "", Toast.LENGTH_LONG);
 
-        //TODO:Snakerbar宣告
+        //Snakerbar宣告
         snackbar = Snackbar.make(this.findViewById(R.id.activity_url_check), "", Snackbar.LENGTH_SHORT)
                 .setAction("已複製", myListener)
                 .setActionTextColor(Color.parseColor("#FF60AF"));
@@ -489,7 +493,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     }
 
-    //TODO:設定snackbar
+    //設定snackbar
     public void setSnackbar(String text, String action, int duration) {
         snackbar.setText(text);
         snackbar.setAction(action, myListener);
@@ -520,9 +524,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 urlObject.tagName = node.getNodeName();
                 urlObject.uuid = node.getAttributes().getNamedItem("uuid").getNodeValue();
                 urlObject.text = node.getTextContent();
+                if (node.getNodeName().equals("mainURL"))
+                    urlObject.safe_score = Integer.valueOf(node.getAttributes().getNamedItem("safe_score").getNodeValue());
                 if (node.getNodeName().equals("subURL"))
                     urlObject.format = Integer.valueOf(node.getAttributes().getNamedItem("format").getNodeValue());
-
 
                 groupList.add(urlObject);
             }
@@ -531,6 +536,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
         }
         System.out.println("讀取資料庫...完畢");
+
         myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener);
         expandableListView.setAdapter(myAdapter);
         System.out.println("創建UI清單...完畢");
@@ -538,7 +544,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
     /* 設定安全網址 - mainURL加入網址到資料庫中 */
-    public void addMainURL(String url) throws Exception {
+    public void addMainURL(String url, int safe_score) throws Exception {
         Boolean isExist = false;
         System.out.println("要加入mainURL的資料: " + url);
         // 先檢查有無重複網址
@@ -562,11 +568,12 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             urlObject.text = url;
             urlObject.tagName = "mainURL";
             urlObject.uuid = Long.toHexString(System.currentTimeMillis());
+            urlObject.safe_score = safe_score; //安全分數
             ArrayList<Struct.urlObject> urlObjects = new ArrayList<>();
             urlObjects.add(urlObject);
 
-            //TODO:相關資料放一起?
-            url_database_list.add(urlObjects);
+            //往最前面插入元素
+            url_database_list.add(0, urlObjects);
 
             System.out.println(url + " 成功新增mainURL");
 //            write_url_database(); //寫入xml檔案
@@ -619,6 +626,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                         token.setAttribute("id", groupID);
                         token.setIdAttribute("id", true);
                         mainURL.setAttribute("groupID", groupID);
+                        mainURL.setAttribute("safe_score", String.valueOf(urlObject.safe_score));
                         mainURL.setAttribute("uuid", urlObject.uuid);
                         mainURL.setIdAttribute("uuid", true);
                         //增加
@@ -786,7 +794,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         urlObject.tagName = "subURL";
         urlObject.uuid = Long.toHexString(System.currentTimeMillis());
         ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID); //加入清單中
-        urlObjects.add(urlObject);
+        urlObjects.add(1, urlObject); //加到mainURL後面
         url_database_list.set(groupID, urlObjects); //Arraylist更新元素
         System.out.println(String.format("%s 已成功加入資料庫中!", url));
 //        write_url_database();
@@ -956,6 +964,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             System.out.println("------------------------------------------");
             message = getIPQualityMessage(IPQualityScore_data)[1];
             risk_score = getIPQualityMessage(IPQualityScore_data)[0];
+            myListener.safe_score = 100 - Integer.valueOf(risk_score); //安全分數
 //            執行 Thread UI更新
             runOnUiThread(new Runnable() {
                 @Override
@@ -1004,6 +1013,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         private int groupID;
         private String url;
         private int format;
+        private int safe_score;
         private boolean isExist; //addMainURL使用
         private boolean isLongClick = false;
         //Comparator
@@ -1135,7 +1145,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 case R.id.ipqs_yes_btn:
                     try {
                         buttomDialog.dismiss();
-                        addMainURL(URL_text);
+                        addMainURL(URL_text, safe_score);
+                        local_url_input.setText("");
                         if (!isExist) {
                             dialog_toast.setText("已添加此網址至資料庫中");
                             dialog_toast.show();
@@ -1146,6 +1157,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     break;
                 case R.id.ipqs_no_btn:
                     buttomDialog.dismiss();
+                    local_url_input.setText("");
                     dialog_toast.setText("取消添加此網址到資料庫中");
                     dialog_toast.show();
                     break;
@@ -1177,12 +1189,17 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     //移除要刪除的 item
                     for (int i = 0; i < PD_urlObjects.size(); i++) {
                         Struct.urlObject urlObject = PD_urlObjects.get(i);
+                        Log.v("mydelete", "待刪除清單" + urlObject.text);
                         //每刪除一個元素就遍歷
                         for (int j = 0; j < url_database_list.size(); j++) {
                             ArrayList<Struct.urlObject> urlObjects = url_database_list.get(j);
                             if (urlObjects.contains(urlObject)) {
-                                urlObjects.remove(urlObject);
-                                url_database_list.set(j, urlObjects);
+                                if (urlObject.tagName.equals("mainURL")) {
+                                    url_database_list.remove(urlObjects);
+                                } else {
+                                    urlObjects.remove(urlObject);
+                                    url_database_list.set(j, urlObjects);
+                                }
                             }
                         }
                     }
@@ -1193,7 +1210,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
                     online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
                     refreshUI(); //更新 UI
-                    //TODO:確認刪除事件
+                    //確認刪除事件
                     break;
                 case R.id.online_check_add_btn:
                     int iconID = (int) online_check_add_btn.getTag();
@@ -1209,7 +1226,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                                 setSnackbar("待刪除清單沒有任何東西", "已選擇0", Snackbar.LENGTH_INDEFINITE);
                                 myVibrator.vibrate(300);
                             } else {
-                                //TODO:插入dialog
                                 del_dialog.show();
 
                             }
@@ -1249,7 +1265,13 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             switch (item.getItemId()) {
                 case R.id.action_intro_Url_Check:
                     break;
-                case R.id.import_export_btn:
+                case R.id.export_btn:
+                    //TODO:import按鈕監聽
+
+                    break;
+                case R.id.import_btn:
+                    //TODO:export按鈕監聽
+
                     break;
                 //排序
                 case R.id.sort_old_to_new:
@@ -1367,7 +1389,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         @RequiresApi(api = Build.VERSION_CODES.Q)
         @Override
         public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+
             TextView parent_item = v.findViewById(R.id.tv_group_parent);
+
             if (this.isLongClick) {
                 //parent item設定
                 parent_item.setSingleLine(false);
@@ -1375,8 +1399,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 toggleStrike(parent_item);
                 //child item設定
                 int child_position = expandableListView.getPositionForView(v) + 1;
+                Log.v("mytmp", "position+1: " + child_position);
+                Log.v("mytmp", "群組子數目: " + myAdapter.getChildrenCount(groupPosition));
                 for (int i = 0; i < myAdapter.getChildrenCount(groupPosition); i++) {
                     View view = expandableListView.getChildAt(child_position);
+                    Log.v("mytmp", "子class: " + view.getClass());
                     TextView child_item = view.findViewById(R.id.tv_group_child);
                     child_item.setSingleLine(false);
                     child_item.setSelected(parent_item.isSelected());
@@ -1402,9 +1429,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 parent_item.setSingleLine(!parent_item.isSingleLine()); //網址展開過長切換
                 String text = parent_item.getText().toString();
                 String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
+                setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
                 if (!text.equals(pre_text)) { //不重新複製
                     cmb.setPrimaryClip(ClipData.newPlainText(null, text));
-                    setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
                     snackbar.show();
                 } else { //若已複製過
                     if (!snackbar.isShown()) snackbar.show();
@@ -1412,10 +1439,11 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
             }
 
+
             return true;
         }
 
-        //TODO:輕點即可展開複製
+        //輕點即可展開複製
         @RequiresApi(api = Build.VERSION_CODES.Q)
         @Override
         public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
@@ -1438,9 +1466,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 child_item.setSingleLine(!child_item.isSingleLine()); //網址過長展開切換
                 String text = child_item.getText().toString();
                 String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
+                setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
                 if (!text.equals(pre_text)) { //不重新複製
                     cmb.setPrimaryClip(ClipData.newPlainText(null, text));
-                    setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
                     snackbar.show();
                 } else { //若已複製過
                     if (!snackbar.isShown()) snackbar.show();
@@ -1450,7 +1478,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             return true;
         }
 
-        //TODO:長按事件
+        //長按事件
         @Override
         public boolean onItemLongClick(AdapterView<?> parent, View v, int position, long id) {
             //長按事件觸發一次
@@ -1504,7 +1532,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             sort_main_a_to_z = new Comparator<ArrayList<Struct.urlObject>>() {
                 @Override
                 public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
-                    Log.v("sort", o1.get(0).text+" "+o2.get(0).text);
+                    Log.v("sort", o1.get(0).text + " " + o2.get(0).text);
                     Log.v("sort", String.valueOf(o1.get(0).text.compareTo(o2.get(0).text)));
                     //FIXME 感覺排序有點怪
                     return o1.get(0).text.compareTo(o2.get(0).text);
@@ -1514,16 +1542,42 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             sort_sub_unsafe_to_safe = new Comparator<Struct.urlObject>() {
                 @Override
                 public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                    if (o1.format == o2.format) {
+                        return o1.uuid.compareTo(o2.uuid);
+                    }
                     return o2.format - o1.format;
                 }
             };
             sort_main_unsafe_to_safe = new Comparator<ArrayList<Struct.urlObject>>() {
                 @Override
                 public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
-                    if(o1.size() == o2.size()){
-                        return o1.get(1).format - o2.get(1).format;
+                    if (o1.get(0).safe_score == o2.get(0).safe_score) {
+                        float avg_1 = 0;
+                        float avg_2 = 0;
+                        //avg_1計算
+                        if (o1.subList(1, o1.size()).size() == 0) avg_1 = 5;
+                        else {
+                            for (Struct.urlObject urlObject : o1)
+                                avg_1 += urlObject.format;
+                            avg_1 = avg_1 / o1.subList(1, o1.size()).size();
+                        }
+                        // avg_2計算
+                        if (o2.subList(1, o2.size()).size() == 0) avg_2 = 5;
+                        else {
+                            for (Struct.urlObject urlObject : o2)
+                                avg_2 += urlObject.format;
+                            avg_2 = avg_2 / o2.subList(1, o2.size()).size();
+                        }
+                        if (Float.compare(avg_1, avg_2) == 0) { //若星星平均數相同
+                            if (o1.size() == o2.size()) //若size也相同,則最舊添加進來的較不安全
+                                return o1.get(0).uuid.compareTo(o2.get(0).uuid);
+
+                            return o2.size() - o1.size();
+                        }
+                        return Float.compare(avg_1, avg_2);
+
                     }
-                    return o1.size() - o2.size();
+                    return o2.get(0).safe_score - o1.get(0).safe_score;
                 }
             };
         }
