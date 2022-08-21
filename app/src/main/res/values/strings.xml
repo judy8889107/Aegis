@@ -411,6 +411,6 @@
     <string name="intro2FA_setting">Setting</string>
     <string name="intro_2FA_two_1">Security</string>
     <string name="intro_2FA_three_1">Two-Factor Authentication</string>
-    <string name="intro_2FA_five">If you need a more detailed explanation,please click the image below</string>
+    <string name="intro_2FA_five">You can click the icons below to learn how each website enables 2FA. If there is no website you need, you can click the lower right corner to enter the website search</string>
     <string name="intro_2FA_four">You can scan the QR code to get the key</string>
 </resources>

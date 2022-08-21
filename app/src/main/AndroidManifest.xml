@@ -83,17 +83,6 @@
         <activity
             android:name=".ui.UrlCheckActivity"
             android:label="@string/url_check"/>
-        <!-- Y:分享app-->
-        <activity
-            android:name=".ui.ShareActivity"
-            android:label="@string/url_check"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".ui.IntroActivity"
             android:screenOrientation="portrait" />

@@ -1,90 +1,57 @@
 package com.beemdevelopment.aegis.ui;
 
-import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_BIOMETRIC;
-import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_INVALID;
-import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_NONE;
-import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_PASS;
-
-import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
-import android.view.inputmethod.InputMethodManager;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
+import androidx.viewpager.widget.ViewPager;
 
 import com.beemdevelopment.aegis.R;
-import com.beemdevelopment.aegis.ThemeMap;
-import com.beemdevelopment.aegis.ui.dialogs.Dialogs;
-import com.beemdevelopment.aegis.ui.intro.IntroBaseActivity;
-import com.beemdevelopment.aegis.ui.intro.SlideFragment;
-import com.beemdevelopment.aegis.ui.slides.DoneSlide;
-import com.beemdevelopment.aegis.ui.slides.Intro2FA_first;
-import com.beemdevelopment.aegis.ui.slides.Intro2FA_five;
-import com.beemdevelopment.aegis.ui.slides.Intro2FA_four;
-import com.beemdevelopment.aegis.ui.slides.Intro2FA_fourth;
-import com.beemdevelopment.aegis.ui.slides.Intro2FA_one;
-import com.beemdevelopment.aegis.ui.slides.Intro2FA_second;
-import com.beemdevelopment.aegis.ui.slides.Intro2FA_third;
-import com.beemdevelopment.aegis.ui.slides.Intro2FA_three;
-import com.beemdevelopment.aegis.ui.slides.Intro2FA_two;
-import com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide;
-import com.beemdevelopment.aegis.ui.slides.SecuritySetupSlide;
-import com.beemdevelopment.aegis.ui.slides.WelcomeSlide;
-import com.beemdevelopment.aegis.vault.VaultFileCredentials;
-import com.beemdevelopment.aegis.vault.VaultRepositoryException;
-import com.beemdevelopment.aegis.vault.slots.BiometricSlot;
-import com.beemdevelopment.aegis.vault.slots.PasswordSlot;
+import com.beemdevelopment.aegis.ui.slides.BlankFragmentClass;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_1;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_2;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_3;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_4;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_5;
 
-public class Intro2FAActivity extends IntroBaseActivity {
+public class Intro2FAActivity extends AppCompatActivity {
+
+    //1.宣告<ViewPager>標籤為viewPager
+    private ViewPager viewPager;
+
+    //2.宣告使用轉換器
+    private BlankFragmentClass adapter;
+
+    //3.宣告變數為fragments
+    private Fragment[] fragments;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_viewpager);
+        //4.指定activity_main.xml內標籤
+        viewPager = findViewById(R.id.viewpager);
 
-        addSlide(Intro2FA_first.class);
-        addSlide(Intro2FA_second.class);
-        addSlide(Intro2FA_third.class);
-        addSlide(Intro2FA_fourth.class);
-        addSlide(Intro2FA_one.class);
-        addSlide(Intro2FA_two.class);
-        addSlide(Intro2FA_three.class);
-        addSlide(Intro2FA_four.class);
-        addSlide(Intro2FA_five.class);
+        //5.初始化三個Fragment分頁
+        fragments = new Fragment[5];
+        Intro2FA_1 bf1 = new Intro2FA_1();
+        Intro2FA_2 bf2 = new Intro2FA_2();
+        Intro2FA_3 bf3 = new Intro2FA_3();
+        Intro2FA_4 bf4 = new Intro2FA_4();
+        Intro2FA_5 bf5 = new Intro2FA_5();
+        //6.陣列內容
+        fragments[0] = bf1;
+        fragments[1] = bf2;
+        fragments[2] = bf3;
+        fragments[3] = bf4;
+        fragments[4] = bf5;
 
+        //7.初始化轉換器
+        adapter = new BlankFragmentClass(getSupportFragmentManager(), fragments);
 
-
+        //8.<ViewPager>標籤設定轉換器
+        viewPager.setAdapter(adapter);
     }
 
-    //判斷backgound顏色
-    @Override
-    protected void onSetTheme() {
-        setTheme(ThemeMap.NO_ACTION_BAR);
-    }
-    //
-    @Override
-    protected boolean onBeforeSlideChanged(Class<? extends SlideFragment> oldSlide, Class<? extends SlideFragment> newSlide) {
-        // hide the keyboard before every slide change
-        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(findViewById(android.R.id.content).getWindowToken(), 0);
-
-        if (oldSlide == Intro2FA_second.class
-                && newSlide == Intro2FA_third.class
-                && getState().getInt("cryptType", CRYPT_TYPE_INVALID) == CRYPT_TYPE_NONE) {
-
-            return true;
-        }
-
-        return false;
-    }
-
-
-
-    @Override
-    protected void onDonePressed() {
-
-       //結束介面
-        // skip the intro from now on
-        _prefs.setIntroDone(true);
-
-        setResult(RESULT_OK);
-        finish();
-    }
 
 }

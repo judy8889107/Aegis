@@ -302,5 +302,5 @@
     <string name="intro_2FA_two_1">安全性</string>
     <string name="intro_2FA_three_1">兩步驟驗證</string>
     <string name="intro_2FA_four_2">可以手動輸入金鑰</string>
-    <string name="intro_2FA_five">如果你需要更詳細的講解可以點擊下方圖</string>
+    <string name="intro_2FA_five">您可以單擊下面的圖標了解每個網站如何啟用 2FA。如果沒有你需要的網站，可以點擊右下角進入網站搜索</string>
 </resources>

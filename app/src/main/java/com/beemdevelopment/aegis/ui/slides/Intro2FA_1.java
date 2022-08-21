@@ -6,12 +6,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.fragment.app.Fragment;
+
 import com.beemdevelopment.aegis.R;
 import com.beemdevelopment.aegis.ui.intro.SlideFragment;
 
-public class Intro2FA_first extends SlideFragment {
+public class Intro2FA_1 extends Fragment {
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_main_first , container, false);
     }
 }
