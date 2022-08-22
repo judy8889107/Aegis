@@ -2,44 +2,43 @@
 package com.beemdevelopment.aegis.ui;
 
 
-import static android.content.DialogInterface.BUTTON_NEGATIVE;
-import static android.content.DialogInterface.BUTTON_POSITIVE;
-
-import android.app.Activity;
-import android.app.AlertDialog;
+import android.Manifest;
 import android.app.Dialog;
-import android.app.ProgressDialog;
+
 import android.app.SearchManager;
 import android.app.Service;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.DialogInterface;
+
 import android.content.Intent;
 
-import android.content.res.TypedArray;
-import android.database.Cursor;
+
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
 
 
 import android.os.Vibrator;
+import android.provider.ContactsContract;
 import android.text.Editable;
 import android.text.Html;
-import android.text.SpannableStringBuilder;
+
 import android.text.TextWatcher;
-import android.text.style.ForegroundColorSpan;
+
+import android.text.method.HideReturnsTransformationMethod;
+import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.util.Pair;
-import android.util.TypedValue;
+
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
+
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -50,11 +49,14 @@ import com.beemdevelopment.aegis.R;
 
 
 import com.beemdevelopment.aegis.ui.dialogs.Dialogs;
-import com.google.android.gms.vision.text.Text;
+
+
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
+
+
 import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
@@ -78,18 +80,26 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 /* URL lib */
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
 
 
 import java.io.*;
 import java.lang.annotation.Target;
+import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
 import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -101,14 +111,21 @@ import java.util.Set;
 /* JSON */
 
 import org.apache.commons.validator.routines.UrlValidator;
+import org.bouncycastle.jcajce.provider.symmetric.ChaCha;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -140,11 +157,14 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     InputMethodManager imm;
     BottomSheetDialog buttomDialog;
     Dialog del_dialog;
+    Dialog EXP_IMP_dialog;
     View dialog_online_check_add_entry_view;
     View dialog_progress_view;
     View dialog_online_check_result;
     View dialog_local_check_result;
     View dialog_delete_dialog;
+    View dialog_export_file;
+    View dialog_import_file;
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
     private Toast dialog_toast;
@@ -167,6 +187,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     final int host = 3;
     final int startwith = 4;
     final int exact = 5;
+    private boolean isPermissionPassed = false;
+    final int ACTION_CREATE_DOCUMENT = 11;
+    final int ACTION_GET_CONTENT = 12;
 
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -187,6 +210,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
         try {
             initialize();
+
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println(e.getMessage());
@@ -194,6 +218,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
     }
+
 
     // 獲取新intent值
     @Override
@@ -315,6 +340,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         dialog_online_check_result = getLayoutInflater().inflate(R.layout.mydialog_online_check_result, null);
         dialog_local_check_result = getLayoutInflater().inflate(R.layout.mydialog_local_check, null);
         dialog_delete_dialog = getLayoutInflater().inflate(R.layout.mydialog_delete_dialog, null);
+        dialog_export_file = getLayoutInflater().inflate(R.layout.mydialog_export_file, null);
+        dialog_import_file = getLayoutInflater().inflate(R.layout.mydialog_import_file, null);
         //設定 view id
         dialog_online_check_add_entry_view.setId((int) R.layout.mydialog_online_check_add_entry);
         dialog_progress_view.setId((int) R.layout.mydialog_progress_view);
@@ -344,6 +371,14 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         View view3 = dialog_delete_dialog;
         view3.findViewById(R.id.delete_no_btn).setOnClickListener(myListener);
         view3.findViewById(R.id.delete_yes_btn).setOnClickListener(myListener);
+        //TODO:設定dialog export file
+        View view4 = dialog_export_file;
+        view4.findViewById(R.id.export_eye_btn).setOnClickListener(myListener);
+        view4.findViewById(R.id.export_confirm_btn).setOnClickListener(myListener);
+        //TODO:設定dialog export file
+        View view5 = dialog_import_file;
+        view5.findViewById(R.id.import_eye_btn).setOnClickListener(myListener);
+        view5.findViewById(R.id.import_confirm_btn).setOnClickListener(myListener);
 
     }
 
@@ -451,33 +486,138 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
     /* RequestCode/ResultCode 在兩個intent間接收/傳遞資料 */
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         /* resultcode 正常無動作(不掃描QRcode)返回時，是0 */
-        switch (resultCode) {
-            case Scan_QR_CODE:
-                URL_text = data.getStringExtra(pass_name);
-                /* 將網址輸入input text改為QRcode掃出的內容 */
-                if (buttomDialog.isShowing()) {
-                    online_url_input.setText(URL_text);
-                } else {
-                    local_url_input.setText(URL_text);
-                }
-
-                break;
-            default:
-                return;  //resultCode為 0 時，return回原本activity
+        Log.v("mydebug", "requestCode: " + requestCode);
+        Log.v("mydebug", "resultCode: " + resultCode);
+        Log.v("mydebug", "resultCodeOK: " + RESULT_OK);
+        if (resultCode == Scan_QR_CODE) {
+            URL_text = data.getStringExtra(pass_name);
+            /* 將網址輸入input text改為QRcode掃出的內容 */
+            if (buttomDialog.isShowing()) {
+                online_url_input.setText(URL_text);
+            } else {
+                local_url_input.setText(URL_text);
+            }
         }
+        if (requestCode == ACTION_CREATE_DOCUMENT) {
+            try {
+                Uri fileUri = data.getData();
+                String passwd = ((EditText) dialog_export_file.findViewById(R.id.export_passwd)).getText().toString();
+                exportFile(fileUri, passwd);
+                setSnackbar("輸出資料庫成功!", "SUCCESS", Snackbar.LENGTH_SHORT);
+                snackbar.show();
+            } catch (Exception e) {
+                Log.v("mydebug", "" + e);
+            }
+        }
+        if (requestCode == ACTION_GET_CONTENT) {
+            Uri fileUri = data.getData();
+            myListener.pass_params(fileUri); /* pass變數 */
+            EXP_IMP_dialog.setContentView(dialog_import_file);
+            EXP_IMP_dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            EXP_IMP_dialog.show(); /*顯示輸入密碼 dialog*/
+
+        }
+
+        return;
+    }
+
+    /*AES加密(MD5 key)*/
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public String Encrypt(String content, String password) throws Exception {
+        MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+        byte[] MD5 = messageDigest.digest(password.getBytes());
+
+        SecretKeySpec secretKeySpec = new SecretKeySpec(MD5, "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+        byte[] byteContent = content.getBytes("utf-8");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
+        byte[] result = cipher.doFinal(byteContent);
+        String result_str = Base64.getEncoder().encodeToString(result);
+        return result_str;
+    }
+
+    /*AES解密(MD5 key)*/
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public String Decrypt(String content, String password) throws Exception{
+            MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+            byte[] MD5 = messageDigest.digest(password.getBytes());
+
+            byte[] decodedContent = Base64.getDecoder().decode(content);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(MD5, "AES");
+            Cipher cipher = Cipher.getInstance("AES");
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
+            try{
+                byte[] result = cipher.doFinal(decodedContent);
+                return new String(result);
+            }catch (Exception e){
+                Log.v("mydebug","例外"+e);
+                Log.v("mydebug","匯入資料庫失敗");
+                return  null;
+            }
+    }
+
+    //TODO:輸出 url_database
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void exportFile(Uri fileUri, String password) throws Exception {
+        if (!isPermissionPassed) {
+            setSnackbar("尚未取得存取權限", "失敗", Snackbar.LENGTH_LONG);
+            getPermission();
+        } else {
+            OutputStream os = getContentResolver().openOutputStream(fileUri); /*檔案輸出流*/
+            InputStream is = new FileInputStream(url_database);
+            String str = getData(is, true);
+            Log.v("mydebug", "匯出的資料庫內容:" + str);
+            String encrypted_str = Encrypt(str, password); /*加密檔案*/
+            byte[] strTobyte = encrypted_str.getBytes();
+            os.write(strTobyte); /*寫入檔案*/
+            os.close();
+            is.close();
+
+        }
+    }
+
+    //TODO:輸出 url_database
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void importFile(Uri fileUri, String password) throws Exception{
+        if (!isPermissionPassed) {
+            setSnackbar("尚未取得存取權限", "失敗", Snackbar.LENGTH_LONG);
+            getPermission();
+        } else {
+            InputStream is = getContentResolver().openInputStream(fileUri); /*檔案輸入*/
+            String str = getData(is, false);
+            String descrypted_str = Decrypt(str, password); /*解密檔案*/
+            if(descrypted_str != null){ /*返回不為空值*/
+                OutputStream os = new FileOutputStream(url_database); /*檔案輸出目標(覆蓋原有檔案)*/
+                byte[] strTobyte = descrypted_str.getBytes();
+                os.write(strTobyte); /*寫入檔案*/
+                os.close();
+                setSnackbar("成功匯入資料庫","SUCCESS",Snackbar.LENGTH_LONG);
+            }else {
+                setSnackbar("匯入資料庫失敗","錯誤",Snackbar.LENGTH_LONG);
+            }
+            is.close();
+            loadDatabase();
+            refreshUI();
+            snackbar.show();
+        }
+
     }
 
     /* 設定所有dialog */
     public void buildAllDialog() {
-
         //del_dialog 宣告
         del_dialog = new Dialog(this);
         del_dialog.setContentView(dialog_delete_dialog);
         del_dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        //EXP_IMP_dialog宣告
+        EXP_IMP_dialog = new Dialog(this);
+
 
         //toast宣告
         dialog_toast = Toast.makeText(this, "", Toast.LENGTH_LONG);
@@ -651,26 +791,6 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         System.out.println("資料庫寫入完畢!");
     }
 
-    // 刪除 mainURL網址
-    public void deleteMainURL(String id) throws Exception {
-
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
-        // 得到父節點並移除mainURL
-        org.w3c.dom.Element root = doc.getDocumentElement();
-        org.w3c.dom.Element tokenNode = doc.getElementById(id);
-        root.removeChild(tokenNode);
-        //mainURL id編號重新命名
-        NodeList nodeList = doc.getElementsByTagName("token");
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node node = nodeList.item(i);
-            node.getAttributes().getNamedItem("id").setNodeValue(String.valueOf(i));
-        }
-        writeXml(doc);
-    }
 
     //解析並比對資料庫 - 檢查網址
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -842,13 +962,17 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
     // 輸入inputstream，串接回傳資訊
-    public static String getData(InputStream inputStream) throws IOException {
+    public static String getData(InputStream inputStream, boolean newline) throws IOException {
         String result = null;
         StringBuilder sb = new StringBuilder();
         String line;
         BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
         while ((line = br.readLine()) != null) {
-            sb.append(line);
+            if (newline) sb.append(line).append("\n");
+            else {
+                sb.append(line);
+            }
+
         }
         result = sb.toString();
         return result;
@@ -871,7 +995,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             connection.setRequestProperty("Accept", "application/json");
 
             if (connection.getResponseCode() == 200) {
-                result = getData(connection.getInputStream());
+                result = getData(connection.getInputStream(), false);
                 connection.disconnect();
                 jsonObject = new JSONObject(result);
                 //取出要的資料
@@ -891,7 +1015,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 }
             } else {
                 /* 若連結失敗則success = false */
-                System.out.println(getData(connection.getErrorStream())); //印出失敗資訊
+                System.out.println(getData(connection.getErrorStream(), false)); //印出失敗資訊
                 data_map.put("success", "false");
             }
         } catch (IOException | JSONException e) {
@@ -1007,6 +1131,53 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     }
 
+    // TODO:取得權限(備用)
+    private void getPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { /*SDK版本*/
+            String writePermission = Manifest.permission.WRITE_EXTERNAL_STORAGE;
+            String readPermission = Manifest.permission.READ_EXTERNAL_STORAGE;
+            boolean checkWritePermisson = ActivityCompat.checkSelfPermission(this, writePermission)
+                    == PackageManager.PERMISSION_GRANTED;
+            boolean checkReadPermisson = ActivityCompat.checkSelfPermission(this, readPermission)
+                    == PackageManager.PERMISSION_GRANTED;
+            Log.v("mydebug", "寫入權限: " + checkWritePermisson);
+            Log.v("mydebug", "讀取權限: " + checkReadPermisson);
+            if (checkWritePermisson && checkReadPermisson) {
+                isPermissionPassed = true;
+            } else {
+                ActivityCompat.requestPermissions(
+                        this, new String[]{writePermission, readPermission}, 100);
+            }
+
+        }
+
+    }
+
+    //TODO:取得權限結果(備用)
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 100) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                    grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                /*如果用戶同意*/
+                isPermissionPassed = true;
+            } else {
+                /*如果用戶不同意*/
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this
+                        , Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    setSnackbar("取得權限失敗", "錯誤", Snackbar.LENGTH_LONG);
+                    snackbar.show();
+                }
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this
+                        , Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                    setSnackbar("取得權限失敗", "錯誤", Snackbar.LENGTH_LONG);
+                    snackbar.show();
+                }
+            }
+        }
+    }
+
     //實作各種監聽器
     class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener, View.OnTouchListener, AdapterView.OnItemLongClickListener {
 
@@ -1016,6 +1187,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         private int safe_score;
         private boolean isExist; //addMainURL使用
         private boolean isLongClick = false;
+        private Uri FileUri;
         //Comparator
         private Comparator sort_sub_old_to_new;
         private Comparator sort_main_old_to_new;
@@ -1033,7 +1205,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         //pass變數用
         public void pass_params(Object... objects) {
             if (objects.length == 1) {
-                isExist = objects[0].getClass() == Boolean.class ? (boolean) objects[0] : null;
+                isExist = objects[0].getClass() == Boolean.class ? (boolean) objects[0] : false;
+                FileUri = objects[0].getClass() == Uri.EMPTY.getClass() ? (Uri)objects[0] : null;
+
             }
             if (objects.length == 3) {
                 groupID = objects[0].getClass() == Integer.class ? (int) objects[0] : null;
@@ -1081,12 +1255,44 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
 
         // Button事件監聽
-        @RequiresApi(api = Build.VERSION_CODES.N)
+        @RequiresApi(api = Build.VERSION_CODES.O)
         @Override
         public void onClick(View v) {
             Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
             String iconTag;
             switch (v.getId()) {
+                case R.id.import_confirm_btn: /*輸入確定按鈕*/
+                    String password = ((EditText)dialog_import_file.findViewById(R.id.import_passwd)).getText().toString();
+                    try {
+                        importFile(FileUri, password);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    EXP_IMP_dialog.dismiss();
+                    break;
+                case R.id.export_confirm_btn: /* 輸出確定按鈕 */
+                    Intent intent = new Intent();
+                    intent.setAction(Intent.ACTION_CREATE_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("application/xml");
+                    intent.putExtra(Intent.EXTRA_TITLE, "myOTP_Database.xml"); /* 預設名稱 */
+                    startActivityForResult(intent, ACTION_CREATE_DOCUMENT);
+                    EXP_IMP_dialog.dismiss();
+                    break;
+                case R.id.export_eye_btn: /* 密碼顯示眼睛 */
+                case R.id.import_eye_btn:
+                    ImageButton eye_btn = (ImageButton) v;
+                    eye_btn.setSelected(!eye_btn.isSelected());
+                    EditText editText;
+                    if (v.getId() == R.id.export_eye_btn)
+                        editText = dialog_export_file.findViewById(R.id.export_passwd);
+                    else editText = dialog_import_file.findViewById(R.id.import_passwd);
+                    if (eye_btn.isPressed()) { //顯示密碼
+                        editText.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
+                    } else { //隱藏密碼
+                        editText.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                    }
+                    break;
                 case R.id.parent_item_icon: /*展開收合清單*/
                     int groupPosition = (int) v.getTag();
                     //還未長按時可以收合清單
@@ -1267,11 +1473,28 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     break;
                 case R.id.export_btn:
                     //TODO:import按鈕監聽
-
+                    try {
+                        write_url_database(); /* 將目前資料寫入File中 */
+                        getPermission();/*取得讀寫權限*/
+                        if (isPermissionPassed) {
+                            ((EditText) dialog_export_file.findViewById(R.id.export_passwd)).setText(""); /*清空輸入*/
+                            EXP_IMP_dialog.setContentView(dialog_export_file);
+                            EXP_IMP_dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                            EXP_IMP_dialog.show();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     break;
                 case R.id.import_btn:
                     //TODO:export按鈕監聽
-
+                    getPermission();
+                    if(isPermissionPassed){
+                        ((EditText) dialog_import_file.findViewById(R.id.import_passwd)).setText("");
+                        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                        intent.setType("text/xml");
+                        startActivityForResult(intent, ACTION_GET_CONTENT);
+                    }
                     break;
                 //排序
                 case R.id.sort_old_to_new:
@@ -1581,6 +1804,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 }
             };
         }
+
+
     }
 
 
