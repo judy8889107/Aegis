@@ -80,25 +80,21 @@
             android:screenOrientation="portrait" />
 
         <!-- J: 新增UrlCheckActivity，且新增 meta-data -->
-
-        <!-- Y:分享app-->
         <activity
             android:name=".ui.UrlCheckActivity"
-            android:label="@string/url_check"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/*" />
-            </intent-filter>
-        </activity>
-
+            android:label="@string/url_check"/>
         <activity
             android:name=".ui.IntroActivity"
             android:screenOrientation="portrait" />
         <!-- Y: 新增Intro2FAActivity -->
         <activity
+            android:name=".ui.dialogActivity"
+            android:screenOrientation="portrait"/>
+        <activity
             android:name=".ui.Intro2FAActivity"
+            android:screenOrientation="portrait"/>
+        <activity
+            android:name=".ui.Intro2FA_UrlCheckActivity"
             android:screenOrientation="portrait"/>
         <activity
             android:name=".ui.IntroUrlCheckActivity"

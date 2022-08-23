@@ -14,17 +14,18 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/btnPrevious" />
+
     <ImageButton
         android:id="@+id/btnPrevious"
         android:layout_width="65dp"
         android:layout_height="65dp"
         android:layout_margin="10dp"
-        android:src="@drawable/circular_button_prev"
-        app:tint="?attr/iconColorPrimary"
         android:background="?selectableItemBackgroundBorderless"
+        android:src="@drawable/circular_button_prev"
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:tint="?attr/iconColorPrimary" />
     <com.beemdevelopment.aegis.ui.intro.SlideIndicator
         android:id="@+id/slideIndicator"
         android:layout_width="0dp"
