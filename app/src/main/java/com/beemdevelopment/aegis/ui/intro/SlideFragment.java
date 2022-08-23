@@ -37,6 +37,7 @@ public abstract class SlideFragment extends Fragment implements IntroActivityInt
      */
     public boolean isFinished() {
         return true;
+
     }
 
     /**

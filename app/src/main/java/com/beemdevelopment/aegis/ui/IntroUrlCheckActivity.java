@@ -1,65 +1,63 @@
 package com.beemdevelopment.aegis.ui;
 
-import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_INVALID;
-import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_NONE;
-
 import android.os.Bundle;
-import android.view.inputmethod.InputMethodManager;
 
-import com.beemdevelopment.aegis.ThemeMap;
-import com.beemdevelopment.aegis.ui.intro.IntroBaseActivity;
-import com.beemdevelopment.aegis.ui.intro.SlideFragment;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
+import androidx.viewpager.widget.ViewPager;
+
+import com.beemdevelopment.aegis.R;
+import com.beemdevelopment.aegis.ui.slides.BlankFragmentClass;
+import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_fifth;
 import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_first;
+import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_fourth;
 import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_second;
 import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_third;
-import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_fourth;
-import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_fifth;
+import com.lwj.widget.viewpagerindicator.ViewPagerIndicator;
 
+public class IntroUrlCheckActivity extends AppCompatActivity {
 
+    //1.宣告<ViewPager>標籤為viewPager
+    private ViewPager viewPager;
+    private ViewPagerIndicator viewPagerIndicator;
 
-public class IntroUrlCheckActivity extends IntroBaseActivity {
+    //2.宣告使用轉換器
+    private BlankFragmentClass adapter;
+
+    //3.宣告變數為fragments
+    private Fragment[] fragments;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_viewpager);
+        //4.指定activity_main.xml內標籤
+        viewPager = findViewById(R.id.viewpager);
+        viewPagerIndicator = (ViewPagerIndicator) findViewById(R.id.viewPagerIndicator);
+        //viewpager是固定页数, 传入viewpager即可
+        viewPagerIndicator.setViewPager(viewPager,5);
 
-        addSlide(IntroUrlCheck_first.class);
-        addSlide(IntroUrlCheck_second.class);
-        addSlide(IntroUrlCheck_third.class);
-        addSlide(IntroUrlCheck_fourth.class);
-        addSlide(IntroUrlCheck_fifth.class);
 
+        //5.初始化三個Fragment分頁
+        fragments = new Fragment[5];
+        IntroUrlCheck_first bf1 = new IntroUrlCheck_first();
+        IntroUrlCheck_second bf2 = new IntroUrlCheck_second();
+        IntroUrlCheck_third bf3= new IntroUrlCheck_third();
+        IntroUrlCheck_fourth bf4 = new IntroUrlCheck_fourth();
+        IntroUrlCheck_fifth bf5 = new IntroUrlCheck_fifth();
+        //6.陣列內容
+        fragments[0] = bf1;
+        fragments[1] = bf2;
+        fragments[2] = bf3;
+        fragments[3] = bf4;
+        fragments[4] = bf5;
+
+        //7.初始化轉換器
+        adapter = new BlankFragmentClass(getSupportFragmentManager(), fragments);
+
+        //8.<ViewPager>標籤設定轉換器
+        viewPager.setAdapter(adapter);
     }
 
-    //呼叫按鈕activity_intro
-    @Override
-    protected void onSetTheme() {
-        setTheme(ThemeMap.NO_ACTION_BAR);
-    }
-    //
-    @Override
-    protected boolean onBeforeSlideChanged(Class<? extends SlideFragment> oldSlide, Class<? extends SlideFragment> newSlide) {
-        // hide the keyboard before every slide change
-        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(findViewById(android.R.id.content).getWindowToken(), 0);
 
-        if (oldSlide == IntroUrlCheck_second.class
-                && newSlide == IntroUrlCheck_third.class
-                && getState().getInt("cryptType", CRYPT_TYPE_INVALID) == CRYPT_TYPE_NONE) {
-            skipToSlide(IntroUrlCheck_fourth.class);
-            return true;
-        }
-
-        return false;
-    }
-
-    @Override
-    protected void onDonePressed() {
-
-       //結束介面
-        // skip the intro from now on
-        _prefs.setIntroDone(true);
-
-        setResult(RESULT_OK);
-        finish();
-    }
 }

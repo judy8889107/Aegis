@@ -13,6 +13,7 @@ import com.beemdevelopment.aegis.ui.slides.Intro2FA_2;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_3;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_4;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_5;
+import com.lwj.widget.viewpagerindicator.ViewPagerIndicator;
 
 public class Intro2FAActivity extends AppCompatActivity {
 
@@ -21,6 +22,7 @@ public class Intro2FAActivity extends AppCompatActivity {
 
     //2.宣告使用轉換器
     private BlankFragmentClass adapter;
+    private ViewPagerIndicator viewPagerIndicator;
 
     //3.宣告變數為fragments
     private Fragment[] fragments;
@@ -31,6 +33,9 @@ public class Intro2FAActivity extends AppCompatActivity {
         setContentView(R.layout.activity_viewpager);
         //4.指定activity_main.xml內標籤
         viewPager = findViewById(R.id.viewpager);
+        viewPagerIndicator = (ViewPagerIndicator) findViewById(R.id.viewPagerIndicator);
+        //viewpager是固定页数, 传入viewpager即可
+        viewPagerIndicator.setViewPager(viewPager,5);
 
         //5.初始化三個Fragment分頁
         fragments = new Fragment[5];

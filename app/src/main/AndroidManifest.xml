@@ -88,7 +88,13 @@
             android:screenOrientation="portrait" />
         <!-- Y: 新增Intro2FAActivity -->
         <activity
+            android:name=".ui.dialogActivity"
+            android:screenOrientation="portrait"/>
+        <activity
             android:name=".ui.Intro2FAActivity"
+            android:screenOrientation="portrait"/>
+        <activity
+            android:name=".ui.Intro2FA_UrlCheckActivity"
             android:screenOrientation="portrait"/>
         <activity
             android:name=".ui.IntroUrlCheckActivity"

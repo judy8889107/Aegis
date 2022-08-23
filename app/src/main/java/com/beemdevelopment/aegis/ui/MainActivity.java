@@ -89,7 +89,7 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
     private FabScrollHelper _fabScrollHelper;
 
     private ActionMode.Callback _actionModeCallbacks = new ActionModeCallbacks();
-    private int Preset;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -39,7 +39,6 @@ public class IntroActivity extends IntroBaseActivity  {
         addSlide(DoneSlide.class);
 
 
-
     }
     @Override
     protected void onSetTheme() {
@@ -59,7 +58,6 @@ public class IntroActivity extends IntroBaseActivity  {
 
             return true;
         }
-
         return false;
     }
 
@@ -76,7 +74,6 @@ public class IntroActivity extends IntroBaseActivity  {
             throw new RuntimeException(String.format("State of SecuritySetupSlide not properly propagated, cryptType: %d, creds: %s", cryptType, creds));
         }
 
-
         try {
             _vaultManager.init(creds);
         } catch (VaultRepositoryException e) {
@@ -90,7 +87,8 @@ public class IntroActivity extends IntroBaseActivity  {
 
         setResult(RESULT_OK);
         finish();
-
+        Intent intent = new Intent(this, dialogActivity.class);
+        startActivity(intent);
     }
 
 }
