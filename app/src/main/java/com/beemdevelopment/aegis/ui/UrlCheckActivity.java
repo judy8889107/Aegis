@@ -190,6 +190,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     private boolean isPermissionPassed = false;
     final int ACTION_CREATE_DOCUMENT = 11;
     final int ACTION_GET_CONTENT = 12;
+    final String IPQS_API_Key = "https://ipqualityscore.com/api/json/url/mMdf76Tro3JGHcC3Cmv9WPGu14C56Rpm/";
 
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -529,7 +530,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
     /*AES加密(MD5 key)*/
     @RequiresApi(api = Build.VERSION_CODES.O)
     public String Encrypt(String content, String password) throws Exception {
-        MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
         byte[] MD5 = messageDigest.digest(password.getBytes());
 
         SecretKeySpec secretKeySpec = new SecretKeySpec(MD5, "AES");
@@ -543,22 +544,22 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     /*AES解密(MD5 key)*/
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public String Decrypt(String content, String password) throws Exception{
-            MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-            byte[] MD5 = messageDigest.digest(password.getBytes());
+    public String Decrypt(String content, String password) throws Exception {
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+        byte[] MD5 = messageDigest.digest(password.getBytes());
 
-            byte[] decodedContent = Base64.getDecoder().decode(content);
-            SecretKeySpec secretKeySpec = new SecretKeySpec(MD5, "AES");
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
-            try{
-                byte[] result = cipher.doFinal(decodedContent);
-                return new String(result);
-            }catch (Exception e){
-                Log.v("mydebug","例外"+e);
-                Log.v("mydebug","匯入資料庫失敗");
-                return  null;
-            }
+        byte[] decodedContent = Base64.getDecoder().decode(content);
+        SecretKeySpec secretKeySpec = new SecretKeySpec(MD5, "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
+        try {
+            byte[] result = cipher.doFinal(decodedContent);
+            return new String(result);
+        } catch (Exception e) {
+            Log.v("mydebug", "例外" + e);
+            Log.v("mydebug", "匯入資料庫失敗");
+            return null;
+        }
     }
 
     //TODO:輸出 url_database
@@ -583,7 +584,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
     //TODO:輸出 url_database
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public void importFile(Uri fileUri, String password) throws Exception{
+    public void importFile(Uri fileUri, String password) throws Exception {
         if (!isPermissionPassed) {
             setSnackbar("尚未取得存取權限", "失敗", Snackbar.LENGTH_LONG);
             getPermission();
@@ -591,14 +592,14 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             InputStream is = getContentResolver().openInputStream(fileUri); /*檔案輸入*/
             String str = getData(is, false);
             String descrypted_str = Decrypt(str, password); /*解密檔案*/
-            if(descrypted_str != null){ /*返回不為空值*/
+            if (descrypted_str != null) { /*返回不為空值*/
                 OutputStream os = new FileOutputStream(url_database); /*檔案輸出目標(覆蓋原有檔案)*/
                 byte[] strTobyte = descrypted_str.getBytes();
                 os.write(strTobyte); /*寫入檔案*/
                 os.close();
-                setSnackbar("成功匯入資料庫","SUCCESS",Snackbar.LENGTH_LONG);
-            }else {
-                setSnackbar("匯入資料庫失敗","錯誤",Snackbar.LENGTH_LONG);
+                setSnackbar("成功匯入資料庫", "SUCCESS", Snackbar.LENGTH_LONG);
+            } else {
+                setSnackbar("匯入資料庫失敗", "錯誤", Snackbar.LENGTH_LONG);
             }
             is.close();
             loadDatabase();
@@ -984,11 +985,9 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         String result = null;
         Map<String, String> data_map = new LinkedHashMap<>(); //存對應的鍵值
         JSONObject jsonObject = null;
-        String IPQualityScore = "https://ipqualityscore.com/api/json/url/mMdf76Tro3JGHcC3Cmv9WPGu14C56Rpm/";
-
         try {
             String encodedURL = URLEncoder.encode(URL_text, "UTF-8");
-            URL url = new URL(IPQualityScore + encodedURL);
+            URL url = new URL(IPQS_API_Key + encodedURL);
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
@@ -1206,7 +1205,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         public void pass_params(Object... objects) {
             if (objects.length == 1) {
                 isExist = objects[0].getClass() == Boolean.class ? (boolean) objects[0] : false;
-                FileUri = objects[0].getClass() == Uri.EMPTY.getClass() ? (Uri)objects[0] : null;
+                FileUri = objects[0].getClass() == Uri.EMPTY.getClass() ? (Uri) objects[0] : null;
 
             }
             if (objects.length == 3) {
@@ -1261,8 +1260,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
             String iconTag;
             switch (v.getId()) {
-                case R.id.import_confirm_btn: /*輸入確定按鈕*/
-                    String password = ((EditText)dialog_import_file.findViewById(R.id.import_passwd)).getText().toString();
+                case R.id.import_confirm_btn: /* 輸入確定按鈕 */
+                    String password = ((EditText) dialog_import_file.findViewById(R.id.import_passwd)).getText().toString();
                     try {
                         importFile(FileUri, password);
                     } catch (Exception e) {
@@ -1271,13 +1270,19 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     EXP_IMP_dialog.dismiss();
                     break;
                 case R.id.export_confirm_btn: /* 輸出確定按鈕 */
-                    Intent intent = new Intent();
-                    intent.setAction(Intent.ACTION_CREATE_DOCUMENT);
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    intent.setType("application/xml");
-                    intent.putExtra(Intent.EXTRA_TITLE, "myOTP_Database.xml"); /* 預設名稱 */
-                    startActivityForResult(intent, ACTION_CREATE_DOCUMENT);
-                    EXP_IMP_dialog.dismiss();
+                    String _password = ((EditText) dialog_export_file.findViewById(R.id.export_passwd)).getText().toString();
+                    if (_password.length() < 8) { /* 密碼長度至少 8位數，至多到 15位數 */
+                       dialog_toast.setText("密碼長度過短!");
+                       dialog_toast.show();
+                    }else {
+                        Intent intent = new Intent();
+                        intent.setAction(Intent.ACTION_CREATE_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.setType("application/xml");
+                        intent.putExtra(Intent.EXTRA_TITLE, "myOTP_Database.xml"); /* 預設名稱 */
+                        startActivityForResult(intent, ACTION_CREATE_DOCUMENT);
+                        EXP_IMP_dialog.dismiss();
+                    }
                     break;
                 case R.id.export_eye_btn: /* 密碼顯示眼睛 */
                 case R.id.import_eye_btn:
@@ -1477,7 +1482,10 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                         write_url_database(); /* 將目前資料寫入File中 */
                         getPermission();/*取得讀寫權限*/
                         if (isPermissionPassed) {
-                            ((EditText) dialog_export_file.findViewById(R.id.export_passwd)).setText(""); /*清空輸入*/
+                            EditText editText = dialog_export_file.findViewById(R.id.export_passwd);
+                            editText.setText(""); /*清空輸入*/
+                            editText.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                            ((ImageButton)dialog_export_file.findViewById(R.id.export_eye_btn)).setSelected(false);
                             EXP_IMP_dialog.setContentView(dialog_export_file);
                             EXP_IMP_dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
                             EXP_IMP_dialog.show();
@@ -1489,8 +1497,13 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 case R.id.import_btn:
                     //TODO:export按鈕監聽
                     getPermission();
-                    if(isPermissionPassed){
-                        ((EditText) dialog_import_file.findViewById(R.id.import_passwd)).setText("");
+
+                    if (isPermissionPassed) {
+                        EditText editText1 = dialog_import_file.findViewById(R.id.import_passwd);
+                        editText1.setText("");
+                        editText1.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                        ((ImageButton)dialog_import_file.findViewById(R.id.import_eye_btn)).setSelected(false);
+
                         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                         intent.setType("text/xml");
                         startActivityForResult(intent, ACTION_GET_CONTENT);

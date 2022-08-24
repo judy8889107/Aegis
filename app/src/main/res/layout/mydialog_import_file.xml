@@ -22,8 +22,6 @@
             android:hint="輸入資料庫解密密碼"
             android:inputType="textPassword"
             android:letterSpacing="0.05"
-
-            android:maxLength="6"
             android:textSize="16dp" />
 
         <ImageButton
