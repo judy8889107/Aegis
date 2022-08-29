@@ -16,7 +16,7 @@ public class dialogActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dialog);
-        String[] strings={"如何使用2FA","如何使用UrlCheck","兩者都介紹"};
+        String[] strings={"如何使用2FA","如何使用網址檢查","兩者都介紹"};
 
         AlertDialog.Builder builder=new AlertDialog.Builder(this);
         builder.setTitle("新手導覽");//標題
