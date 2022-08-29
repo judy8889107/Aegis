@@ -402,15 +402,6 @@
     <string name="intro_2FA_third">There are three ways in total</string>
     <string name="intro_2FA_second">Press the plus sign in the lower right corner</string>
     <string name="intro_2FA_fourth">Manual setting: first enter the program name and the key inside the program</string>
-    <string name="intro_2FA_three">Step 3 Tap two-factor authentication</string>
-    <string name="intro_2FA_two">Step 2 Find security or account password security</string>
-    <string name="intro_2FA_four_2">Key can be entered manually</string>
-    <string name="intro_2FA_one">Step 1: Find Settings</string>
     <string name="action_2FA">Introduction to using 2FA</string>
-    <string name="intro_2FA_one_1">In the next step we will describe how to obtain the key</string>
-    <string name="intro2FA_setting">Setting</string>
-    <string name="intro_2FA_two_1">Security</string>
-    <string name="intro_2FA_three_1">Two-Factor Authentication</string>
-    <string name="intro_2FA_five">You can click the icons below to learn how each website enables 2FA. If there is no website you need, you can click the lower right corner to enter the website search</string>
-    <string name="intro_2FA_four">You can scan the QR code to get the key</string>
+    <string name="intro_2FA_five">You can click the icons below to learn how each website enables 2FA.\nIf there is no website you need,\n you can click the lower right corner to enter the website search</string>
 </resources>
