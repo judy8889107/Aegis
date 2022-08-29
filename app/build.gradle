@@ -134,6 +134,8 @@ protobuf {
 dependencies {
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:2.7.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'com.google.android.gms:play-services-auth:20.2.0'
+
 
     def androidTestVersion = '1.4.0'
     def cameraxVersion = '1.0.2'

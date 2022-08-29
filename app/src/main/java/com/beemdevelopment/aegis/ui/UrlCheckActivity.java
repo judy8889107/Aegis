@@ -2,28 +2,59 @@
 package com.beemdevelopment.aegis.ui;
 
 
-import static android.content.DialogInterface.BUTTON_NEGATIVE;
-import static android.content.DialogInterface.BUTTON_POSITIVE;
+import android.Manifest;
+import android.app.Dialog;
 
-import android.app.AlertDialog;
-import android.app.ProgressDialog;
+import android.app.SearchManager;
+import android.app.Service;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.DialogInterface;
+
 import android.content.Intent;
 
-import android.content.res.XmlResourceParser;
+
+import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
+import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
 
 
-import android.text.TextUtils;
+import android.os.Vibrator;
+import android.provider.ContactsContract;
+import android.text.Editable;
+import android.text.Html;
+
+import android.text.TextWatcher;
+
+import android.text.method.HideReturnsTransformationMethod;
+import android.text.method.PasswordTransformationMethod;
+import android.util.Log;
+import android.util.Pair;
+
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
+
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 
 
 import com.beemdevelopment.aegis.R;
+
+
+import com.beemdevelopment.aegis.ui.dialogs.Dialogs;
+
+
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 
 
 import com.google.common.net.InternetDomainName;
@@ -32,8 +63,11 @@ import java.io.IOException;
 
 import android.view.inputmethod.InputMethodManager;
 
-import android.widget.Button;
 /* 使用EditText */
+import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CheckedTextView;
 import android.widget.EditText;
 /* 控制鍵盤 */
 /* ImageButton的import */
@@ -41,88 +75,122 @@ import android.widget.ExpandableListView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 /* URL lib */
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.widget.SearchView;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
 
 
 import java.io.*;
+import java.lang.annotation.Target;
+import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
 import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 /* JSON */
 
 import org.apache.commons.validator.routines.UrlValidator;
-import org.json.JSONArray;
+import org.bouncycastle.jcajce.provider.symmetric.ChaCha;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.jsoup.nodes.Document;
-import org.jsoup.Jsoup;
 
 
-import org.jsoup.nodes.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
+import org.xml.sax.SAXException;
 
 
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import kotlin.Triple;
+
 class Struct {
     public static class urlObject {
-        public String tagName, uuid, text, format = "none";
+        public String tagName, uuid, text;
+        int format = 0;
+        int safe_score = 0;
     }
 }
 
-public class UrlCheckActivity extends AegisActivity implements View.OnClickListener, Runnable, DialogInterface.OnClickListener {
+public class UrlCheckActivity extends AegisActivity implements Runnable {
     /* 變數宣告 */
-    EditText url_input;
-    Button set_safe_url;
-    Button url_check;
-    ImageButton clear_button;
-    Button scan_qrcode_button;
+    public MyListener myListener;
+    EditText local_url_input;
+    EditText online_url_input;
+    FloatingActionButton online_check_add_btn;
+    ImageButton local_check_send_btn;
+    ImageButton local_input_right_btn;
+    ImageButton online_input_right_btn;
+    androidx.appcompat.widget.Toolbar toolbar;
+    InputMethodManager imm;
+    BottomSheetDialog buttomDialog;
+    Dialog del_dialog;
+    Dialog EXP_IMP_dialog;
+    View dialog_online_check_add_entry_view;
+    View dialog_progress_view;
+    View dialog_online_check_result;
+    View dialog_local_check_result;
+    View dialog_delete_dialog;
+    View dialog_export_file;
+    View dialog_import_file;
     private static final int Scan_QR_CODE = 2;
     private static final String pass_name = "URL_text"; /* 傳遞資料的string名，新增變數避免寫死 */
-    private ArrayList<String> issuer;
-    private AlertDialog alert_dialog; /* 警告diaolog */
-    private AlertDialog IPQS_search_dialog; /* 搜尋 IPQS dialog */
-    private ProgressDialog progressDialog; /* 加載 dialog */
-    private AlertDialog IPQS_message_dialog; /* 顯示網站資訊 IPQS dialog */
-    private AlertDialog message_dialog; /* 顯示提示訊息 dialog */
-
     private Toast dialog_toast;
+    private Snackbar snackbar;
     private String api_key = null; /* SafetyNet與 Google Play建立連線用的 API KEY */
-    String URL_text = null; /* url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
+    String URL_text = null; /* local_url_input和qr_code_scan共用的變數，避免判斷時有衝突，判斷完畢後設為null */
     File url_database;
-    private HashMap<Integer, ArrayList<TextView>> textViewList = new HashMap<>();
-    private HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list;
+    private ArrayList<ArrayList<Struct.urlObject>> url_database_list;
+    private ArrayList<Struct.urlObject> PD_urlObjects;
     private ExpandableListView expandableListView;
     private MyBaseExpandableListAdapter myAdapter;
+    private ClipboardManager cmb;
+    private Vibrator myVibrator;
+    private long firstPressedTime;
 
     /* Code代碼 */
     final int CODE_SCAN = 0;
+    final int unmatched = 1;
+    final int basedomain = 2;
+    final int host = 3;
+    final int startwith = 4;
+    final int exact = 5;
+    private boolean isPermissionPassed = false;
+    final int ACTION_CREATE_DOCUMENT = 11;
+    final int ACTION_GET_CONTENT = 12;
+    final String IPQS_API_Key = "https://ipqualityscore.com/api/json/url/mMdf76Tro3JGHcC3Cmv9WPGu14C56Rpm/";
 
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -140,285 +208,439 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         this.setContentView(R.layout.activity_url_check);
         this.setSupportActionBar(findViewById(R.id.toolbar));
         /* 初始化 */
+
         try {
             initialize();
-            addMainURL("http://google.com");
-            addMainURL("https://github.com/");
-            addMainURL("http://www.eyny.com/");
+
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println(e.getMessage());
         }
-//        displayDatabase();
-
-
-        //測試看看
-        System.out.println("測試摺疊清單");
-        expandableListView = (ExpandableListView) this.findViewById(R.id.expand_listview);
-        myAdapter = new MyBaseExpandableListAdapter(url_database_list,this);
-        expandableListView.setAdapter(myAdapter);
-        expandableListView.setLongClickable(true);
-        expandableListView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
-            @Override
-            public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
-                System.out.println("你點擊了 "+url_database_list.get(groupPosition).get(0).text);
-                if(expandableListView.isGroupExpanded(groupPosition))
-                    expandableListView.collapseGroup(groupPosition);
-                else expandableListView.expandGroup(groupPosition);
-                return true;
-            }
-        });
-        expandableListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
-            @Override
-            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
-                String message = myAdapter.child_list.get(groupPosition).get(childPosition).text;
-                System.out.println(message);
-                return true;
-            }
-        });
-
-
 
 
     }
+
+
+    // 獲取新intent值
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Log.v("share", "新intent");
+        setIntent(intent);
+    }
+
+    // intent字串取得貼上Input框
+    public void shareAction() {
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        String type = intent.getType();
+        if (Intent.ACTION_SEND.equals(action) && type != null) {
+            String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
+            if (sharedText != null) {
+                local_url_input.setText(sharedText);
+            }
+        }
+    }
+
+    //應用後臺執行 返回繼續
+    @Override
+    protected void onResume() {
+        super.onResume();
+        shareAction();
+        refreshUI(); //修復bug(App後臺執行回到前台刷新list)
+    }
+
 
     //捕捉返回鍵, 寫入到外部記憶體後離開
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if ((keyCode == KeyEvent.KEYCODE_BACK)) {
-            try {
-                write_url_database();
-                this.finish();
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (myListener.isLongClick) { //長按返回事件
+                if (PD_urlObjects.size() == 0 || (System.currentTimeMillis() - firstPressedTime < 2000)) {
+                    myListener.isLongClick = false;
+                    online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
+                    online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
+                    refreshUI();
+                    setSnackbar("已退出操作", "", Snackbar.LENGTH_SHORT);
+                    snackbar.show();
+                    PD_urlObjects.clear();
+                    return false;
+                } else { //當選擇數目不為 0 時
+                    myVibrator.vibrate(300);
+                    setSnackbar("請重新按下返回鍵以退出", "", Snackbar.LENGTH_INDEFINITE);
+                    firstPressedTime = System.currentTimeMillis();
+                    return false;
+                }
+            } else {
+                try {
+                    for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                        Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(myListener.sort_sub_old_to_new));
+                    Collections.sort(url_database_list, Collections.reverseOrder(myListener.sort_main_old_to_new));
+                    write_url_database();
+                    this.finish();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return true;
             }
-            return true;
+
         }
         return super.onKeyDown(keyCode, event);
     }
 
+    //点击空白区域 自动隐藏软键盘
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (this.getCurrentFocus() != null)
+            imm.hideSoftInputFromWindow(this.getCurrentFocus().getWindowToken(), 0);
+        if (!buttomDialog.isShowing())
+            imm.hideSoftInputFromWindow(buttomDialog.getWindow().getDecorView().getWindowToken(), 0);
+        return super.dispatchTouchEvent(event);
+    }
 
     /* 初始化 設定所有參數等等 */
     public void initialize() throws Exception {
         /* 設定參數 */
-        url_input = findViewById(R.id.url_input);
-        set_safe_url = findViewById(R.id.set_safe_url);
-        url_check = findViewById(R.id.url_check);
-        clear_button = findViewById(R.id.clear_button);
-        scan_qrcode_button = findViewById(R.id.scan_qrcode_button);
+        myListener = new MyListener();
+        local_url_input = findViewById(R.id.url_input);
+        online_check_add_btn = findViewById(R.id.online_check_add_btn);
+        local_check_send_btn = findViewById(R.id.local_check_send_btn);
+        local_input_right_btn = findViewById(R.id.local_input_right_btn);
+        toolbar = findViewById(R.id.toolbar);
+        expandableListView = (ExpandableListView) findViewById(R.id.expand_listview);
+        imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        cmb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        myVibrator = (Vibrator) getSystemService(Service.VIBRATOR_SERVICE);
+        PD_urlObjects = new ArrayList<>();
+        /* 其他變數設定 */
+        setSupportActionBar(toolbar);
+        online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
         /* 監聽器設定 */
-        set_safe_url.setOnClickListener(this);
-        clear_button.setOnClickListener(this);
-        scan_qrcode_button.setOnClickListener(this);
-        url_check.setOnClickListener(this);
+        toolbar.setOnMenuItemClickListener(myListener);
+        local_input_right_btn.setOnClickListener(myListener);
+        local_url_input.addTextChangedListener(myListener);
+        online_check_add_btn.setOnClickListener(myListener);
+        local_check_send_btn.setOnClickListener(myListener);
+        //摺疊清單監聽
+        expandableListView.setOnGroupClickListener(myListener);
+        expandableListView.setOnChildClickListener(myListener);
+        expandableListView.setOnItemLongClickListener(myListener);
+        /* 設定Dialog view */
+        setAllView();
         /* 創立 url database(目前為空) */
         Create_url_database_file();
         /* 建立所有 dialog 和 toast */
         buildAllDialog();
         /* 讀資料庫 */
         loadDatabase();
+    }
 
+    public void setAllView() {
+        dialog_online_check_add_entry_view = getLayoutInflater().inflate(R.layout.mydialog_online_check_add_entry, null);
+        dialog_progress_view = getLayoutInflater().inflate(R.layout.mydialog_progress_view, null);
+        dialog_online_check_result = getLayoutInflater().inflate(R.layout.mydialog_online_check_result, null);
+        dialog_local_check_result = getLayoutInflater().inflate(R.layout.mydialog_local_check, null);
+        dialog_delete_dialog = getLayoutInflater().inflate(R.layout.mydialog_delete_dialog, null);
+        dialog_export_file = getLayoutInflater().inflate(R.layout.mydialog_export_file, null);
+        dialog_import_file = getLayoutInflater().inflate(R.layout.mydialog_import_file, null);
+        //設定 view id
+        dialog_online_check_add_entry_view.setId((int) R.layout.mydialog_online_check_add_entry);
+        dialog_progress_view.setId((int) R.layout.mydialog_progress_view);
+        dialog_online_check_result.setId((int) R.layout.mydialog_online_check_result);
+        dialog_local_check_result.setId((int) R.layout.mydialog_local_check);
+        //設定 dialog_online_check_add_entry_view 元件
+        View view = dialog_online_check_add_entry_view;
+        online_url_input = view.findViewById(R.id.online_check_input);
+        online_input_right_btn = view.findViewById(R.id.online_check_input_right_btn);
+        online_url_input.addTextChangedListener(myListener);
+        view.findViewById(R.id.online_check_input_right_btn).setOnClickListener(myListener);
+        view.findViewById(R.id.online_check_send_btn).setOnClickListener(myListener);
+        view.findViewById(R.id.online_check_close_btn).setOnClickListener(myListener);
+        view.setOnTouchListener(myListener);
+        //設定dialog_progress_view 元件
+        ImageView imageView = dialog_progress_view.findViewById(R.id.progress_dot_img);
+        AnimationDrawable ani = (AnimationDrawable) imageView.getDrawable();
+        ani.start();
+        //設定 dialog_online_check_result元件
+        View view1 = dialog_online_check_result;
+        view1.findViewById(R.id.ipqs_yes_btn).setOnClickListener(myListener);
+        view1.findViewById(R.id.ipqs_no_btn).setOnClickListener(myListener);
+        View view2 = dialog_local_check_result;
+        view2.findViewById(R.id.local_check_yes_btn).setOnClickListener(myListener);
+        view2.findViewById(R.id.local_check_no_btn).setOnClickListener(myListener);
+        // 設定 delete dialog
+        View view3 = dialog_delete_dialog;
+        view3.findViewById(R.id.delete_no_btn).setOnClickListener(myListener);
+        view3.findViewById(R.id.delete_yes_btn).setOnClickListener(myListener);
+        //TODO:設定dialog export file
+        View view4 = dialog_export_file;
+        view4.findViewById(R.id.export_eye_btn).setOnClickListener(myListener);
+        view4.findViewById(R.id.export_confirm_btn).setOnClickListener(myListener);
+        //TODO:設定dialog export file
+        View view5 = dialog_import_file;
+        view5.findViewById(R.id.import_eye_btn).setOnClickListener(myListener);
+        view5.findViewById(R.id.import_confirm_btn).setOnClickListener(myListener);
 
     }
 
 
-    /* Layout按鈕監聽器事件，實作 View.OnClickListener */
-    @RequiresApi(api = Build.VERSION_CODES.N)
+    public void setButtomDialog(View view, boolean isTouchCanceled, String... addition) {
+        BottomSheetBehavior buttomDialogbehavior;
+        System.out.println((int) view.getId());
+        System.out.println(view.getId() == (int) R.layout.mydialog_local_check);
+        switch (view.getId()) {
+            case R.layout.mydialog_online_check_add_entry:
+                buttomDialog.setContentView(view);
+                buttomDialog.setCanceledOnTouchOutside(isTouchCanceled);
+                break;
+            case R.layout.mydialog_progress_view:
+                buttomDialog.setContentView(view);
+                buttomDialogbehavior = BottomSheetBehavior.from((View) dialog_progress_view.getParent());
+                buttomDialogbehavior.setHideable(false);
+                buttomDialog.setCanceledOnTouchOutside(isTouchCanceled);
+                break;
+            case R.layout.mydialog_online_check_result:
+                TextView ipqs_score = view.findViewById(R.id.ipqs_score);
+                TextView ipqs_msg = view.findViewById(R.id.ipqs_msg);
+                TextView ipqs_url = view.findViewById(R.id.ipqs_url);
+                String score = addition[0];
+                String msg = addition[1].trim();
+                ipqs_score.setText(score);
+                ipqs_msg.setText(msg);
+                ipqs_url.setText(URL_text);
+                int _score = Integer.valueOf(score);
+                //設定文字顏色
+                if (0 <= _score && _score <= 20)
+                    ipqs_score.setTextColor(Color.parseColor("#457c0d"));
+                else if (21 <= _score && _score <= 40)
+                    ipqs_score.setTextColor(Color.parseColor("#78c430"));
+                else if (41 <= _score && _score <= 60)
+                    ipqs_score.setTextColor(Color.parseColor("#fec721"));
+                else if (61 <= _score && _score <= 80)
+                    ipqs_score.setTextColor(Color.parseColor("#f65922"));
+                else ipqs_score.setTextColor(Color.parseColor("#d63839"));
+                // bottomDialog完全展開
+                buttomDialog.setContentView(dialog_online_check_result);
+                buttomDialogbehavior = BottomSheetBehavior.from((View) dialog_online_check_result.getParent());
+                buttomDialogbehavior.setState(BottomSheetBehavior.STATE_EXPANDED); //完全展開
+                buttomDialogbehavior.setDraggable(false); //不能拖曳dialog
+                buttomDialogbehavior.setHideable(false);  //無法隱藏
+                buttomDialog.setCanceledOnTouchOutside(isTouchCanceled);
+                break;
+            case R.layout.mydialog_local_check:
+                int safe_scale = Integer.valueOf(addition[0]);
+                ImageView safe_scale_img = view.findViewById(R.id.safe_scale);
+                TextView result_title = view.findViewById(R.id.local_check_title);
+                TextView result_msg = view.findViewById(R.id.dialog_message_box);
+                Button yes_btn = view.findViewById(R.id.local_check_yes_btn);
+                Button no_btn = view.findViewById(R.id.local_check_no_btn);
+                //設定輸出訊息 && 按鈕 tag
+                String title = "此網址安全層級為<font color='%s'><u>%s星</u></font>";
+                String _msg = "%s此網址不在資料庫中，請問是否要加入資料庫？";
+                String hint = "低於三星網址建議登入後小心使用<br>";
+                int[] drawableID = {0, R.drawable.mydrawble_star_scale1, R.drawable.mydrawble_star_scale2, R.drawable.mydrawble_star_scale3, R.drawable.mydrawble_star_scale4, R.drawable.mydrawble_star_scale5};
+                String[] numText = {"", "一", "二", "三", "四", "五"};
+                String[] textColor = {"", "#d63839", "#f65922", "#fec721", "#78c430", "#457c0d"};
+                title = String.format(title, textColor[safe_scale], numText[safe_scale]);
+                if (safe_scale == 1)
+                    _msg = "此網址在資料庫中<font color='#d63839'><u>無任何匹配</u></font><br>是否進一步檢查此網址？";
+                if (safe_scale == 2 || safe_scale == 3) _msg = String.format(_msg, hint);
+                if (safe_scale == 4) _msg = String.format(_msg, "");
+                if (safe_scale == 5) _msg = "此為<font color='#457c0d'><u>安全網址</u></font>，可以放心登入";
+                //設定按鈕
+                yes_btn.setTag(safe_scale == 1 ? "ipqs_search" : "add_url"); //若 scale==1則設定 tag為ipqs_search
+                no_btn.setTag(safe_scale == 1 ? "ipqs_search" : "add_url");
+                yes_btn.setVisibility(safe_scale == 5 ? View.GONE : View.VISIBLE);
+                no_btn.setVisibility(safe_scale == 5 ? View.GONE : View.VISIBLE);
+                //輸出到widget
+                safe_scale_img.setImageDrawable(getDrawable(drawableID[safe_scale]));
+                result_title.setText(Html.fromHtml(title));
+                result_msg.setText(Html.fromHtml(_msg));
+                buttomDialog.setContentView(dialog_local_check_result);
+                buttomDialog.setCanceledOnTouchOutside(isTouchCanceled);
+                break;
+
+        }
+    }
+
+
+    //刷新database UI
+    public void refreshUI(String... params) {
+        String search_str = null;
+        if (params.length != 0)
+            search_str = params[0];
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener, search_str);
+        expandableListView.setAdapter(myAdapter);
+    }
+
+    // 設定 toolbar&& 搜尋功能
     @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.set_safe_url:
-                /* 按下set_safe_url就隱藏鍵盤 */
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(set_safe_url.getWindowToken(), 0);
-                URL_text = url_input.getText().toString().trim();
-                /* 執行 IPQS 檢查 */
-                IPQSCheck();
-                break;
-            case R.id.clear_button:
-                url_input.setText("");
-                break;
-            case R.id.scan_qrcode_button:
-                Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
-                startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
-                break;
-            case R.id.url_check:
-                System.out.println("按下url_check，進行網址資料庫比對");
-                /* 按下url_check就隱藏鍵盤 */
-                imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(url_check.getWindowToken(), 0);
-                URL_text = url_input.getText().toString().trim();
-                try {
-                    matchDatabase(URL_text);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                break;
-            default:
-                String widgetClass = v.getClass().toString();
-                if (widgetClass.contains("TextView")) {
-                    TextView textView = (TextView) v;
-                    HashMap<String, String> tags = (HashMap) v.getTag();
-                    int groupID = textView.getId();
-                    if (tags.containsKey("icon")) {
-                        System.out.println("groupID: " + groupID);
-                        if (tags.get("icon").equals("right_arrow")) {
-                            textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.down_arrow, 0);
-                            tags.replace("icon", "down_arrow");
-                            displayGroup(groupID); //顯示群組
-                        } else {
-                            textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
-                            tags.replace("icon", "right_arrow");
-                            hideGroup(groupID); //隱藏群組
-                        }
-                    }
-                }
-
-                break;
-        }
-
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_activity_url_check, menu);
+        MenuItem menuSearchItem = menu.findItem(R.id.search_btn);
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        SearchView searchView = (SearchView) menuSearchItem.getActionView();
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setOnQueryTextListener(myListener);
+        return true;
     }
 
-    //群組顯示
-    public void displayGroup(int groupID) {
-        System.out.println("\n\n群組id:" + groupID);
-        ArrayList<TextView> groupItem = textViewList.get(groupID);
-        TextView textView;
-        for (int i = 0; i < groupItem.size(); i++) {
-            textView = groupItem.get(i);
-            textView.setVisibility(View.VISIBLE);
-        }
-    }
-
-    //群組隱藏
-    public void hideGroup(int groupID) {
-        System.out.println("\n\n群組id:" + groupID);
-        ArrayList<TextView> groupItem = textViewList.get(groupID);
-        TextView textView;
-        for (int i = 1; i < groupItem.size(); i++) { //跳過第一個 mainURL
-            textView = groupItem.get(i);
-            textView.setVisibility(View.GONE);
-        }
-    }
 
     /* RequestCode/ResultCode 在兩個intent間接收/傳遞資料 */
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-
         super.onActivityResult(requestCode, resultCode, data);
         /* resultcode 正常無動作(不掃描QRcode)返回時，是0 */
+        Log.v("mydebug", "requestCode: " + requestCode);
+        Log.v("mydebug", "resultCode: " + resultCode);
+        Log.v("mydebug", "resultCodeOK: " + RESULT_OK);
+        if (resultCode == Scan_QR_CODE) {
+            URL_text = data.getStringExtra(pass_name);
+            /* 將網址輸入input text改為QRcode掃出的內容 */
+            if (buttomDialog.isShowing()) {
+                online_url_input.setText(URL_text);
+            } else {
+                local_url_input.setText(URL_text);
+            }
+        }
+        if (requestCode == ACTION_CREATE_DOCUMENT) {
+            try {
+                Uri fileUri = data.getData();
+                String passwd = ((EditText) dialog_export_file.findViewById(R.id.export_passwd)).getText().toString();
+                exportFile(fileUri, passwd);
+                setSnackbar("輸出資料庫成功!", "SUCCESS", Snackbar.LENGTH_SHORT);
+                snackbar.show();
+            } catch (Exception e) {
+                Log.v("mydebug", "" + e);
+            }
+        }
+        if (requestCode == ACTION_GET_CONTENT) {
+            Uri fileUri = data.getData();
+            myListener.pass_params(fileUri); /* pass變數 */
+            EXP_IMP_dialog.setContentView(dialog_import_file);
+            EXP_IMP_dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            EXP_IMP_dialog.show(); /*顯示輸入密碼 dialog*/
 
-        switch (resultCode) {
-            case Scan_QR_CODE:
-                URL_text = data.getStringExtra(pass_name);
-                /* 將網址輸入input text改為QRcode掃出的內容 */
-                url_input.setText(URL_text);
-                break;
-            default:
-                return;  //resultCode為 0 時，return回原本activity
+        }
+
+        return;
+    }
+
+    /*AES加密(MD5 key)*/
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public String Encrypt(String content, String password) throws Exception {
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+        byte[] MD5 = messageDigest.digest(password.getBytes());
+
+        SecretKeySpec secretKeySpec = new SecretKeySpec(MD5, "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+        byte[] byteContent = content.getBytes("utf-8");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
+        byte[] result = cipher.doFinal(byteContent);
+        String result_str = Base64.getEncoder().encodeToString(result);
+        return result_str;
+    }
+
+    /*AES解密(MD5 key)*/
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public String Decrypt(String content, String password) throws Exception {
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+        byte[] MD5 = messageDigest.digest(password.getBytes());
+
+        byte[] decodedContent = Base64.getDecoder().decode(content);
+        SecretKeySpec secretKeySpec = new SecretKeySpec(MD5, "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
+        try {
+            byte[] result = cipher.doFinal(decodedContent);
+            return new String(result);
+        } catch (Exception e) {
+            Log.v("mydebug", "例外" + e);
+            Log.v("mydebug", "匯入資料庫失敗");
+            return null;
         }
     }
 
-    //設定 message dialog顯示圖片&&文字(重建以更新UI)
-    public void setMessageDialog(int id, String msg, boolean enable_no_button) {
-        AlertDialog.Builder message_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        message_dialog_builder.setPositiveButton(R.string.yes, this);
-        if (enable_no_button) //開啟取消 button
-            message_dialog_builder.setNegativeButton(R.string.no, this);
-        LayoutInflater layoutInflater = LayoutInflater.from(this);
-        View view = layoutInflater.inflate(R.layout.dialog_picture, null);
-        ImageView imageView = view.findViewById(R.id.safe_scale);
-        TextView textView = view.findViewById(R.id.dialog_message_box);
-        imageView.setImageResource(id); //設定icon來源
-        textView.setText(msg);
-        message_dialog_builder.setView(view);
-        message_dialog = message_dialog_builder.create();
-        message_dialog.dismiss();
+    //TODO:輸出 url_database
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void exportFile(Uri fileUri, String password) throws Exception {
+        if (!isPermissionPassed) {
+            setSnackbar("尚未取得存取權限", "失敗", Snackbar.LENGTH_LONG);
+            getPermission();
+        } else {
+            OutputStream os = getContentResolver().openOutputStream(fileUri); /*檔案輸出流*/
+            InputStream is = new FileInputStream(url_database);
+            String str = getData(is, true);
+            Log.v("mydebug", "匯出的資料庫內容:" + str);
+            String encrypted_str = Encrypt(str, password); /*加密檔案*/
+            byte[] strTobyte = encrypted_str.getBytes();
+            os.write(strTobyte); /*寫入檔案*/
+            os.close();
+            is.close();
+
+        }
+    }
+
+    //TODO:輸出 url_database
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void importFile(Uri fileUri, String password) throws Exception {
+        if (!isPermissionPassed) {
+            setSnackbar("尚未取得存取權限", "失敗", Snackbar.LENGTH_LONG);
+            getPermission();
+        } else {
+            InputStream is = getContentResolver().openInputStream(fileUri); /*檔案輸入*/
+            String str = getData(is, false);
+            String descrypted_str = Decrypt(str, password); /*解密檔案*/
+            if (descrypted_str != null) { /*返回不為空值*/
+                OutputStream os = new FileOutputStream(url_database); /*檔案輸出目標(覆蓋原有檔案)*/
+                byte[] strTobyte = descrypted_str.getBytes();
+                os.write(strTobyte); /*寫入檔案*/
+                os.close();
+                setSnackbar("成功匯入資料庫", "SUCCESS", Snackbar.LENGTH_LONG);
+            } else {
+                setSnackbar("匯入資料庫失敗", "錯誤", Snackbar.LENGTH_LONG);
+            }
+            is.close();
+            loadDatabase();
+            refreshUI();
+            snackbar.show();
+        }
+
     }
 
     /* 設定所有dialog */
     public void buildAllDialog() {
-        /* alert dialog */
-        AlertDialog.Builder alert_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
+        //del_dialog 宣告
+        del_dialog = new Dialog(this);
+        del_dialog.setContentView(dialog_delete_dialog);
+        del_dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
-        alert_dialog_builder.setTitle(R.string.warning);
-        /* 設定按鈕監聽器 */
-        alert_dialog_builder.setPositiveButton(R.string.yes, this);
-        alert_dialog_builder.setNegativeButton(R.string.no, this);
-        alert_dialog = alert_dialog_builder.create();
-        alert_dialog.dismiss();
+        //EXP_IMP_dialog宣告
+        EXP_IMP_dialog = new Dialog(this);
 
 
+        //toast宣告
+        dialog_toast = Toast.makeText(this, "", Toast.LENGTH_LONG);
 
-        /* IPQS search dialog */
-        AlertDialog.Builder IPQS_dialog_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        IPQS_dialog_builder.setTitle(R.string.warning);
-        /* 設定按鈕監聽器 */
-        IPQS_dialog_builder.setPositiveButton(R.string.yes, this);
-        IPQS_dialog_builder.setNegativeButton(R.string.no, this);
-        IPQS_search_dialog = IPQS_dialog_builder.create();
-        IPQS_search_dialog.dismiss();
-
-
-        progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("");
-        progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-
-        dialog_toast = Toast.makeText(this.getApplicationContext(), "", Toast.LENGTH_LONG);
+        //Snakerbar宣告
+        snackbar = Snackbar.make(this.findViewById(R.id.activity_url_check), "", Snackbar.LENGTH_SHORT)
+                .setAction("已複製", myListener)
+                .setActionTextColor(Color.parseColor("#FF60AF"));
+        //底部dialog
+        buttomDialog = new BottomSheetDialog(this);
+        buttomDialog.setContentView(dialog_online_check_add_entry_view);
+        buttomDialog.setCanceledOnTouchOutside(true);
 
     }
 
-    //顯示資料庫 TODO:可折疊清單研究(防止資料量過大)
-//    @RequiresApi(api = Build.VERSION_CODES.M)
-//    public void displayDatabase() {
-//
-//        LinearLayout scroll_block = this.findViewById(R.id.scroll_block);
-//        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-//                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-//        params.setMargins(0, 0, 0, 20);
-//
-//        for (int i = 0; i < url_database_list.size(); i++) {
-//            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
-//            ArrayList<TextView> textViews = new ArrayList<>();
-//            for (int j = 0; j < urlObjects.size(); j++) {
-//                Struct.urlObject urlObject = urlObjects.get(j);
-//                String uuid = urlObject.uuid;
-//                String tagName = urlObject.tagName;
-//                String url = urlObject.text;
-//
-//                //TextView設定
-//                TextView textView = new TextView(this);
-//                textView.setText(url);
-//                textView.setTextColor(Color.parseColor("#000000"));
-//                textView.setTextSize(18);
-//                textView.setOnClickListener(this);
-//                textView.setSingleLine();//設定單行顯示
-//                textView.setEllipsize(TextUtils.TruncateAt.END); //設定省略符號在尾端
-//
-//                //設定 tags資料
-//                Map<String, String> tags = new HashMap<>();
-//                tags.put("uuid", uuid);
-//                tags.put("tagName", tagName);
-//                if (tagName.equals("mainURL")) {
-//                    textView.setId(i); //紀錄 groupID用
-//                    textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
-//                    textView.setTextSize(20);
-//                    textView.setPaddingRelative(20, 0, 0, 0);
-//                    textView.setLayoutParams(params); //設定 margin
-//                    textView.setBackgroundColor(Color.parseColor("#FFFAFA"));
-//                    tags.put("icon", "right_arrow");
-//                }
-//                if (tagName.equals("subURL")) {
-//                    textView.setVisibility(View.GONE);
-//                    textView.setPaddingRelative(60, 0, 0, 0);
-//                }
-//                textView.setTag(tags);
-//                scroll_block.addView(textView);
-//                textViews.add(textView);
-//
-//            }
-//            textViewList.put(i, textViews);
-//        }
-//    }
+    //設定snackbar
+    public void setSnackbar(String text, String action, int duration) {
+        snackbar.setText(text);
+        snackbar.setAction(action, myListener);
+        snackbar.setDuration(duration);
+
+    }
 
     //讀取資料庫進入 url_database_list
     public void loadDatabase() throws Exception {
@@ -429,7 +651,8 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         org.w3c.dom.Document doc = db.parse(url_database);
         NodeList nodeList = doc.getElementsByTagName("token");
 
-        url_database_list = new HashMap<>();
+        url_database_list = new ArrayList<>();
+
         for (int i = 0; i < nodeList.getLength(); i++) {
             Node tokenNode = nodeList.item(i);
             String groupID = tokenNode.getAttributes().getNamedItem("id").getNodeValue();
@@ -442,126 +665,65 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 urlObject.tagName = node.getNodeName();
                 urlObject.uuid = node.getAttributes().getNamedItem("uuid").getNodeValue();
                 urlObject.text = node.getTextContent();
+                if (node.getNodeName().equals("mainURL"))
+                    urlObject.safe_score = Integer.valueOf(node.getAttributes().getNamedItem("safe_score").getNodeValue());
                 if (node.getNodeName().equals("subURL"))
-                    urlObject.format = node.getAttributes().getNamedItem("format").getNodeValue();
+                    urlObject.format = Integer.valueOf(node.getAttributes().getNamedItem("format").getNodeValue());
+
                 groupList.add(urlObject);
             }
-            url_database_list.put(Integer.valueOf(groupID), groupList);
+
+            url_database_list.add(Integer.valueOf(groupID), groupList);
 
         }
-        System.out.println("\n讀取資料庫...完畢");
-    }
+        System.out.println("讀取資料庫...完畢");
 
-    /* 實作dialog按鈕監聽 */
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    @Override
-    public void onClick(DialogInterface dialog, int which) {
-        /* 先判斷哪個dialog */
-
-        /* IPQS_search_dialog */
-        if (dialog.equals(IPQS_search_dialog)) {
-            /* 判斷哪個按鈕被按下 */
-            switch (which) {
-                /* 是 */
-                case BUTTON_POSITIVE:
-                    /* int which = -1 */
-                    /* 啟動 whois thread 檢查 */
-                    IPQS_search_dialog.dismiss(); //隱藏 dialog再啟動 Thread
-                    Thread IPQS_thread = new Thread(this);
-                    IPQS_thread.setName("IPQS_thread");
-                    progressDialog.setMessage("網址正在IPQS進行檢查中，請稍後...");
-                    progressDialog.show();
-                    IPQS_thread.start();
-                    break;
-                case BUTTON_NEGATIVE:
-                    /* int which = -2 */
-                    alert_dialog.setMessage(URL_text + "\n" + R.string.unsafeURL);
-                    alert_dialog.show();
-                    break;
-            }
-        }
-        /* IPQS message dialog */
-        if (dialog.equals(IPQS_message_dialog)) {
-            /* 判斷哪個按鈕被按下 */
-            switch (which) {
-                /* 是 */
-                case BUTTON_POSITIVE:
-                    /* int which = -1 */
-                    dialog.dismiss();
-                    alert_dialog.setMessage(URL_text + "\n" + "請問是否要將此網址加入安全網址資料庫中?");
-                    alert_dialog.show();
-                    break;
-            }
-        }
-        /* 警告dialog */
-        if (dialog.equals(alert_dialog)) {
-            /* 判斷哪個按鈕被按下 */
-            switch (which) {
-                /* 是 */
-                case BUTTON_POSITIVE:
-                    /* int which = -1 */
-                    try {
-                        dialog.dismiss();
-                        addMainURL(URL_text);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    dialog_toast.setText(R.string.addURL); /* 此網址已添加到安全名單 */
-                    dialog_toast.show();
-                    break;
-                case BUTTON_NEGATIVE:
-                    /* int which = -2 */
-                    dialog.dismiss();
-                    dialog_toast.setText("不添加此網址到安全名單中"); /* 此網址不會添加到安全名單 */
-                    dialog_toast.show();
-                    break;
-            }
-
-        }
-
-
+        myAdapter = new MyBaseExpandableListAdapter(url_database_list, this, myListener);
+        expandableListView.setAdapter(myAdapter);
+        System.out.println("創建UI清單...完畢");
     }
 
 
-    // 設定安全網址 - mainURL加入網址到資料庫中
-    public void addMainURL(String url) throws Exception {
+    /* 設定安全網址 - mainURL加入網址到資料庫中 */
+    public void addMainURL(String url, int safe_score) throws Exception {
         Boolean isExist = false;
         System.out.println("要加入mainURL的資料: " + url);
-        //先檢查有無重複網址
+        // 先檢查有無重複網址
+
         for (int i = 0; i < url_database_list.size(); i++) {
             ArrayList<Struct.urlObject> urlObjects = url_database_list.get(i);
             String mainURL = urlObjects.get(0).text;
             if (mainURL.equals(url)) {
                 isExist = true;
-                System.out.println(url+" 已存在於資料庫中");
                 break;
             }
         }
+        myListener.pass_params(isExist);
+
+
         //若此網址從未添加過才寫入xml檔
         if (!isExist) {
-
             //創建 url Object加入到 list中
             Struct.urlObject urlObject = new Struct.urlObject();
             //設定 urlObject
             urlObject.text = url;
             urlObject.tagName = "mainURL";
             urlObject.uuid = Long.toHexString(System.currentTimeMillis());
+            urlObject.safe_score = safe_score; //安全分數
             ArrayList<Struct.urlObject> urlObjects = new ArrayList<>();
             urlObjects.add(urlObject);
-            //檢查 groupID有無沒被用到的,有的話就先放, 沒有則放入hashmap最後
-            for (int i = 0; i < url_database_list.size()+1; i++) {
-                System.out.println(url_database_list.containsKey(i)+" "+i);
-                if (!url_database_list.containsKey(i)){
-                    url_database_list.put(i, urlObjects);
-                    break;
-                }
-            }
-            System.out.println(url+" 成功新增mainURL");
-//            write_url_database(); //TODO:寫入xml檔案
+
+            //往最前面插入元素
+            url_database_list.add(0, urlObjects);
+
+            System.out.println(url + " 成功新增mainURL");
+//            write_url_database(); //寫入xml檔案
         } else {
             dialog_toast.setText("此網址已存在於資料庫中");
             dialog_toast.show();
         }
+        refreshUI(); //刷新 UI
+
 
     }
 
@@ -605,6 +767,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                         token.setAttribute("id", groupID);
                         token.setIdAttribute("id", true);
                         mainURL.setAttribute("groupID", groupID);
+                        mainURL.setAttribute("safe_score", String.valueOf(urlObject.safe_score));
                         mainURL.setAttribute("uuid", urlObject.uuid);
                         mainURL.setIdAttribute("uuid", true);
                         //增加
@@ -613,7 +776,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                     case "subURL":
                         org.w3c.dom.Element subURL = doc.createElement("subURL");
                         subURL.setTextContent(urlObject.text);
-                        subURL.setAttribute("format", urlObject.format);
+                        subURL.setAttribute("format", String.valueOf(urlObject.format));
                         subURL.setAttribute("groupID", groupID);
                         subURL.setAttribute("uuid", urlObject.uuid);
                         subURL.setIdAttribute("uuid", true);
@@ -629,112 +792,75 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         System.out.println("資料庫寫入完畢!");
     }
 
-    // 刪除 mainURL網址
-    public void deleteMainURL(String id) throws Exception {
 
-        //建立一個 Document類
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = factory.newDocumentBuilder();
-        //解析 url_database檔案
-        org.w3c.dom.Document doc = db.parse(url_database);
-        // 得到父節點並移除mainURL
-        org.w3c.dom.Element root = doc.getDocumentElement();
-        org.w3c.dom.Element tokenNode = doc.getElementById(id);
-        root.removeChild(tokenNode);
-        //mainURL id編號重新命名
-        NodeList nodeList = doc.getElementsByTagName("token");
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node node = nodeList.item(i);
-            node.getAttributes().getNamedItem("id").setNodeValue(String.valueOf(i));
-        }
-        writeXml(doc);
-    }
-
-    // 解析並比對資料庫 - 檢查網址
+    //解析並比對資料庫 - 檢查網址
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public void matchDatabase(String url) throws Exception {
-        System.out.println(url+" 進入網址資料庫進行比對...");
         // 外部變數紀錄
-        String format = null;
-        int groupID = 0;
+        int format = unmatched;
+        int max_main_relative = unmatched;
+        int max_sub_relative = unmatched;
+        int groupID = url_database_list.size();
+        //配對第一層如果exact就返回,否則要記錄其他groupPosition和format, 以便進行第二層匹配
+        ArrayList<Pair<Integer, Integer>> record = new ArrayList<>();
         for (int i = 0; i < url_database_list.size(); i++) {
             Struct.urlObject urlObject = url_database_list.get(i).get(0);
             String mainURL = urlObject.text;
-            groupID = i;
             format = getURLMatchFormat(url, mainURL);
-            if (format != null) break;
+            Log.v("mydebug [matchDatabase]", String.format("%s比對結果為...%d", mainURL, format));
+            if (format == 5) break;
+            if (1 < format && format < 5) {
+                record.add(new Pair<>(i, format)); //紀錄相關的mainURL位置和format
+            }
         }
-        System.out.println("mainURL配對完畢...比對結果為: " + format);
-
+        if (format != 5) {// 不為exact, 則進行第二層級比對
+            Log.v("mydebug [matchDatabase]", "record: " + record.toString() + "...進入二級比對");
+            for (int i = 0; i < record.size(); i++) {
+                int r_groupID = record.get(i).first;
+                int r_format = record.get(i).second;
+                String mainURL = url_database_list.get(r_groupID).get(0).text;
+                //Triple:groupID, mainRelative, subRelative
+                Triple<Integer, Integer, Integer> matchTriple = matchSubURL(r_groupID, url, r_format);
+                if (matchTriple.getThird() == exact) {
+                    format = 5;
+                    break;
+                }
+                Log.v("mydebug [matchDatabase]", String.format("%s的主關聯性%d...群組%d:子關聯性%d", mainURL, matchTriple.getSecond(), matchTriple.getFirst(), matchTriple.getThird()));
+                if (matchTriple.getSecond() >= max_main_relative) {
+                    max_main_relative = matchTriple.getSecond();
+                    format = max_main_relative;
+                    if (matchTriple.getThird() > max_sub_relative) {
+                        max_sub_relative = matchTriple.getThird();
+                        groupID = matchTriple.getFirst();
+                    }
+                }
+            }
+        }
+        Log.v("mydebug [matchDatabase]", String.format("最終配對結果,群組%d:格式%d:主相關性%d:子相關性%d", groupID, format, max_main_relative, max_sub_relative));
         // mainURL全無匹配
-        if (format == null) {
-            setMessageDialog(R.drawable.safe_scale_1, "此網址在資料庫中無任何匹配\n是否進一步檢查此網址？", true);
-            message_dialog.show();
-            message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    message_dialog.dismiss();
-                    dialog_toast.setText("取消進一步檢查此網址");
-                    dialog_toast.show();
-                }
-            });
-            message_dialog.getButton(BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    message_dialog.dismiss();
-                    IPQSCheck();
-                }
-            });
+        if (format == unmatched) {
+            setButtomDialog(dialog_local_check_result, false, "1");
+            Dialogs.showSecureDialog(buttomDialog);
         } else {  /* 有匹配到 mainURL */
+            myListener.pass_params(groupID, url, format);
             /* 比對 subURL */
-            if (format.equals("exact") || matchSubURL(groupID, url, format)) { /*若 mainURL為 exact或 subURL配對成功*/
-                setMessageDialog(R.drawable.safe_scale_5, "此為安全網址，可以放心登入", false);
-                message_dialog.show();
-
+            if (format == exact) { /*若 mainURL為 exact或 subURL配對成功*/
+                setButtomDialog(dialog_local_check_result, true, "5");
+                Dialogs.showSecureDialog(buttomDialog);
             } else { /*配對失敗*/
-                String str = "此網址安全層級為%s級\n%s此網址不在資料庫中，請問是否要加入資料庫？";
-                String hint = "(低於三級網址建議登入後小心使用)\n";
                 // 比對級數配對
                 switch (format) {
-                    case "startwith":
-                        str = String.format(str, "四", "");
-                        setMessageDialog(R.drawable.safe_scale_4, str, true);
+                    case startwith:
+                        setButtomDialog(dialog_local_check_result, false, "4");
                         break;
-                    case "host":
-                        str = String.format(str, "三", hint);
-                        setMessageDialog(R.drawable.safe_scale_3, str, true);
+                    case host:
+                        setButtomDialog(dialog_local_check_result, false, "3");
                         break;
-                    case "basedomain":
-                        str = String.format(str, "二", hint);
-                        setMessageDialog(R.drawable.safe_scale_2, str, true);
+                    case basedomain:
+                        setButtomDialog(dialog_local_check_result, false, "2");
                         break;
                 }
-                message_dialog.show();
-                /* 詢問是否加入subURL(監聽器製作) */
-                final int final_groupID = groupID;
-                final String final_format = format;
-                message_dialog.getButton(BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        message_dialog.dismiss();
-                        dialog_toast.setText("取消添加此網址到資料庫中");
-                        dialog_toast.show();
-
-                    }
-                });
-                message_dialog.getButton(BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        try {
-                            message_dialog.dismiss();
-                            addsubURL(final_groupID, url, final_format);
-                            dialog_toast.setText("此網址已加入資料庫");
-                            dialog_toast.show();
-                        } catch (Exception e) {
-                            System.out.println(e.getMessage());
-                            e.printStackTrace();
-                        }
-                    }
-                });
+                Dialogs.showSecureDialog(buttomDialog);
             }
 
         }
@@ -742,12 +868,10 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
     }
 
-    //四種比對模式
-    public String getURLMatchFormat(String url, String mainURL) throws Exception {
-        System.out.println();
-        System.out.println("主URL:" + url);
-        System.out.println("mainURL:" + mainURL);
-        String format = null;
+    // 四種比對模式
+    public int getURLMatchFormat(String url, String mainURL) throws Exception {
+        Log.v("getURLMatchFormat", String.format("主URL: %s", url));
+        Log.v("getURLMatchFormat", String.format("Other-URL: %s", mainURL));
         //變數
         String maj_basedomain = null;
         String tmp_basedomain = null;
@@ -771,19 +895,19 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String tmp_startwith = tmp_host + ":" + tmp_port + tmp_path;
         String maj_hoststr = maj_host + ":" + maj_port;
         String tmp_hoststr = tmp_host + ":" + tmp_port;
-        System.out.println(maj_basedomain + " " + tmp_basedomain);
-        System.out.println(maj_host + " " + tmp_host);
-        System.out.println(maj_port + " " + tmp_port);
-        System.out.println(maj_path + " " + tmp_path);
-        if (url.equals(mainURL)) return "exact";
-        if (maj_startwith.contains(tmp_startwith)) return "startwith";
-        if (maj_hoststr.contains(tmp_hoststr)) return "host";
-        if (maj_basedomain.contains(tmp_basedomain)) return "basedomain";
-        return format;
+        Log.v("getURLMatchFormat", String.format("Domain:[%s] [%s]", maj_basedomain, tmp_basedomain));
+        Log.v("getURLMatchFormat", String.format("Host:[%s] [%s]", maj_host, tmp_host));
+        Log.v("getURLMatchFormat", String.format("Port:[%s] [%s]", maj_port, tmp_port));
+        Log.v("getURLMatchFormat", String.format("Path:[%s] [%s]", maj_path, tmp_path));
+        if (url.equals(mainURL)) return exact;
+        if (maj_startwith.contains(tmp_startwith)) return startwith;
+        if (maj_hoststr.contains(tmp_hoststr)) return host;
+        if (maj_basedomain.contains(tmp_basedomain)) return basedomain;
+        return unmatched;
     }
 
     // 紀錄 subURL 到 database
-    public void addsubURL(final int groupID, String url, final String format) throws Exception {
+    public void addsubURL(final int groupID, String url, final int format) throws Exception {
         System.out.println(String.format("準備將 %s[格式%s]的網址加入群組%d中...", url, format, groupID));
         Struct.urlObject urlObject = new Struct.urlObject();
         urlObject.text = url;
@@ -791,50 +915,32 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         urlObject.tagName = "subURL";
         urlObject.uuid = Long.toHexString(System.currentTimeMillis());
         ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID); //加入清單中
-        urlObjects.add(urlObject);
-        url_database_list.put(groupID,urlObjects); //hashMap鍵更新鍵值
-        System.out.println(String.format("%s 已成功加入資料庫中!",url));
+        urlObjects.add(1, urlObject); //加到mainURL後面
+        url_database_list.set(groupID, urlObjects); //Arraylist更新元素
+        System.out.println(String.format("%s 已成功加入資料庫中!", url));
 //        write_url_database();
+        refreshUI();//刷新 UI
     }
 
-    //比對 subURL有無 exact
-    public boolean matchSubURL(int groupID, String url, String format) {
-        System.out.println("準備在群組"+groupID+"中搜尋...");
-        Boolean isMatch = false;
+    // 比對 subURL有無 exact
+    public Triple<Integer, Integer, Integer> matchSubURL(int groupID, String url, int format) throws Exception {
+        Log.v("mydebug [matchSubURL]", String.format("準備在群組%d中搜尋...", groupID));
+        int _format = format;
         ArrayList<Struct.urlObject> urlObjects = url_database_list.get(groupID);
         for (int i = 0; i < urlObjects.size(); i++) {
             Struct.urlObject urlObject = urlObjects.get(i);
-            if (urlObject.format.equals(format)) {
-                String subURL = urlObject.text;
-                if (subURL.equals(url)){
-                    isMatch = true;
-                    System.out.println("\n檢查subURL有無存在網址...檢查完畢");
-                    System.out.println("結果為..." + isMatch);
-                    return isMatch;
+            if (urlObject.tagName.equals("mainURL")) continue; //跳過mainURL
+            String subURL = urlObject.text;
+            Log.v("mydebug [matchSubURL]", String.format("群組%d,第%d個..subURL為%s", groupID, i, subURL));
+            Log.v("mydebug [matchSubURL]", String.format("得到subURL比對層級...%d", getURLMatchFormat(url, subURL)));
+            _format = Math.max(_format, getURLMatchFormat(url, subURL));
+            if (urlObject.format == format) {
+                if (subURL.equals(url)) {
+                    return new Triple<>(groupID, format, exact);
                 }
             }
         }
-        System.out.println("\n檢查subURL有無存在網址...檢查完畢");
-        System.out.println("結果為..." + isMatch);
-
-
-//        for (int i = 0; i < nodeList.getLength(); i++) {
-//            System.out.println("進入迴圈" + i);
-//            node = nodeList.item(i);
-//            //若為subURL才進行判斷
-//            if (node.getNodeName().equals("subURL")) {
-//                node_format = node.getAttributes().getNamedItem("format").getNodeValue();
-//                System.out.println(node_format);
-//                if (node_format.equals(format)) {
-//                    subURL = node.getTextContent();
-//                    if (subURL.equals(url)) return true; //若找到相符的 subURL, 直接返回
-//                }
-//            }
-//
-//
-//        }
-        return isMatch;
-
+        return new Triple<>(groupID, format, _format);
     }
 
 
@@ -847,8 +953,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             /* 啟動IPQS thread送出請求 */
             Thread IPQS_thread = new Thread(this);
             IPQS_thread.setName("IPQS_thread");
-            progressDialog.setMessage("網址正在IPQS進行檢查中，請稍後...");
-            progressDialog.show();
+            setButtomDialog(dialog_progress_view, false); //顯示處理 dialog
             IPQS_thread.start();
         } else {
             dialog_toast.setText(R.string.parseFail);
@@ -858,13 +963,17 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
 
 
     // 輸入inputstream，串接回傳資訊
-    public static String getData(InputStream inputStream) throws IOException {
+    public static String getData(InputStream inputStream, boolean newline) throws IOException {
         String result = null;
         StringBuilder sb = new StringBuilder();
         String line;
         BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
         while ((line = br.readLine()) != null) {
-            sb.append(line);
+            if (newline) sb.append(line).append("\n");
+            else {
+                sb.append(line);
+            }
+
         }
         result = sb.toString();
         return result;
@@ -876,18 +985,16 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         String result = null;
         Map<String, String> data_map = new LinkedHashMap<>(); //存對應的鍵值
         JSONObject jsonObject = null;
-        String IPQualityScore = "https://ipqualityscore.com/api/json/url/mMdf76Tro3JGHcC3Cmv9WPGu14C56Rpm/";
-
         try {
             String encodedURL = URLEncoder.encode(URL_text, "UTF-8");
-            URL url = new URL(IPQualityScore + encodedURL);
+            URL url = new URL(IPQS_API_Key + encodedURL);
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Accept", "application/json");
 
             if (connection.getResponseCode() == 200) {
-                result = getData(connection.getInputStream());
+                result = getData(connection.getInputStream(), false);
                 connection.disconnect();
                 jsonObject = new JSONObject(result);
                 //取出要的資料
@@ -907,7 +1014,7 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
                 }
             } else {
                 /* 若連結失敗則success = false */
-                System.out.println(getData(connection.getErrorStream())); //印出失敗資訊
+                System.out.println(getData(connection.getErrorStream(), false)); //印出失敗資訊
                 data_map.put("success", "false");
             }
         } catch (IOException | JSONException e) {
@@ -961,34 +1068,6 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
         return result;
     }
 
-    public void setIPQSDialog(String risk_score, String msg) {
-        int score;
-        /* IPQS資訊 dialog */
-        AlertDialog.Builder IPQS_message_builder = new AlertDialog.Builder(UrlCheckActivity.this);
-        /* 設定按鈕監聽器 */
-        IPQS_message_builder.setPositiveButton(R.string.yes, this);
-        LayoutInflater layoutInflater = LayoutInflater.from(this);
-        View view = layoutInflater.inflate(R.layout.ipqs_msg_display, null);
-        TextView ipqs_score = view.findViewById(R.id.ipqs_score);
-        TextView ipqs_msg = view.findViewById(R.id.ipqs_msg);
-        ipqs_score.setText(risk_score);
-        ipqs_msg.setText(msg);
-        /* 評判風險分數並換顏色 */
-        score = Integer.valueOf(risk_score);
-        if (0 <= score && score <= 20)
-            ipqs_score.setTextColor(Color.parseColor("#457c0d"));
-        else if (21 <= score && score <= 40)
-            ipqs_score.setTextColor(Color.parseColor("#78c430"));
-        else if (41 <= score && score <= 60)
-            ipqs_score.setTextColor(Color.parseColor("#fec721"));
-        else if (61 <= score && score <= 80)
-            ipqs_score.setTextColor(Color.parseColor("#f65922"));
-        else
-            ipqs_score.setTextColor(Color.parseColor("#d63839"));
-        IPQS_message_builder.setView(view);
-        IPQS_message_dialog = IPQS_message_builder.create();
-        IPQS_message_dialog.dismiss();
-    }
 
     /* implements Runnable(subThread會執行裡面內容) */
     /* 執行 IPQS search */
@@ -1008,13 +1087,14 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
             System.out.println("------------------------------------------");
             message = getIPQualityMessage(IPQualityScore_data)[1];
             risk_score = getIPQualityMessage(IPQualityScore_data)[0];
+            myListener.safe_score = 100 - Integer.valueOf(risk_score); //安全分數
 //            執行 Thread UI更新
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    progressDialog.dismiss();
-                    setIPQSDialog(risk_score, message);
-                    IPQS_message_dialog.show();
+                    buttomDialog.dismiss();
+                    setButtomDialog(dialog_online_check_result, false, risk_score, message);
+                    buttomDialog.show();
                 }
             });
         } catch (NullPointerException e) {
@@ -1026,454 +1106,721 @@ public class UrlCheckActivity extends AegisActivity implements View.OnClickListe
     }
 
     /* 建立 url database的檔案 */
-    public void Create_url_database_file() {
+    public void Create_url_database_file() throws Exception {
         /* Create file */
         File dir = getApplicationContext().getFilesDir();
         url_database = new File(dir, "url_database.xml");
         url_database.setWritable(true);  // 設為可讀寫
         url_database.setReadable(true);
-        try {
-            if (url_database.createNewFile()) {
-                //建立一個 Document類
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder db = factory.newDocumentBuilder();
-                //建立一個根節點，並且將根節點新增到Document物件中去
-                org.w3c.dom.Document doc = db.newDocument();
-                org.w3c.dom.Element root = doc.createElement("root");
-                doc.appendChild(root);
+        if (url_database.createNewFile()) {
+            //建立一個 Document類
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = factory.newDocumentBuilder();
+            //建立一個根節點，並且將根節點新增到Document物件中去
+            org.w3c.dom.Document doc = db.newDocument();
+            org.w3c.dom.Element root = doc.createElement("root");
+            doc.appendChild(root);
 
-                //開始把Document對映到檔案
-                TransformerFactory transFactory = TransformerFactory.newInstance();
-                Transformer transFormer = transFactory.newTransformer();
-                //設定輸出結果並且生成XML檔案
-                DOMSource domSource = new DOMSource(doc);
-                File file = url_database;
-
-                FileOutputStream out = new FileOutputStream(file);
-                StreamResult xmlResult = new StreamResult(out); //設定輸入源
-                transFormer.transform(domSource, xmlResult); //輸出xml檔案
-                out.close();
-                System.out.println("成功創建url_database 檔案");
-
-
-            } else {
-                System.out.println("url_database檔案已存在");
-            }
-        } catch (IOException | ParserConfigurationException | TransformerConfigurationException e) {
-            e.printStackTrace();
-        } catch (TransformerException e) {
-            e.printStackTrace();
+            writeXml(doc);
+            System.out.println("成功創建url_database 檔案");
+        } else {
+            System.out.println("url_database檔案已存在");
         }
 
 
     }
 
-    //class定義
+    // TODO:取得權限(備用)
+    private void getPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { /*SDK版本*/
+            String writePermission = Manifest.permission.WRITE_EXTERNAL_STORAGE;
+            String readPermission = Manifest.permission.READ_EXTERNAL_STORAGE;
+            boolean checkWritePermisson = ActivityCompat.checkSelfPermission(this, writePermission)
+                    == PackageManager.PERMISSION_GRANTED;
+            boolean checkReadPermisson = ActivityCompat.checkSelfPermission(this, readPermission)
+                    == PackageManager.PERMISSION_GRANTED;
+            Log.v("mydebug", "寫入權限: " + checkWritePermisson);
+            Log.v("mydebug", "讀取權限: " + checkReadPermisson);
+            if (checkWritePermisson && checkReadPermisson) {
+                isPermissionPassed = true;
+            } else {
+                ActivityCompat.requestPermissions(
+                        this, new String[]{writePermission, readPermission}, 100);
+            }
+
+        }
+
+    }
+
+    //TODO:取得權限結果(備用)
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 100) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                    grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                /*如果用戶同意*/
+                isPermissionPassed = true;
+            } else {
+                /*如果用戶不同意*/
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this
+                        , Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    setSnackbar("取得權限失敗", "錯誤", Snackbar.LENGTH_LONG);
+                    snackbar.show();
+                }
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this
+                        , Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                    setSnackbar("取得權限失敗", "錯誤", Snackbar.LENGTH_LONG);
+                    snackbar.show();
+                }
+            }
+        }
+    }
+
+    //實作各種監聽器
+    class MyListener implements View.OnClickListener, TextWatcher, ExpandableListView.OnGroupClickListener, ExpandableListView.OnChildClickListener, Toolbar.OnMenuItemClickListener, SearchView.OnQueryTextListener, View.OnTouchListener, AdapterView.OnItemLongClickListener {
+
+        private int groupID;
+        private String url;
+        private int format;
+        private int safe_score;
+        private boolean isExist; //addMainURL使用
+        private boolean isLongClick = false;
+        private Uri FileUri;
+        //Comparator
+        private Comparator sort_sub_old_to_new;
+        private Comparator sort_main_old_to_new;
+        private Comparator sort_sub_a_to_z;
+        private Comparator sort_main_a_to_z;
+        private Comparator sort_sub_unsafe_to_safe;
+        private Comparator sort_main_unsafe_to_safe;
 
 
-    /* 沒用到的程式碼 */
-    /* ================================================================================================================== */
-    /* ================================================================================================================== */
-    /* ================================================================================================================== */
-    /* ================================================================================================================== */
-    /* ================================================================================================================== */
-    //IP2WHOIS 使用
-//    public Map<String, String> getIP2WHOIS(String URL_text) throws IOException {
-//
-//        Map<String, String> data_map = new LinkedHashMap<String, String>();
-//
-//        String result = null;
-//        String key = "TZ6JJY5XVPJH5TOI6R2KQIVD9Y9IB2UX"; //My api key
-//        Hashtable<String, String> data = new Hashtable<String, String>();
-//        String domain = InternetDomainName.from(new URL(URL_text).getHost()).topDomainUnderRegistrySuffix().toString(); /* 得到 Domain name */
-//        data.put("domain", domain);
-//        data.put("format", "xml");
-//        String datastr = "";
-//        for (Map.Entry<String, String> entry : data.entrySet()) {
-//            datastr += "&" + entry.getKey() + "=" + URLEncoder.encode(entry.getValue(), "UTF-8");
-//        }
-//        //建立連線
-//        URL url = new URL("https://api.ip2whois.com/v2?key=" + key + datastr);
-//        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-//        conn.setRequestMethod("GET");
-//        conn.setRequestProperty("Accept", "application/json");
-//
-//        if (conn.getResponseCode() != 200) {
-//            throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
-//        }
-//        result = getData(conn.getInputStream());
-//        conn.disconnect();
-//
-//        Document doc = Jsoup.parse(result);
-//        String[] tag = {"domain", "create_date", "update_date", "expire_date", "domain_age", "error_code"};
-//        for (String s : tag) {
-//            Element element = doc.getElementsByTag(s).first();
-//            String element_str = (element == null) ? null : element.text();  //判斷式 ？ 若判斷為真執行區塊 ： 若判斷為假執行區塊
-//            data_map.put(s, element_str);
-//
-//        }
-//
-//        return data_map;
-//    }
-//
-//
-//    //VirusTotal返回結果
-//    public Map<String, Integer> getAalysisResult(String URL_text) throws JSONException, IOException, InterruptedException {
-//        String analysisID = getAnalysisID(URL_text);
-//        String x_apikey = "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714";
-//        String status = null;
-//        JSONObject jsonObject = null;
-//        Map<String, Integer> data_map = new LinkedHashMap<>();
-//
-//        //建立連線
-//        HttpURLConnection connection = (HttpURLConnection) new URL("https://www.virustotal.com/api/v3/analyses/" + analysisID).openConnection();
-//        connection.setRequestMethod("GET");
-//        connection.setRequestProperty("Accept", "application/json");
-//        connection.setRequestProperty("x-apikey", x_apikey);
-//        System.out.println("建立連線");
-//        connection.connect();
-//        if (200 == connection.getResponseCode()) {
-//            String result = getData(connection.getInputStream());
-//            jsonObject = new JSONObject(result).getJSONObject("data").getJSONObject("attributes");
-//            status = jsonObject.getString("status");
-//            data_map.put("status", status.equals("completed") ? 1 : 0); //若 complete status=1, 其他則 status = 0
-//            //放入鍵和鍵值
-//            jsonObject = jsonObject.getJSONObject("stats");
-//            Iterator<String> iterator = jsonObject.keys();
-//            while (iterator.hasNext()) {
-//                String key = iterator.next();
-//                data_map.put(key, jsonObject.getInt(key));
-//            }
-//        } else System.out.println(getData(connection.getErrorStream()));
-//
-//        connection.disconnect();
-//        return data_map;
-//    }
-//
-//    //VirusTotal得到分析ID
-//    public String getAnalysisID(String URL_text) throws IOException, JSONException {
-//        String x_apikey = "b022681243b4c4217ac2ae51dffbe1f82babf2855816347e1de6e92e66f65714";
-//        String analysisID = null;
-//        HttpURLConnection connection = (HttpURLConnection) new URL("https://www.virustotal.com/api/v3/urls").openConnection();
-//        connection.setDoOutput(true);
-//        connection.setDoInput(true);
-//        connection.setRequestMethod("POST");
-//        connection.setRequestProperty("Accept", "application/json");
-//        connection.setRequestProperty("x-apikey", x_apikey);
-//        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-//        connection.setUseCaches(false);
-//        //需要先寫入流再做connection
-//        DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
-//        String parameter = "url=" + URLEncoder.encode(URL_text, "UTF-8");
-//        outputStream.write(parameter.getBytes(StandardCharsets.UTF_8));
-//        connection.connect();
-//        if (200 == connection.getResponseCode()) {
-//            String result = getData(connection.getInputStream());
-//            analysisID = new JSONObject(result).getJSONObject("data").getString("id");
-//        } else {
-//            System.out.println(getData(connection.getErrorStream()));
-//
-//        }
-//        outputStream.close(); //關閉寫入流
-//        connection.disconnect(); //關閉連接
-//        return analysisID;
-//    }
-//
-//    /* 在 XML 中找 whois server */
-//    public String get_whois_server(String xdot_text) {
-//
-//        String whois_server = null;
-//        /* 利用 resources讀取 res/xml中檔案 */
-//        XmlResourceParser server_file = getResources().getXml(R.xml.whois_server);
-//        boolean isFind = false;
-//        try {
-//            int event = server_file.getEventType(); /* 得到現在光標的位置 */
-//            while (event != XmlPullParser.END_DOCUMENT) { /* 當光標還未到文件結尾 */
-//                if (event == XmlPullParser.TEXT) { /* 若得到的是文字(非 XmlPullParser.START_TAG <XXX></XXX> ) */
-//                    if (isFind) {
-//                        whois_server = server_file.getText(); /* 找到的server給whois_server, whois_server就不為空了 */
-//                        break;
-//                    }
-//                    if (xdot_text.equalsIgnoreCase(server_file.getText())) {
-//                        isFind = true;
-//                    }
-//                }
-//
-//                if (whois_server != null) break;
-//                event = server_file.next(); /* 移動光標 */
-//            }
-//        } catch (IOException | XmlPullParserException e) {
-//            e.printStackTrace();
-//        }
-//
-//
-//        return whois_server;
-//
-//    }
-//
-//    /* information欄位切割 (註：若非英文的information 將不欄位處理，但會進行翻譯)*/
-//    @RequiresApi(api = Build.VERSION_CODES.N)
-//    public void splitting_filed(String TLD, String msg) {
-//
-//        System.out.println("############################################\n原始訊息:\n" + msg);
-//
-//
-//        /* 先將可以處理的大致處理 */
-//        msg = msg.replaceAll("_", " ");
-//        msg = msg.replaceAll("\\.{2,}", ""); //匹配一長串..... .no TLD
-//        msg = msg.replaceAll("\r", ""); //把 \r置換(\r是將光標移動到行首)
-////        System.out.println("\n\nReplace過後:\n"+msg+"\n----------------------------");
-//
-//        /* 分割字串 */
-////        System.out.println("\n\n=================================================================================\n");
-//
-//        String[] token = msg.split("\n");
-//        //TLD 為.pl的另外處理，但.pl的REGISTRAR 還要再處理其他前面有空白的欄位。所以會在下面 if判斷.ua錯誤，執行 else再把其他欄位處理好
-//        if (TLD.equals("pl")) {
-//            //處理 REGISTRAR field
-//            for (int i = 0; i < token.length; i++) {
-//                //找後面沒有跟任何字串的Tag
-//                if (token[i].matches(".*[:]$")) {
-//                    int j = i + 1;
-//                    if (j >= token.length) break;
-//                    if (!token[j].equals("")) token[i] += "\n";
-//                    else continue;
-//                    while (!token[j].equals("")) {
-//                        token[i] += token[j] + "\n";
-//                        token[j] = "";
-//                        if (j == token.length - 1) break;
-//                        else j++;
-//                    }
-//                }
-//            }
-//        }
-//        //TLD為 .ua的另外處理
-//        if (TLD.matches("ua")) {
-//            for (int i = 0; i < token.length; i++) {
-//                //移除 % 開頭且非 :結尾的字串及只有%開頭的字串
-//                if (token[i].matches("^%.*[^:]$|%")) {
-//                    token[i] = "";
-//                }
-//
-//            }
-//            //移除空字串
-//            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
-//            arrayList.removeIf(item -> item.equals(""));
-//            token = arrayList.toArray(new String[0]);
-//            //開始處理field
-//            for (int i = 0; i < token.length; i++) {
-//                //判斷標籤，若符合 % 開頭且 : 結尾的字串就是Tag
-//                if (token[i].matches("^%.*[:]$")) {
-//                    //把標籤前的 %和空白移除
-//                    token[i] = token[i].replaceAll("%\\s*", "");
-//                    int j = i + 1;
-//                    if (j >= token.length) break; //若超過index就break
-////                    //若字串符合開頭非 % 開頭的字串
-//                    if (token[j].matches("^[^%].*")) token[i] += "\n";
-//                    else continue;
-//                    while (token[j].matches("^[^%].*")) {
-//                        token[i] += token[j] + "\n";
-//                        token[j] = "";
-//                        if (j == token.length - 1) break; //不超過index(因為.ua底下不會再有其他說明等等，所以避免陷入無限迴圈)
-//                        else j++;
-//                    }
-//                }
-//            }
-//
-//
-//        }
-//        //針對.gov, .net, .cc做特殊處理(不需要做串接)
-//        else if (TLD.matches("gov|net|cc|tv|com")) {
-//            /* 只把 % 開頭的字串移除 */
-//            for (int i = 0; i < token.length; i++) {
-//                token[i] = token[i].trim(); //去除字串頭尾空白
-//                if (token[i].matches("^%.*")) {
-//                    token[i] = "";
-//                }
-//            }
-//        }
-//        //對 .br 做特殊串接處理
-//        else if (TLD.matches("br")) {
-//            //先清除前面有 %的字串
-//            for (int i = 0; i < token.length; i++) {
-//                if (token[i].matches("^%.*")) {
-//                    token[i] = "";
-//                }
-//            }
-//            //清除空字串
-//            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
-//            arrayList.removeIf(item -> item.equals(""));
-//            token = arrayList.toArray(new String[0]);
-//            //字串串接
-//            for (int i = 0; i < token.length; i++) {
-//                if (token[i].matches("nic-hdl-br.*")) {
-//                    int j = i + 1;
-//                    if (j >= token.length) break;
-//                    if (!token[j].matches("nic-hdl-br.*")) token[i] += "\n";
-//                    while (!token[j].matches("nic-hdl-br.*")) {
-//                        token[i] += token[j] + "\n";
-//                        token[j] = "";
-//                        if (j == token.length - 1) break;
-//                        else j++;
-//                    }
-//
-//                }
-//            }
-//        }
-//        //.pl 處理完後會跳至這個區塊接續處理
-//        //處理非例外TLD的字串
-//        else {
-//            for (int i = 0; i < token.length; i++) {
-//                /* 把前面有 #和 % 的字串清空，或單一開頭為 %、# (多餘字串)*/
-//                if (token[i].matches("^%.*") || token[i].matches("^#.*")) {
-//                    token[i] = "";
-//                }
-//            }
-//            //移除空字串
-//            ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
-//            arrayList.removeIf(item -> item.equals(""));
-//            token = arrayList.toArray(new String[0]);
-//            //串接
-//            for (int i = 0; i < token.length; i++) {
-//                /* 先找標籤，並判斷標籤後的字串是否前面有無數空格 */
-//                if (token[i].matches(".+:.+|.+:")) { //Tag後面有無東西(.pl TLD Tag後面有東西)
-//                    int j = i + 1; // next index
-//                    if (j >= token.length) break; // 判斷有無超過index
-//                    //判斷是否需要串接 前面有空格且結尾不為:的字串
-//                    if (token[j].matches("\\s{2,}.+[^:)]$")) token[i] += "\n";
-//                    else continue;
-//                    while (token[j].matches("\\s{2,}.+[^:)]$")) { // 匹配前面多個空格(\\s{2,}兩個以上空格，多個可視字元.+)
-//                        token[i] += token[j] + "\n";
-//                        token[j] = "";
-//                        if (j == token.length - 1) break; //不超過index
-//                        else j++;
-//                    }
-//                }
-//            }
-//        }
-//
-//        //將空白標籤刪除，並將頭尾空白去除
-//        for (int i = 0; i < token.length; i++) {
-//            token[i] = token[i].trim();
-//            //移除空白標籤和不含標籤資訊
-//            if (token[i].matches(".*[:]$") || !token[i].contains(":")) {
-//                token[i] = "";
-//            }
-//        }
-//        //移除所有空字串
-//        ArrayList<String> arrayList = new ArrayList<>(Arrays.asList(token));
-//        arrayList.removeIf(item -> item.equals(""));
-//        token = arrayList.toArray(new String[0]);
-//
-//        //印出所有field
-//        System.out.println("\n########################################################");
-//        System.out.println("Field切割狀態:");
-//        arrayList.forEach(a -> System.out.println("-----------------------\n" + a));
-//
-////        //測試，列印標籤用以對照用
-////        System.out.println("列出去除空白的所有標籤：");
-////        for(int i=0;i<token.length;i++){
-////            String tag = token[i].substring(0,token[i].indexOf(':'));
-////            tag = tag.replaceAll("\\s+",""); //把所有空白置換掉
-////            tag = tag.replaceAll("-",""); //把-置換掉
-////            System.out.println(tag);
-////        }
-//        System.out.println("\n########################################\n回傳結果：\n");
-//
-//        //抓取關鍵字並印出
-//        String TLD_id = "(sponsoring)*"; //TLD為.id的特殊開頭
-//        String registrar_parameter = "(URL|Organization|City|(State//)*Province|Phone|Email|Country|Handle)*";
-//        String registrant_parameter = "(Name|Street|City|(State//)*Province|Country|Phone)*";
-//        String ua_parameter = "(Registrar|URL|Organization|City|(State//)*Province|Phone|Email|Country|Handle|Address|Phone)";
-//
-//        for (int i = 0; i < token.length; i++) {
-//            String tag = token[i].substring(0, token[i].indexOf(':'));
-//            tag = tag.replaceAll("\\s+", ""); //把所有空白置換掉
-//            tag = tag.replaceAll("-", ""); //把-置換掉
-//            if (tag.matches("(?i)domain(name)*")) {
-//                System.out.println(token[i]);
-//            }
-//            //Registrar
-//            if (tag.matches("(?i)" + TLD_id + "registrar" + registrar_parameter) || tag.matches("(?i)Owner")) {
-//                //對.ua的Registrar做特別處理
-//                if (TLD.matches("ua")) {
-//                    String[] temp = token[i].split("\n");
-//                    System.out.println(temp[0]); //印出Title(主Tag)
-//                    for (int j = 1; j < temp.length; j++) {
-//                        String temp_tag = temp[j].substring(0, temp[j].indexOf(':'));
-//                        if (temp_tag.matches("(?i)" + ua_parameter)) {
-//                            System.out.println("\t\t" + temp[j]);
-//                        }
-//                    }
-//                } else System.out.println(token[i]);
-//            }
-//            //Registrant
-//            if (tag.matches("(?i)registrant" + registrant_parameter)) {
-//                //對.ua的Registrant做特別處理
-//                if (TLD.matches("ua")) {
-//                    String[] temp = token[i].split("\n");
-//                    System.out.println(temp[0]); //印出Title(主Tag)
-//                    for (int j = 1; j < temp.length; j++) {
-//                        String temp_tag = temp[j].substring(0, temp[j].indexOf(':'));
-//                        if (temp_tag.matches("(?i)" + ua_parameter)) {
-//                            System.out.println("\t\t" + temp[j]);
-//                        }
-//                    }
-//                } else System.out.println(token[i]);
-//            }
-//            //Updated Date
-//            if (tag.matches("(?i).*Updated.*") || tag.matches("(?i).*Modifi(ed|cation).*") ||
-//                    tag.matches("(?i).*Changed.*") || tag.matches("(?i)RelevantDates")) {
-//                System.out.println(token[i]);
-//            }
-//            //Creation Date
-//            if (tag.matches("(?i).*Creation.*") || tag.matches("(?i).*Created.*") ||
-//                    tag.matches("(?i)Registration(Date|Time)")) {
-//                System.out.println(token[i]);
-//            }
-//            //Expiry Date
-//            if (tag.matches("(?i).*Expir(y|es|ation).*") || tag.matches("(?i).*DateRegistered.*") ||
-//                    tag.matches("(?i)PaidTill")) {
-//                System.out.println(token[i]);
-//            }
-//        }
-//
-//    }
-//
-//    /* 分析aegis.json檔，並把issuer放入arrayList issuer裡面 */
-//    public void Create_issuer_arrayList() {
-//        /* 打開 aegis.json 轉換 && 解析JSON檔，並創建 issuer arraylist */
-//        File f = new File(getApplicationContext().getFilesDir(), "aegis.json");
-//        BufferedReader br;
-//        String aegis_json_string = ""; /* File JSON檔轉為String */
-//        JSONObject jsonObject; /* String再建立成jsonObject */
-//        JSONArray jsonArray;   /* 用來解析jsonObject */
-//        issuer = new ArrayList<>(); /* 利用ArrayList儲存issuer */
-//        try {
-//            /* 讀取 file轉換成String，因為JDK版本關係要用 BufferedReader轉(用BufferedReader是因為讀取效率高) */
-//            br = new BufferedReader(new FileReader(f));
-//            while (br.ready()) {
-//                aegis_json_string += br.readLine();
-//            }
-//            br.close();
-//            /* 創立並解析 JSON物件 */
-//            jsonObject = new JSONObject(aegis_json_string);
-//            jsonObject = jsonObject.getJSONObject("db");
-//            jsonArray = jsonObject.getJSONArray("entries");
-//            for (int i = 0; i < jsonArray.length(); i++) {
-//                jsonObject = jsonArray.getJSONObject(i);
-//                issuer.add(jsonObject.get("issuer").toString().toLowerCase()); /* issuer轉換成小寫放入arrayList */
-//            }
-//        } catch (FileNotFoundException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
-//
-//
-//    }
+        //Constructor
+        public MyListener() {
+            initializeCmp();
+        }
+
+        //pass變數用
+        public void pass_params(Object... objects) {
+            if (objects.length == 1) {
+                isExist = objects[0].getClass() == Boolean.class ? (boolean) objects[0] : false;
+                FileUri = objects[0].getClass() == Uri.EMPTY.getClass() ? (Uri) objects[0] : null;
+
+            }
+            if (objects.length == 3) {
+                groupID = objects[0].getClass() == Integer.class ? (int) objects[0] : null;
+                url = objects[1].getClass() == String.class ? (String) objects[1] : null;
+                format = objects[2].getClass() == Integer.class ? (int) objects[2] : null;
+            }
+        }
+
+        // input框監聽:打字事件
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+        }
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+            if (buttomDialog.isShowing()) {
+                ImageButton close_btn = dialog_online_check_add_entry_view.findViewById(R.id.online_check_close_btn);
+                if (count == 0) {
+                    buttomDialog.setCanceledOnTouchOutside(true);
+                    close_btn.setVisibility(View.GONE);
+                    online_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_qrcode_scan));
+                    online_input_right_btn.setTag("ic_qrcode_scan");
+                } else {
+                    buttomDialog.setCanceledOnTouchOutside(false);
+                    close_btn.setVisibility(View.VISIBLE);
+                    online_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_clear_button));
+                    online_input_right_btn.setTag("ic_clear_button");
+                }
+            } else {
+                if (count == 0) {
+                    local_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_qrcode_scan));
+                    local_input_right_btn.setTag("ic_qrcode_scan");
+                } else {
+                    local_input_right_btn.setImageDrawable(getDrawable(R.drawable.ic_clear_button));
+                    local_input_right_btn.setTag("ic_clear_button");
+                }
+            }
+
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+
+        }
+
+        // Button事件監聽
+        @RequiresApi(api = Build.VERSION_CODES.O)
+        @Override
+        public void onClick(View v) {
+            Intent scan_qrcode_activity = new Intent(getApplicationContext(), UrlCheckActivity_ScanQrcodeActivity.class);
+            String iconTag;
+            switch (v.getId()) {
+                case R.id.import_confirm_btn: /* 輸入確定按鈕 */
+                    String password = ((EditText) dialog_import_file.findViewById(R.id.import_passwd)).getText().toString();
+                    try {
+                        importFile(FileUri, password);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    EXP_IMP_dialog.dismiss();
+                    break;
+                case R.id.export_confirm_btn: /* 輸出確定按鈕 */
+                    String _password = ((EditText) dialog_export_file.findViewById(R.id.export_passwd)).getText().toString();
+                    if (_password.length() < 8) { /* 密碼長度至少 8位數，至多到 15位數 */
+                       dialog_toast.setText("密碼長度過短!");
+                       dialog_toast.show();
+                    }else {
+                        Intent intent = new Intent();
+                        intent.setAction(Intent.ACTION_CREATE_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.setType("application/xml");
+                        intent.putExtra(Intent.EXTRA_TITLE, "myOTP_Database.xml"); /* 預設名稱 */
+                        startActivityForResult(intent, ACTION_CREATE_DOCUMENT);
+                        EXP_IMP_dialog.dismiss();
+                    }
+                    break;
+                case R.id.export_eye_btn: /* 密碼顯示眼睛 */
+                case R.id.import_eye_btn:
+                    ImageButton eye_btn = (ImageButton) v;
+                    eye_btn.setSelected(!eye_btn.isSelected());
+                    EditText editText;
+                    if (v.getId() == R.id.export_eye_btn)
+                        editText = dialog_export_file.findViewById(R.id.export_passwd);
+                    else editText = dialog_import_file.findViewById(R.id.import_passwd);
+                    if (eye_btn.isPressed()) { //顯示密碼
+                        editText.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
+                    } else { //隱藏密碼
+                        editText.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                    }
+                    break;
+                case R.id.parent_item_icon: /*展開收合清單*/
+                    int groupPosition = (int) v.getTag();
+                    //還未長按時可以收合清單
+                    //長按後不可收合清單
+                    if (!isLongClick) {
+                        if (!expandableListView.isGroupExpanded(groupPosition)) {
+                            expandableListView.expandGroup(groupPosition);
+
+                        } else {
+                            //收合清單前先收合textView(單行設置)
+                            int view_position = expandableListView.getPositionForView(v);
+                            for (int i = 0; i < myAdapter.getChildrenCount(groupPosition) + 1; i++, view_position++) {
+                                Object obj_tag = expandableListView.getChildAt(view_position).getTag();
+                                TextView textView = null;
+                                if (obj_tag.getClass() == MyBaseExpandableListAdapter.ViewHolderGroup.class)
+                                    textView = ((MyBaseExpandableListAdapter.ViewHolderGroup) obj_tag).tv_parent_item;
+                                else
+                                    textView = ((MyBaseExpandableListAdapter.ViewHolderItem) obj_tag).tv_child_item;
+                                textView.setSingleLine(true); //收合某群組時,設置單行
+                            }
+                            expandableListView.collapseGroup(groupPosition);
+                        }
+                    } else { //長按後不可收合清單
+                        ImageButton imgBtn = (ImageButton) v;
+                        imgBtn.setImageDrawable(getDrawable(R.drawable.down_arrow)); //改變圖標方向
+                    }
+                    break;
+                case R.id.online_check_close_btn: /*關閉buttomDialog(X)*/
+                    buttomDialog.dismiss();
+                    break;
+                case R.id.local_check_yes_btn:
+                    if (v.getTag().equals("add_url")) {
+                        try {
+                            buttomDialog.dismiss();
+                            addsubURL(groupID, url, format);
+                            dialog_toast.setText("已添加此網址至資料庫中");
+                            dialog_toast.show();
+                            local_url_input.setText("");
+                        } catch (Exception e) {
+                            System.out.println(e.getMessage());
+                        }
+                    } else { //ipqs_search
+                        IPQSCheck();
+                    }
+                    break;
+                case R.id.local_check_no_btn:
+                    if (v.getTag().equals("add_url")) {
+                        dialog_toast.setText("已取消添加此網址至資料庫中");
+                        dialog_toast.show();
+                    } else { //ipqs_search
+                        dialog_toast.setText("取消進一步檢查此網址");
+                        dialog_toast.show();
+                    }
+                    buttomDialog.dismiss();
+                    break;
+                case R.id.ipqs_yes_btn:
+                    try {
+                        buttomDialog.dismiss();
+                        addMainURL(URL_text, safe_score);
+                        local_url_input.setText("");
+                        if (!isExist) {
+                            dialog_toast.setText("已添加此網址至資料庫中");
+                            dialog_toast.show();
+                        }
+                    } catch (Exception e) {
+                        System.out.println(e.getMessage());
+                    }
+                    break;
+                case R.id.ipqs_no_btn:
+                    buttomDialog.dismiss();
+                    local_url_input.setText("");
+                    dialog_toast.setText("取消添加此網址到資料庫中");
+                    dialog_toast.show();
+                    break;
+                case R.id.online_check_input_right_btn:
+                    iconTag = (String) online_input_right_btn.getTag();
+                    if (iconTag.equals("ic_clear_button")) {
+                        online_url_input.setText("");
+                    } else {
+                        startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
+                    }
+                    break;
+                case R.id.online_check_send_btn:
+                    URL_text = online_url_input.getText().toString().trim();
+                    imm.hideSoftInputFromWindow(buttomDialog.getWindow().getDecorView().getWindowToken(), 0);
+                    IPQSCheck();
+                    break;
+                case R.id.delete_no_btn:
+                    del_dialog.dismiss();
+                    this.isLongClick = false;
+                    setSnackbar("已取消操作", "成功", Snackbar.LENGTH_SHORT);
+                    snackbar.show();
+                    PD_urlObjects.clear();
+                    online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
+                    online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
+                    refreshUI();
+                    break;
+                case R.id.delete_yes_btn:
+                    del_dialog.dismiss();
+                    //移除要刪除的 item
+                    for (int i = 0; i < PD_urlObjects.size(); i++) {
+                        Struct.urlObject urlObject = PD_urlObjects.get(i);
+                        Log.v("mydelete", "待刪除清單" + urlObject.text);
+                        //每刪除一個元素就遍歷
+                        for (int j = 0; j < url_database_list.size(); j++) {
+                            ArrayList<Struct.urlObject> urlObjects = url_database_list.get(j);
+                            if (urlObjects.contains(urlObject)) {
+                                if (urlObject.tagName.equals("mainURL")) {
+                                    url_database_list.remove(urlObjects);
+                                } else {
+                                    urlObjects.remove(urlObject);
+                                    url_database_list.set(j, urlObjects);
+                                }
+                            }
+                        }
+                    }
+                    this.isLongClick = false;
+                    setSnackbar("已刪除選中項", "成功", Snackbar.LENGTH_SHORT);
+                    snackbar.show();
+                    PD_urlObjects.clear();
+                    online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_add_black_24dp));
+                    online_check_add_btn.setTag(R.drawable.ic_add_black_24dp);
+                    refreshUI(); //更新 UI
+                    //確認刪除事件
+                    break;
+                case R.id.online_check_add_btn:
+                    int iconID = (int) online_check_add_btn.getTag();
+                    switch (iconID) {
+                        case R.drawable.ic_add_black_24dp:
+                            setButtomDialog(dialog_online_check_add_entry_view, true);
+                            Dialogs.showSecureDialog(buttomDialog);
+                            online_url_input.setText("");
+                            break;
+                        case R.drawable.ic_delete_black_24dp:
+                            //刪除操作
+                            if (PD_urlObjects.size() == 0) {
+                                setSnackbar("待刪除清單沒有任何東西", "已選擇0", Snackbar.LENGTH_INDEFINITE);
+                                myVibrator.vibrate(300);
+                            } else {
+                                del_dialog.show();
+
+                            }
+                            break;
+                    }
+                    break;
+                case R.id.local_input_right_btn:
+                    iconTag = (String) local_input_right_btn.getTag();
+                    if (iconTag.equals("ic_clear_button")) { // clear icon 動作
+                        local_url_input.setText("");
+                    } else { // qrcode_scan_icon 動作
+                        startActivityForResult(scan_qrcode_activity, Scan_QR_CODE);
+                    }
+                    break;
+                case R.id.local_check_send_btn:
+                    System.out.println("按下url_check，進行網址資料庫比對");
+                    /* 按下url_check就隱藏鍵盤 */
+                    imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(local_check_send_btn.getWindowToken(), 0);
+                    URL_text = local_url_input.getText().toString().trim();
+                    try {
+                        matchDatabase(URL_text);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    break;
+            }
+        }
+
+
+        //TODO:Menu按鈕監聽
+        @RequiresApi(api = Build.VERSION_CODES.N)
+        @Override
+        public boolean onMenuItemClick(MenuItem item) {
+            System.out.println(item.getItemId());
+            int presort = R.id.sort_old_to_new;
+            switch (item.getItemId()) {
+                case R.id.action_intro_Url_Check:
+                    break;
+                case R.id.export_btn:
+                    //TODO:import按鈕監聽
+                    try {
+                        write_url_database(); /* 將目前資料寫入File中 */
+                        getPermission();/*取得讀寫權限*/
+                        if (isPermissionPassed) {
+                            EditText editText = dialog_export_file.findViewById(R.id.export_passwd);
+                            editText.setText(""); /*清空輸入*/
+                            editText.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                            ((ImageButton)dialog_export_file.findViewById(R.id.export_eye_btn)).setSelected(false);
+                            EXP_IMP_dialog.setContentView(dialog_export_file);
+                            EXP_IMP_dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                            EXP_IMP_dialog.show();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case R.id.import_btn:
+                    //TODO:export按鈕監聽
+                    getPermission();
+
+                    if (isPermissionPassed) {
+                        EditText editText1 = dialog_import_file.findViewById(R.id.import_passwd);
+                        editText1.setText("");
+                        editText1.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                        ((ImageButton)dialog_import_file.findViewById(R.id.import_eye_btn)).setSelected(false);
+
+                        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                        intent.setType("text/xml");
+                        startActivityForResult(intent, ACTION_GET_CONTENT);
+                    }
+                    break;
+                //排序
+                case R.id.sort_old_to_new:
+                    item.setChecked(true);
+                    if (presort == R.id.sort_new_to_old) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排序
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), sort_sub_old_to_new);
+                        Collections.sort(url_database_list, sort_main_old_to_new);
+                    }
+                    presort = R.id.sort_old_to_new;
+                    refreshUI();
+                    break;
+                case R.id.sort_new_to_old:
+                    item.setChecked(true);
+                    if (presort == R.id.sort_old_to_new) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排序
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(sort_sub_old_to_new));
+                        Collections.sort(url_database_list, Collections.reverseOrder(sort_main_old_to_new));
+                    }
+                    presort = R.id.sort_new_to_old;
+                    refreshUI();
+                    break;
+                case R.id.sort_a_to_z:
+                    item.setChecked(true);
+                    if (presort == R.id.sort_z_to_a) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排列
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), sort_sub_a_to_z);
+                        Collections.sort(url_database_list, sort_main_a_to_z);
+                    }
+                    presort = R.id.sort_a_to_z;
+                    refreshUI();
+                    break;
+                case R.id.sort_z_to_a:
+                    item.setChecked(true);
+                    if (presort == R.id.sort_a_to_z) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排列
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(sort_sub_a_to_z));
+                        Collections.sort(url_database_list, Collections.reverseOrder(sort_main_a_to_z));
+                    }
+                    presort = R.id.sort_z_to_a;
+                    refreshUI();
+                    break;
+                case R.id.sort_unsafe_to_safe:
+                    item.setChecked(true);
+                    if (presort == R.id.sort_safe_to_unsafe) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else {
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), sort_sub_unsafe_to_safe);
+                        Collections.sort(url_database_list, sort_main_unsafe_to_safe);
+                    }
+                    presort = R.id.sort_unsafe_to_safe;
+                    refreshUI();
+                    break;
+                case R.id.sort_safe_to_unsafe:
+                    item.setChecked(true);
+                    if (presort == R.id.sort_unsafe_to_safe) { //反轉
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.reverse(urlObjects.subList(1, urlObjects.size()));
+                        Collections.reverse(url_database_list);
+                    } else { //重新排序
+                        for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                            Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(sort_sub_unsafe_to_safe));
+                        Collections.sort(url_database_list, Collections.reverseOrder(sort_main_unsafe_to_safe));
+                    }
+                    presort = R.id.sort_safe_to_unsafe;
+                    refreshUI();
+                    break;
+            }
+            return true;
+        }
+
+        @Override
+        public boolean onQueryTextSubmit(String query) {
+            //按下搜尋後string
+            return true;
+        }
+
+        //只要有文字變動就會有的string
+        @Override
+        public boolean onQueryTextChange(String newText) {
+            refreshUI(newText);
+            for (int i = 0; i < myAdapter.getGroupCount(); i++)
+                expandableListView.expandGroup(i);
+            return true;
+        }
+
+
+        // 鍵盤點擊 dialog空白處收起事件
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            if (online_url_input.isFocused())
+                imm.hideSoftInputFromWindow(buttomDialog.getWindow().getDecorView().getWindowToken(), 0);
+            return true;
+        }
+
+        @RequiresApi(api = Build.VERSION_CODES.Q)
+        @Override
+        public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+
+            TextView parent_item = v.findViewById(R.id.tv_group_parent);
+
+            if (this.isLongClick) {
+                //parent item設定
+                parent_item.setSingleLine(false);
+                parent_item.setSelected(!parent_item.isSelected()); //state_select轉換
+                toggleStrike(parent_item);
+                //child item設定
+                int child_position = expandableListView.getPositionForView(v) + 1;
+                Log.v("mytmp", "position+1: " + child_position);
+                Log.v("mytmp", "群組子數目: " + myAdapter.getChildrenCount(groupPosition));
+                for (int i = 0; i < myAdapter.getChildrenCount(groupPosition); i++) {
+                    View view = expandableListView.getChildAt(child_position);
+                    Log.v("mytmp", "子class: " + view.getClass());
+                    TextView child_item = view.findViewById(R.id.tv_group_child);
+                    child_item.setSingleLine(false);
+                    child_item.setSelected(parent_item.isSelected());
+                    toggleStrike(child_item);
+                    child_position++;
+                }
+                //加入待刪除清單
+                ArrayList<Struct.urlObject> urlObjects = (ArrayList<Struct.urlObject>) parent_item.getTag();
+                for (Struct.urlObject item : urlObjects) {
+                    //若parent item選中
+                    if (parent_item.isSelected()) {
+                        if (!PD_urlObjects.contains(item)) //不重複添加
+                            PD_urlObjects.add(item);
+                    } else {
+                        PD_urlObjects.remove(item);  //若parent item沒選中
+                    }
+                }
+                Log.v("mydebug", PD_urlObjects.toString());
+                setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
+
+            } else {
+                //輕觸展開並複製
+                parent_item.setSingleLine(!parent_item.isSingleLine()); //網址展開過長切換
+                String text = parent_item.getText().toString();
+                String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
+                setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
+                if (!text.equals(pre_text)) { //不重新複製
+                    cmb.setPrimaryClip(ClipData.newPlainText(null, text));
+                    snackbar.show();
+                } else { //若已複製過
+                    if (!snackbar.isShown()) snackbar.show();
+                }
+
+            }
+
+
+            return true;
+        }
+
+        //輕點即可展開複製
+        @RequiresApi(api = Build.VERSION_CODES.Q)
+        @Override
+        public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
+            TextView child_item = v.findViewById(R.id.tv_group_child);
+            if (isLongClick) { //長按事件
+                child_item.setSingleLine(false);
+                child_item.setSelected(!child_item.isSelected());//state_select轉換
+                toggleStrike(child_item);
+                //添加移除toggle
+                if (child_item.isSelected()) {
+                    if (!PD_urlObjects.contains(child_item.getTag())) //不重複添加
+                        PD_urlObjects.add((Struct.urlObject) child_item.getTag());
+                } else {
+                    PD_urlObjects.remove(child_item.getTag());
+                }
+                Log.v("mydebug", PD_urlObjects.toString());
+                setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
+            } else { //輕觸複製事件
+                //輕觸展開並複製
+                child_item.setSingleLine(!child_item.isSingleLine()); //網址過長展開切換
+                String text = child_item.getText().toString();
+                String pre_text = cmb.getPrimaryClip().getItemAt(0).getText().toString();
+                setSnackbar(text, "已複製", Snackbar.LENGTH_SHORT);
+                if (!text.equals(pre_text)) { //不重新複製
+                    cmb.setPrimaryClip(ClipData.newPlainText(null, text));
+                    snackbar.show();
+                } else { //若已複製過
+                    if (!snackbar.isShown()) snackbar.show();
+                }
+
+            }
+            return true;
+        }
+
+        //長按事件
+        @Override
+        public boolean onItemLongClick(AdapterView<?> parent, View v, int position, long id) {
+            //長按事件觸發一次
+            if (!this.isLongClick) {
+                this.isLongClick = true;
+                myVibrator.vibrate(500);
+                //長按展開所有清單
+                for (int i = 0; i < myAdapter.getGroupCount(); i++) {
+                    expandableListView.expandGroup(i);
+                }
+                //floating button 設定
+                online_check_add_btn.setImageDrawable(getDrawable(R.drawable.ic_delete_black_24dp));
+                online_check_add_btn.setTag(R.drawable.ic_delete_black_24dp);
+                //snackbar 設定
+                setSnackbar("請選擇要刪除的項目", "已選擇" + PD_urlObjects.size(), Snackbar.LENGTH_INDEFINITE);
+                snackbar.show();
+            }
+
+            return true;
+        }
+
+        public void toggleStrike(TextView item) {
+            int strike_line_show = (item.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+            int strike_line_hide = (item.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+            if (item.isSelected())
+                item.setPaintFlags(strike_line_show);
+            else item.setPaintFlags(strike_line_hide);
+        }
+
+        public void initializeCmp() {
+            // 時間(舊 - 新)
+            sort_sub_old_to_new = new Comparator<Struct.urlObject>() {
+                @Override
+                public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                    return o1.uuid.compareTo(o2.uuid);
+                }
+            };
+            sort_main_old_to_new = new Comparator<ArrayList<Struct.urlObject>>() {
+                @Override
+                public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                    return o1.get(0).uuid.compareTo(o2.get(0).uuid);
+                }
+            };
+            // 字母 a - z
+            sort_sub_a_to_z = new Comparator<Struct.urlObject>() {
+                @Override
+                public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                    return o1.text.compareTo(o2.text);
+                }
+            };
+            sort_main_a_to_z = new Comparator<ArrayList<Struct.urlObject>>() {
+                @Override
+                public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                    Log.v("sort", o1.get(0).text + " " + o2.get(0).text);
+                    Log.v("sort", String.valueOf(o1.get(0).text.compareTo(o2.get(0).text)));
+                    //FIXME 感覺排序有點怪
+                    return o1.get(0).text.compareTo(o2.get(0).text);
+                }
+            };
+            // 安全(低 - 高)
+            sort_sub_unsafe_to_safe = new Comparator<Struct.urlObject>() {
+                @Override
+                public int compare(Struct.urlObject o1, Struct.urlObject o2) {
+                    if (o1.format == o2.format) {
+                        return o1.uuid.compareTo(o2.uuid);
+                    }
+                    return o2.format - o1.format;
+                }
+            };
+            sort_main_unsafe_to_safe = new Comparator<ArrayList<Struct.urlObject>>() {
+                @Override
+                public int compare(ArrayList<Struct.urlObject> o1, ArrayList<Struct.urlObject> o2) {
+                    if (o1.get(0).safe_score == o2.get(0).safe_score) {
+                        float avg_1 = 0;
+                        float avg_2 = 0;
+                        //avg_1計算
+                        if (o1.subList(1, o1.size()).size() == 0) avg_1 = 5;
+                        else {
+                            for (Struct.urlObject urlObject : o1)
+                                avg_1 += urlObject.format;
+                            avg_1 = avg_1 / o1.subList(1, o1.size()).size();
+                        }
+                        // avg_2計算
+                        if (o2.subList(1, o2.size()).size() == 0) avg_2 = 5;
+                        else {
+                            for (Struct.urlObject urlObject : o2)
+                                avg_2 += urlObject.format;
+                            avg_2 = avg_2 / o2.subList(1, o2.size()).size();
+                        }
+                        if (Float.compare(avg_1, avg_2) == 0) { //若星星平均數相同
+                            if (o1.size() == o2.size()) //若size也相同,則最舊添加進來的較不安全
+                                return o1.get(0).uuid.compareTo(o2.get(0).uuid);
+
+                            return o2.size() - o1.size();
+                        }
+                        return Float.compare(avg_1, avg_2);
+
+                    }
+                    return o2.get(0).safe_score - o1.get(0).safe_score;
+                }
+            };
+        }
+
+
+    }
+
 
 }
 

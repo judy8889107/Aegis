@@ -1,0 +1,58 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.beemdevelopment.aegis.ui.UrlCheckActivity">
+    <item
+        android:id="@+id/action_intro_Url_Check"
+        android:title="@string/intro_Url_Check"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/export_btn"
+        android:icon="@drawable/import_export_icon"
+        android:title="匯出"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/import_btn"
+        android:icon="@drawable/import_export_icon"
+        android:title="匯入"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/search_btn"
+        android:icon="@drawable/search_icon"
+        android:title="@string/search"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_sort"
+        android:icon="@drawable/ic_action_sort"
+        android:title="@string/sort"
+        app:showAsAction="always">
+        <menu>
+            <group
+                android:id="@+id/action_sort_category"
+                android:checkableBehavior="single">
+                <item
+                    android:id="@+id/sort_new_to_old"
+                    android:checked="true"
+                    android:title="時間(新 到 舊)" />
+                <item
+                    android:id="@+id/sort_old_to_new"
+                    android:title="時間(舊 到 新)" />
+                <item
+                    android:id="@+id/sort_a_to_z"
+                    android:title="網址(A 到 Z)" />
+                <item
+                    android:id="@+id/sort_z_to_a"
+                    android:title="網址(Z 到 A)" />
+                <item
+                    android:id="@+id/sort_unsafe_to_safe"
+                    android:title="安全性(低 到 高)" />
+                <item
+                    android:id="@+id/sort_safe_to_unsafe"
+                    android:title="安全性(高 到 低)" />
+            </group>
+        </menu>
+    </item>
+
+</menu>

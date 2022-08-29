@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    >
+
+    <ImageButton
+        android:id="@+id/online_check_close_btn"
+        android:layout_width="46dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:layout_marginTop="10dp"
+        android:background="@android:color/transparent"
+        app:srcCompat="@drawable/mydrawble_clear_icon" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="220dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="30dp"
+            android:orientation="horizontal">
+
+            <RelativeLayout
+                android:layout_width="357dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center">
+
+                <EditText
+                    android:id="@+id/online_check_input"
+                    android:layout_width="346dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="20dp"
+                    android:background="@drawable/textview_border"
+                    android:enabled="true"
+                    android:hint="http://example.domain.com"
+                    android:inputType="textUri"
+                    android:paddingHorizontal="15dp"
+                    android:paddingVertical="5dp"
+                    android:textSize="18dp" />
+
+                <ImageButton
+                    android:id="@+id/online_check_input_right_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignStart="@+id/online_check_input"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentEnd="true"
+                    android:layout_marginStart="291dp"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginEnd="22dp"
+                    android:background="@android:color/transparent"
+                    android:tag="ic_qrcode_scan"
+                    app:srcCompat="@drawable/ic_qrcode_scan" />
+
+            </RelativeLayout>
+
+            <ImageButton
+                android:id="@+id/online_check_send_btn"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:padding="10dp"
+                android:scaleType="centerCrop"
+                app:srcCompat="@android:drawable/ic_menu_send" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textView10"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="30dp"
+            android:drawableRight="@drawable/ic_url_check"
+            android:drawablePadding="5dp"
+            android:letterSpacing="0.05"
+            android:text="輸入網址，即可線上檢測並設定至資料庫中"
+            android:textAlignment="center"
+            android:textSize="16dp" />
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="100dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

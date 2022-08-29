@@ -1,10 +1,20 @@
 package com.beemdevelopment.aegis.ui;
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
+import android.provider.ContactsContract;
+import android.text.TextUtils;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.CheckBox;
+import android.widget.CheckedTextView;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.beemdevelopment.aegis.R;
@@ -12,24 +22,33 @@ import com.beemdevelopment.aegis.R;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.logging.LogRecord;
 
 public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
 
-    public HashMap<Integer, ArrayList<Struct.urlObject>> group_list;
-    public HashMap<Integer, ArrayList<Struct.urlObject>> child_list;
+    public ArrayList<ArrayList<Struct.urlObject>> group_list;
+    public ArrayList<ArrayList<Struct.urlObject>> child_list;
     public Context content;
+    public UrlCheckActivity.MyListener myListener;
+    public String search_str;
 
 
-    public MyBaseExpandableListAdapter(HashMap<Integer, ArrayList<Struct.urlObject>> url_database_list, Context content) {
+    public MyBaseExpandableListAdapter(ArrayList<ArrayList<Struct.urlObject>> url_database_list, Context content, UrlCheckActivity.MyListener myListener, String... params) {
         this.group_list = url_database_list;
         this.preprocess();
+        this.myListener = myListener;
         this.content = content;
+        if(params.length!=0)
+            this.search_str = params[0];
 
     }
 
+
+
+
     //處理child_list, 若用 remove會影響到同一份物件(建立新物件並重新加入或實現深拷貝)
     public void preprocess() {
-        this.child_list = new HashMap<>();
+        this.child_list = new ArrayList<>();
         for (int i = 0; i < group_list.size(); i++) {
             ArrayList<Struct.urlObject> oldObjects = group_list.get(i);
             ArrayList<Struct.urlObject> newObjects = new ArrayList<>();
@@ -37,7 +56,7 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
                 if (oldObjects.get(j).tagName.equals("mainURL")) continue;
                 newObjects.add(oldObjects.get(j));
             }
-            this.child_list.put(i, newObjects);
+            this.child_list.add(newObjects);
         }
     }
 
@@ -84,17 +103,41 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
                     R.layout.listview_parent_item, parent, false);
             viewHolderGroup = new ViewHolderGroup();
             viewHolderGroup.tv_parent_item = (TextView) convertView.findViewById(R.id.tv_group_parent);
+            viewHolderGroup.parent_item_icon = convertView.findViewById(R.id.parent_item_icon);
+            viewHolderGroup.parent_item_icon.setTag(groupPosition); //傳遞資訊
+            viewHolderGroup.parent_item_icon.setOnClickListener(myListener);
             convertView.setTag(viewHolderGroup);
         } else {
             viewHolderGroup = (ViewHolderGroup) convertView.getTag();
         }
         String parentItem = group_list.get(groupPosition).get(0).text;
         viewHolderGroup.tv_parent_item.setText(parentItem);
+        //添加 Tag
+        ArrayList<Struct.urlObject> urlObjects = group_list.get(groupPosition);
+        viewHolderGroup.tv_parent_item.setTag(urlObjects);
+
+        //search判斷
+        if(search_str!=null){
+            String text = viewHolderGroup.tv_parent_item.getText().toString();
+            if(text.contains(search_str)){
+                viewHolderGroup.tv_parent_item.setVisibility(View.VISIBLE);
+                viewHolderGroup.parent_item_icon.setVisibility(View.VISIBLE);
+            }
+            else{
+                viewHolderGroup.tv_parent_item.setVisibility(View.GONE);
+                viewHolderGroup.parent_item_icon.setVisibility(View.GONE);
+            }
+
+        }
+
+
         //展開收合圖示變更
         if (isExpanded) {
-            viewHolderGroup.tv_parent_item.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.down_arrow, 0);
+            viewHolderGroup.parent_item_icon.setPressed(true);
+            viewHolderGroup.parent_item_icon.setTag(groupPosition); //傳遞位置資訊
         } else {
-            viewHolderGroup.tv_parent_item.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.right_arrow, 0);
+            viewHolderGroup.parent_item_icon.setPressed(false);
+            viewHolderGroup.parent_item_icon.setTag(groupPosition); //傳遞位置資訊
         }
         return convertView;
     }
@@ -112,10 +155,37 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
         } else {
             viewHolderItem = (ViewHolderItem) convertView.getTag();
         }
-        String childItem = child_list.get(groupPosition).get(childPosition).text;
+        Struct.urlObject urlObject = child_list.get(groupPosition).get(childPosition);
+        String childItem = urlObject.text;
         viewHolderItem.tv_child_item.setText(childItem);
+        viewHolderItem.tv_child_item.setTag(urlObject);
+        switch (urlObject.format){
+            case 2:
+                viewHolderItem.tv_child_item.setCompoundDrawablesWithIntrinsicBounds(R.drawable.mylevel_2,0,0,0);
+                break;
+            case 3:
+                viewHolderItem.tv_child_item.setCompoundDrawablesWithIntrinsicBounds(R.drawable.mylevel_3,0,0,0);
+                break;
+            case 4:
+                viewHolderItem.tv_child_item.setCompoundDrawablesWithIntrinsicBounds(R.drawable.mylevel_4,0,0,0);
+                break;
+
+        }
+        //search判斷
+        if(search_str!=null){
+            String text = viewHolderItem.tv_child_item.getText().toString();
+            if(text.contains(search_str)){
+                viewHolderItem.tv_child_item.setVisibility(View.VISIBLE);
+            }
+            else{
+                viewHolderItem.tv_child_item.setVisibility(View.GONE);
+            }
+        }
+
         return convertView;
     }
+
+
 
     //设置子列表是否可选中
     @Override
@@ -124,12 +194,13 @@ public class MyBaseExpandableListAdapter extends BaseExpandableListAdapter {
     }
 
 
-    private static class ViewHolderGroup {
-        private TextView tv_parent_item;
+    public static class ViewHolderGroup {
+        public TextView tv_parent_item;
+        private ImageButton parent_item_icon;
     }
 
-    private static class ViewHolderItem {
-        private TextView tv_child_item;
+    public static class ViewHolderItem {
+        public TextView tv_child_item;
     }
 
 }
