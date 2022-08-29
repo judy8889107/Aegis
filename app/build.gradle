@@ -193,6 +193,10 @@ dependencies {
     implementation 'commons-net:commons-net:3.3'
     /* 導入JSoup解析 html */
     implementation 'org.jsoup:jsoup:1.11.3'
+    /* 簡體轉繁體工具 */
+    implementation files('libs\\ZHConverter.jar')
+    /* Add SafetyNet dependency */
+    implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
     /*加入OKhttp*/
     implementation 'com.squareup.okhttp3:okhttp:4.7.2'
     implementation 'commons-validator:commons-validator:1.4.0'
