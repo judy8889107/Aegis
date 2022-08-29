@@ -113,8 +113,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="掃描OR code以輸入網址"
+                    android:backgroundTint="@color/button_color"
                     app:icon="@drawable/ic_qrcode_scan"
-                    app:iconGravity="textStart" />
+                    app:iconGravity="textStart"
+                    />
 
                 <Button
                     android:id="@+id/url_check"
@@ -122,6 +124,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="網址檢查"
+                    android:backgroundTint="@color/button_color2"
                     app:icon="@android:drawable/ic_search_category_default"
                     app:iconGravity="textStart"
                     app:iconSize="24dp" />
@@ -132,6 +135,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="設定安全網址"
+                    android:backgroundTint="@color/button_color2"
                     app:icon="@drawable/ic_add_black_24dp"
                     app:iconGravity="textStart"
                     app:iconSize="26dp" />
