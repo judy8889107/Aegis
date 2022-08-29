@@ -1,9 +1,11 @@
 package com.beemdevelopment.aegis.ui;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -87,6 +89,7 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
     private FabScrollHelper _fabScrollHelper;
 
     private ActionMode.Callback _actionModeCallbacks = new ActionModeCallbacks();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

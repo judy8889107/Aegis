@@ -5,11 +5,14 @@ import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_NONE;
 import static com.beemdevelopment.aegis.ui.slides.SecurityPickerSlide.CRYPT_TYPE_PASS;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.beemdevelopment.aegis.R;
 import com.beemdevelopment.aegis.ThemeMap;
@@ -35,8 +38,8 @@ public class IntroActivity extends IntroBaseActivity  {
         addSlide(SecuritySetupSlide.class);
         addSlide(DoneSlide.class);
 
-    }
 
+    }
     @Override
     protected void onSetTheme() {
         setTheme(ThemeMap.NO_ACTION_BAR);
@@ -47,14 +50,14 @@ public class IntroActivity extends IntroBaseActivity  {
         // hide the keyboard before every slide change
         InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(findViewById(android.R.id.content).getWindowToken(), 0);
-
         if (oldSlide == SecurityPickerSlide.class
                 && newSlide == SecuritySetupSlide.class
                 && getState().getInt("cryptType", CRYPT_TYPE_INVALID) == CRYPT_TYPE_NONE) {
             skipToSlide(DoneSlide.class);
+
+
             return true;
         }
-
         return false;
     }
 
@@ -84,6 +87,8 @@ public class IntroActivity extends IntroBaseActivity  {
 
         setResult(RESULT_OK);
         finish();
+        Intent intent = new Intent(this, dialogActivity.class);
+        startActivity(intent);
     }
 
 }
