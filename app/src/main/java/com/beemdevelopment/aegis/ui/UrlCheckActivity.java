@@ -1475,6 +1475,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
             int presort = R.id.sort_old_to_new;
             switch (item.getItemId()) {
                 case R.id.action_intro_Url_Check:
+                    Intent intent1 = new Intent(UrlCheckActivity.this, IntroUrlCheckActivity.class);
+                    startActivity(intent1);
                     break;
                 case R.id.export_btn:
                     //TODO:import按鈕監聽
