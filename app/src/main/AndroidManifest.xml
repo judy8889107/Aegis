@@ -87,7 +87,14 @@
         <!-- J: 新增UrlCheckActivity，且新增 meta-data -->
         <activity
             android:name=".ui.UrlCheckActivity"
-            android:label="@string/url_check"/>
+            android:label="@string/url_check"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/*" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ui.IntroActivity"
             android:screenOrientation="portrait" />

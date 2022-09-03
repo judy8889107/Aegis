@@ -13,11 +13,11 @@ import com.beemdevelopment.aegis.ui.slides.Intro2FA_2;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_3;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_4;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_5;
-import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_fifth;
-import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_first;
-import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_fourth;
-import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_second;
-import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_third;
+import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_5;
+import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_1;
+import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_4;
+import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_2;
+import com.beemdevelopment.aegis.ui.slides.IntroUrlCheck_3;
 import com.lwj.widget.viewpagerindicator.ViewPagerIndicator;
 
 public class Intro2FA_UrlCheckActivity extends AppCompatActivity {
@@ -49,11 +49,11 @@ public class Intro2FA_UrlCheckActivity extends AppCompatActivity {
         Intro2FA_3 bf3 = new Intro2FA_3();
         Intro2FA_4 bf4 = new Intro2FA_4();
         Intro2FA_5 bf5 = new Intro2FA_5();
-        IntroUrlCheck_first bf6 = new IntroUrlCheck_first();
-        IntroUrlCheck_second bf7 = new IntroUrlCheck_second();
-        IntroUrlCheck_third bf8= new IntroUrlCheck_third();
-        IntroUrlCheck_fourth bf9 = new IntroUrlCheck_fourth();
-        IntroUrlCheck_fifth bf0 = new IntroUrlCheck_fifth();
+        IntroUrlCheck_1 bf6 = new IntroUrlCheck_1();
+        IntroUrlCheck_2 bf7 = new IntroUrlCheck_2();
+        IntroUrlCheck_3 bf8= new IntroUrlCheck_3();
+        IntroUrlCheck_4 bf9 = new IntroUrlCheck_4();
+        IntroUrlCheck_5 bf0 = new IntroUrlCheck_5();
         //6.陣列內容
         fragments[0] = bf1;
         fragments[1] = bf2;
