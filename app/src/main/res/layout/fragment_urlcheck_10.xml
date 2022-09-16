@@ -24,7 +24,7 @@
         android:layout_height="110dp"
         android:background="#FFFFFF"
         android:gravity="center"
-        android:text="框的部分是本地檢查完加入資料庫\n前面顯示的數字會是\n經由本地檢查後顯示的結果"
+        android:text="透過本地檢查加入資料庫的網址會顯示在此，前面數字代表安全層級(2~5)"
         android:textColor="#F44336"
         android:textSize="20sp"
         app:layout_constraintBottom_toBottomOf="@+id/imageView7"

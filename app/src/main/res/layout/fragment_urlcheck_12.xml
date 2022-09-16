@@ -24,7 +24,7 @@
         android:layout_height="83dp"
         android:background="#FFFFFF"
         android:gravity="center"
-        android:text="1. 介紹如何使用網址檢查\n2. 資料庫加密匯出\n3. 資料庫匯入"
+        android:text="1. 介紹如何使用網址檢查\n2. \使用者設定密碼加密後匯出\n3. 資料庫匯入"
         android:textColor="#F44336"
         android:textSize="20sp"
         app:layout_constraintBottom_toBottomOf="@+id/imageView7"

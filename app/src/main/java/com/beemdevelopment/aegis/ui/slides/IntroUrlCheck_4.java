@@ -1,10 +1,16 @@
 package com.beemdevelopment.aegis.ui.slides;
 
 
+import android.app.Dialog;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.view.Display;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 

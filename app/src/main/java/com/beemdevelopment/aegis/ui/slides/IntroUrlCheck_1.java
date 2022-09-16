@@ -1,10 +1,12 @@
 package com.beemdevelopment.aegis.ui.slides;
 
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 
 import androidx.fragment.app.Fragment;
 

@@ -23,6 +23,7 @@
         android:layout_width="298dp"
         android:layout_height="70dp"
         android:gravity="center"
+        android:textStyle="bold"
         android:text="@string/intro_2FA_second"
         android:textColor="#F44336"
         android:textSize="25sp"
