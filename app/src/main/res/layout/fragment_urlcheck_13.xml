@@ -9,27 +9,28 @@
 
     <ImageView
         android:id="@+id/imageView7"
-        android:layout_width="324dp"
-        android:layout_height="508dp"
+        android:layout_width="match_parent"
+        android:layout_height="520dp"
         android:src="@drawable/share"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.494"
+        app:layout_constraintHorizontal_bias="0.75"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.497" />
+        app:layout_constraintVertical_bias="0.0" />
 
     <TextView
         android:layout_width="284dp"
         android:layout_height="74dp"
-        android:background="#FFFFFF"
         android:gravity="center"
         android:text="選取網址分享，\n可以快速進行網址檢查"
-        android:textColor="#F44336"
-        android:textSize="20sp"
+        android:textColor="#FFFFFF"
+        android:textSize="25sp"
+        android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/imageView7"
         app:layout_constraintEnd_toEndOf="@+id/imageView7"
+        app:layout_constraintHorizontal_bias="0.492"
         app:layout_constraintStart_toStartOf="@+id/imageView7"
         app:layout_constraintTop_toTopOf="@+id/imageView7"
-        app:layout_constraintVertical_bias="0.566" />
+        app:layout_constraintVertical_bias="0.663" />
 </androidx.constraintlayout.widget.ConstraintLayout>

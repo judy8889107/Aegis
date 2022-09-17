@@ -135,7 +135,6 @@ dependencies {
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:2.7.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'com.google.android.gms:play-services-auth:20.2.0'
-    implementation 'com.jakewharton:butterknife-compiler:10.2.3'
 
 
     def androidTestVersion = '1.4.0'
@@ -203,7 +202,6 @@ dependencies {
     implementation 'commons-validator:commons-validator:1.4.0'
 
     implementation 'com.github.LinweiJ:ViewPagerIndicator:0.3.0'
-    implementation 'com.jakewharton:butterknife:10.2.3'
 
     androidTestAnnotationProcessor "com.google.dagger:hilt-android-compiler:$hiltVersion"
     androidTestImplementation "com.google.dagger:hilt-android-testing:$hiltVersion"
