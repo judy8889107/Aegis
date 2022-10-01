@@ -91,6 +91,9 @@ import java.io.*;
 import java.lang.annotation.Target;
 import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 /* 輸入流 */
 import java.net.URLEncoder;
@@ -108,6 +111,8 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 /* JSON */
 
 import org.apache.commons.validator.routines.UrlValidator;
@@ -943,13 +948,39 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         return new Triple<>(groupID, format, _format);
     }
 
+//    TODO:URL convert to URI to valid
+    public static boolean urlValidator(String url){
+        try {
+            URL urlObj = new URL(url);
+            URI uriObj = new URI(urlObj.getProtocol(), urlObj.getHost(), urlObj.getPath(), urlObj.getQuery(), null);
+            return true;
+        }
+        catch (URISyntaxException exception) {
+            return false;
+        }
+        catch (MalformedURLException exception) {
+            return false;
+        }
 
+    }
     /* 檢查URL function */
     public void IPQSCheck() {
 
         /* 檢查網址是否 valid */
-        UrlValidator defaultValidator = new UrlValidator();
-        if (defaultValidator.isValid(URL_text)) {
+//        TODO:判斷是否valid有問題
+//        UrlValidator defaultValidator = new UrlValidator(UrlValidator.ALLOW_ALL_SCHEMES);
+//        System.out.println("UrlValidator是否valid?"+defaultValidator.isValid(URL_text));
+        final String URL_REGEX =
+                "^((((https?|ftps?|gopher|telnet|nntp)://)|(mailto:|news:))" +
+                        "(%[0-9A-Fa-f]{2}|[-()_.!~*';/?:@&=+$,A-Za-z0-9])+)" +
+                        "([).!';/?:,][[:blank:]])?$";
+        Pattern urlPattern = Pattern.compile(URL_REGEX);
+        Matcher matcher = urlPattern.matcher(URL_text);
+
+//        TODO:URL 沒有嚴格按照 RFC 2396 並且不能轉換為 URI
+        System.out.println("是否可轉為URI: "+urlValidator(URL_text));
+
+        if (matcher.matches()) {
             /* 啟動IPQS thread送出請求 */
             Thread IPQS_thread = new Thread(this);
             IPQS_thread.setName("IPQS_thread");
