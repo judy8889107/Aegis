@@ -18,10 +18,10 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:vpi_default_color="#cdcdcd"
-        app:vpi_distance="800dp"
+        app:vpi_distance="600dp"
         app:vpi_distanceType="BY_RADIUS"
         app:vpi_indicatorType="CIRCLE"
         app:vpi_length="24dp"
-        app:vpi_radius="7dp"
+        app:vpi_radius="5dp"
         app:vpi_selected_color="#FF23EEF5" />
 </androidx.constraintlayout.widget.ConstraintLayout>

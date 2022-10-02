@@ -27,6 +27,7 @@
         android:layout_width="358dp"
         android:layout_height="359dp"
         android:src="@drawable/first"
+        android:padding="32dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

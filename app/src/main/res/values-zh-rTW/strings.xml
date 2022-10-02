@@ -293,5 +293,5 @@
     <string name="intro_2FA_third">總共可以分成三種方式</string>
     <string name="intro_2FA_second">按右下角的加號</string>
     <string name="intro_2FA_fourth">手動設定:先輸入程式名稱\n及程式內部的金鑰</string>
-    <string name="intro_2FA_five">您可以點擊下面的圖標了解每個網站\n如何啟用 2FA。\n如果以下沒有您需要的網站，\n可以點擊右下角進入網站搜尋</string>
+    <string name="intro_2FA_five">您可以點擊下面的圖標\n了解每個網站如何啟用 2FA。\n如果以下沒有您需要的網站，\n可以點擊右下角進入網站搜尋</string>
 </resources>

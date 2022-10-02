@@ -21,22 +21,21 @@
         android:orientation="vertical">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="350dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginTop="30dp"
             android:orientation="horizontal">
 
             <RelativeLayout
-                android:layout_width="357dp"
+                android:layout_width="310dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center">
 
                 <EditText
                     android:id="@+id/online_check_input"
-                    android:layout_width="346dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
                     android:background="@drawable/textview_border"
                     android:enabled="true"
                     android:hint="http://example.domain.com"
@@ -52,7 +51,7 @@
                     android:layout_alignStart="@+id/online_check_input"
                     android:layout_alignParentTop="true"
                     android:layout_alignParentEnd="true"
-                    android:layout_marginStart="291dp"
+                    android:layout_marginStart="260dp"
                     android:layout_marginTop="6dp"
                     android:layout_marginEnd="22dp"
                     android:background="@android:color/transparent"
@@ -65,9 +64,7 @@
                 android:id="@+id/online_check_send_btn"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
                 android:background="@android:color/transparent"
-                android:padding="10dp"
                 android:scaleType="centerCrop"
                 app:srcCompat="@android:drawable/ic_menu_send" />
         </LinearLayout>
@@ -83,7 +80,7 @@
             android:letterSpacing="0.05"
             android:text="輸入網址，即可線上檢測並設定至資料庫中"
             android:textAlignment="center"
-            android:textSize="16dp" />
+            android:textSize="14dp" />
 
         <Space
             android:layout_width="match_parent"

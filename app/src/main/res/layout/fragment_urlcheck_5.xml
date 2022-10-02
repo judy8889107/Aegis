@@ -11,7 +11,7 @@
         android:layout_width="322dp"
         android:layout_height="139dp"
         android:gravity="center"
-        android:text="顯示本地檢查結果：\n滿分為五個星表示\n星數越少安全性越低\n一星則會詢問是否進一步線上檢查"
+        android:text="顯示本地檢查結果：\n滿分為五個星表示\n星數越少安全性越低\n一星則詢問是否進一步線上檢查"
         android:textColor="#000000"
         android:textSize="20sp"
         app:layout_constraintBottom_toTopOf="@+id/imageView10"

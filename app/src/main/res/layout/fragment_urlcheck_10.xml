@@ -20,17 +20,16 @@
         app:layout_constraintVertical_bias="0.0" />
 
     <TextView
-        android:layout_width="308dp"
-        android:layout_height="130dp"
+        android:layout_width="321dp"
+        android:layout_height="107dp"
         android:gravity="center"
-        android:text="透過本地檢查加入資料庫的網址會顯示在此，前面數字代表安全層級(2~5)"
+        android:text="透過本地檢查加入資料庫的網址\n會顯示在此，\n前面數字代表安全層級(2~5)"
         android:textColor="#FFFFFF"
-        android:textSize="25sp"
+        android:textSize="20sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/imageView7"
         app:layout_constraintEnd_toEndOf="@+id/imageView7"
-        app:layout_constraintHorizontal_bias="0.487"
         app:layout_constraintStart_toStartOf="@+id/imageView7"
         app:layout_constraintTop_toTopOf="@+id/imageView7"
-        app:layout_constraintVertical_bias="0.811" />
+        app:layout_constraintVertical_bias="0.77" />
 </androidx.constraintlayout.widget.ConstraintLayout>

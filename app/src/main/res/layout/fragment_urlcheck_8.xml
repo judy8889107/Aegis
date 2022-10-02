@@ -20,9 +20,9 @@
         app:layout_constraintVertical_bias="0.862" />
 
     <TextView
-        android:layout_width="343dp"
-        android:layout_height="134dp"
-        android:text="線上檢查結果：\n風險分數從0-100分\n風險分數為0分為安全網站\n風險分數越高時越有可能為危險網站"
+        android:layout_width="295dp"
+        android:layout_height="131dp"
+        android:text="線上檢查結果：\n風險分數從0-100分\n風險分數為0分為安全網站\n風險分數越高越可能是危險網站"
         android:textColor="#000000"
         android:textSize="20sp"
         app:layout_constraintBottom_toTopOf="@+id/imageView7"

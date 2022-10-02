@@ -19,16 +19,16 @@
         app:layout_constraintVertical_bias="0.0" />
 
     <TextView
-        android:layout_width="321dp"
-        android:layout_height="167dp"
+        android:layout_width="309dp"
+        android:layout_height="141dp"
         android:gravity="center"
-        android:text="1. 介紹如何使用網址檢查\n2. \使用者設定密碼加密後\n匯出\n3. 資料庫匯入"
+        android:text="1. 介紹如何使用網址檢查\n2. \使用者設定密碼加密後匯出\n3. 資料庫匯入"
         android:textColor="#FFFFFF"
-        android:textSize="25sp"
+        android:textSize="20sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/imageView7"
         app:layout_constraintEnd_toEndOf="@+id/imageView7"
         app:layout_constraintStart_toStartOf="@+id/imageView7"
         app:layout_constraintTop_toTopOf="@+id/imageView7"
-        app:layout_constraintVertical_bias="0.585" />
+        app:layout_constraintVertical_bias="0.544" />
 </androidx.constraintlayout.widget.ConstraintLayout>
