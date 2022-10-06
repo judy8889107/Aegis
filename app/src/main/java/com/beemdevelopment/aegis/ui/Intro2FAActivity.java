@@ -12,6 +12,7 @@ import com.beemdevelopment.aegis.ui.slides.Intro2FA_1;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_2;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_3;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_4;
+import com.beemdevelopment.aegis.ui.slides.Intro2FA_4_2;
 import com.beemdevelopment.aegis.ui.slides.Intro2FA_5;
 import com.lwj.widget.viewpagerindicator.ViewPagerIndicator;
 
@@ -35,21 +36,23 @@ public class Intro2FAActivity extends AppCompatActivity {
         viewPager = findViewById(R.id.viewpager);
         viewPagerIndicator = (ViewPagerIndicator) findViewById(R.id.viewPagerIndicator);
         //viewpager是固定页数, 传入viewpager即可
-        viewPagerIndicator.setViewPager(viewPager,5);
+        viewPagerIndicator.setViewPager(viewPager,6);
 
         //5.初始化三個Fragment分頁
-        fragments = new Fragment[5];
+        fragments = new Fragment[6];
         Intro2FA_1 bf1 = new Intro2FA_1();
         Intro2FA_2 bf2 = new Intro2FA_2();
         Intro2FA_3 bf3 = new Intro2FA_3();
         Intro2FA_4 bf4 = new Intro2FA_4();
-        Intro2FA_5 bf5 = new Intro2FA_5();
+        Intro2FA_4_2 bf5 = new Intro2FA_4_2();
+        Intro2FA_5 bf6 = new Intro2FA_5();
         //6.陣列內容
         fragments[0] = bf1;
         fragments[1] = bf2;
         fragments[2] = bf3;
         fragments[3] = bf4;
         fragments[4] = bf5;
+        fragments[5] = bf6;
 
         //7.初始化轉換器
         adapter = new BlankFragmentClass(getSupportFragmentManager(), fragments);

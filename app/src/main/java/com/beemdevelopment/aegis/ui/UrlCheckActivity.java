@@ -993,6 +993,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
     }
 
+
     // 輸入inputstream，串接回傳資訊
     public static String getData(InputStream inputStream, boolean newline) throws IOException {
         String result = null;

@@ -203,10 +203,6 @@ dependencies {
 
     implementation 'com.github.LinweiJ:ViewPagerIndicator:0.3.0'
 
-
-
-
-
     androidTestAnnotationProcessor "com.google.dagger:hilt-android-compiler:$hiltVersion"
     androidTestImplementation "com.google.dagger:hilt-android-testing:$hiltVersion"
     androidTestImplementation "androidx.test:core:${androidTestVersion}"

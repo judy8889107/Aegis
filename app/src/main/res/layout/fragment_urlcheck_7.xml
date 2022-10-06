@@ -8,31 +8,27 @@
     android:padding="32dp">
 
     <ImageView
-        android:id="@+id/imageView4"
+        android:id="@+id/imageView7"
         android:layout_width="match_parent"
-        android:layout_height="520dp"
-        android:src="@drawable/second"
+        android:layout_height="560dp"
+        android:src="@drawable/four"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.25"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0" />
 
     <TextView
-        android:id="@+id/textView6"
-        android:layout_width="238dp"
-        android:layout_height="60dp"
+        android:layout_width="163dp"
+        android:layout_height="62dp"
         android:gravity="center"
-        android:text="@string/intro_2FA_second"
+        android:text="輸入網址"
         android:textColor="#FFFFFF"
-        android:textStyle="bold"
         android:textSize="25sp"
-        app:layout_constraintBottom_toBottomOf="@+id/imageView4"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.61"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/imageView4"
-        app:layout_constraintVertical_bias="0.773" />
-
+        app:layout_constraintBottom_toBottomOf="@+id/imageView7"
+        app:layout_constraintEnd_toEndOf="@+id/imageView7"
+        app:layout_constraintHorizontal_bias="0.201"
+        app:layout_constraintStart_toStartOf="@+id/imageView7"
+        app:layout_constraintTop_toTopOf="@+id/imageView7"
+        app:layout_constraintVertical_bias="0.532" />
 </androidx.constraintlayout.widget.ConstraintLayout>
