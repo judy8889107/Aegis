@@ -61,6 +61,7 @@ import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
 
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 
 /* 使用EditText */
@@ -292,6 +293,23 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
         return super.onKeyDown(keyCode, event);
     }
+
+    //當應用於後台運行(使用者按下 home或 menu鍵，資料會寫入文檔，防止使用者滑除應用而沒有記錄到新增的網址)
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.e("myactivity", "應用在後台運行");
+        try {
+            for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(myListener.sort_sub_old_to_new));
+            Collections.sort(url_database_list, Collections.reverseOrder(myListener.sort_main_old_to_new));
+            write_url_database();
+            Log.e("myactivity", "資料寫入文檔");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     //点击空白区域 自动隐藏软键盘
     @Override
