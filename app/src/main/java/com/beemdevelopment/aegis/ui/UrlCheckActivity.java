@@ -19,6 +19,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.nfc.Tag;
 import android.os.Build;
@@ -998,17 +1000,27 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 //        TODO:URL 沒有嚴格按照 RFC 2396 並且不能轉換為 URI
         System.out.println("是否可轉為URI: "+urlValidator(URL_text));
-
-        if (matcher.matches()) {
-            /* 啟動IPQS thread送出請求 */
-            Thread IPQS_thread = new Thread(this);
-            IPQS_thread.setName("IPQS_thread");
-            setButtomDialog(dialog_progress_view, false); //顯示處理 dialog
-            IPQS_thread.start();
-        } else {
-            dialog_toast.setText(R.string.parseFail);
+        //檢查有無網路
+        ConnectivityManager conManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);//先取得此service
+        NetworkInfo networInfo = conManager.getActiveNetworkInfo(); //取得相關資訊
+        /*若無網路*/
+        if (networInfo == null || !networInfo.isAvailable()){
+            dialog_toast.setText("目前無網路，無法執行");
             dialog_toast.show();
         }
+        else{
+            if (matcher.matches()) {
+                /* 啟動IPQS thread送出請求 */
+                Thread IPQS_thread = new Thread(this);
+                IPQS_thread.setName("IPQS_thread");
+                setButtomDialog(dialog_progress_view, false); //顯示處理 dialog
+                IPQS_thread.start();
+            } else {
+                dialog_toast.setText(R.string.parseFail);
+                dialog_toast.show();
+            }
+        }
+
     }
 
 
@@ -1379,6 +1391,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     buttomDialog.dismiss();
                     break;
                 case R.id.local_check_yes_btn:
+                    Log.v("myactivity", v.getTag().toString());
                     if (v.getTag().equals("add_url")) {
                         try {
                             buttomDialog.dismiss();
