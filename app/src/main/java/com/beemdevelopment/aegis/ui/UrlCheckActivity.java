@@ -19,6 +19,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.nfc.Tag;
 import android.os.Build;
@@ -61,6 +63,7 @@ import com.google.common.net.InternetDomainName;
 
 import java.io.IOException;
 
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 
 /* 使用EditText */
@@ -292,6 +295,23 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
         return super.onKeyDown(keyCode, event);
     }
+
+    //當應用於後台運行(使用者按下 home或 menu鍵，資料會寫入文檔，防止使用者滑除應用而沒有記錄到新增的網址)
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.e("myactivity", "應用在後台運行");
+        try {
+            for (ArrayList<Struct.urlObject> urlObjects : url_database_list)
+                Collections.sort(urlObjects.subList(1, urlObjects.size()), Collections.reverseOrder(myListener.sort_sub_old_to_new));
+            Collections.sort(url_database_list, Collections.reverseOrder(myListener.sort_main_old_to_new));
+            write_url_database();
+            Log.e("myactivity", "資料寫入文檔");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     //点击空白区域 自动隐藏软键盘
     @Override
@@ -948,7 +968,8 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         return new Triple<>(groupID, format, _format);
     }
 
-//    TODO:URL convert to URI to valid
+
+    //    TODO:URL convert to URI to valid
     public static boolean urlValidator(String url){
         try {
             URL urlObj = new URL(url);
@@ -979,17 +1000,27 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 //        TODO:URL 沒有嚴格按照 RFC 2396 並且不能轉換為 URI
         System.out.println("是否可轉為URI: "+urlValidator(URL_text));
-
-        if (matcher.matches()) {
-            /* 啟動IPQS thread送出請求 */
-            Thread IPQS_thread = new Thread(this);
-            IPQS_thread.setName("IPQS_thread");
-            setButtomDialog(dialog_progress_view, false); //顯示處理 dialog
-            IPQS_thread.start();
-        } else {
-            dialog_toast.setText(R.string.parseFail);
+        //檢查有無網路
+        ConnectivityManager conManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);//先取得此service
+        NetworkInfo networInfo = conManager.getActiveNetworkInfo(); //取得相關資訊
+        /*若無網路*/
+        if (networInfo == null || !networInfo.isAvailable()){
+            dialog_toast.setText("目前無網路，無法執行");
             dialog_toast.show();
         }
+        else{
+            if (matcher.matches()) {
+                /* 啟動IPQS thread送出請求 */
+                Thread IPQS_thread = new Thread(this);
+                IPQS_thread.setName("IPQS_thread");
+                setButtomDialog(dialog_progress_view, false); //顯示處理 dialog
+                IPQS_thread.start();
+            } else {
+                dialog_toast.setText(R.string.parseFail);
+                dialog_toast.show();
+            }
+        }
+
     }
 
 
@@ -1360,6 +1391,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     buttomDialog.dismiss();
                     break;
                 case R.id.local_check_yes_btn:
+                    Log.v("myactivity", v.getTag().toString());
                     if (v.getTag().equals("add_url")) {
                         try {
                             buttomDialog.dismiss();
