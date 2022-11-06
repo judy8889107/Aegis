@@ -8,12 +8,12 @@
 
     <TextView
         android:id="@+id/textView14"
-        android:layout_width="322dp"
-        android:layout_height="139dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:gravity="center"
         android:text="顯示本地檢查結果：\n滿分為五個星表示\n星數越少安全性越低\n一星則詢問是否進一步線上檢查"
         android:textColor="#000000"
-        android:textSize="20sp"
+        android:textSize="25sp"
         app:layout_constraintBottom_toTopOf="@+id/imageView10"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.438"
@@ -23,9 +23,9 @@
 
     <ImageView
         android:id="@+id/imageView9"
-        android:layout_width="match_parent"
-        android:layout_height="231dp"
-        android:layout_marginBottom="36dp"
+        android:layout_width="wrap_content"
+        android:layout_height="319dp"
+        android:layout_marginBottom="136dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -33,11 +33,12 @@
 
     <ImageView
         android:id="@+id/imageView10"
-        android:layout_width="match_parent"
-        android:layout_height="201dp"
-        android:layout_marginBottom="12dp"
-        app:layout_constraintBottom_toTopOf="@+id/imageView9"
+        android:layout_width="wrap_content"
+        android:layout_height="232dp"
+        android:layout_marginBottom="468dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.042"
         app:layout_constraintStart_toStartOf="parent"
         app:srcCompat="@drawable/five_2" />
 

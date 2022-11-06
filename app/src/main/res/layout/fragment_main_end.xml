@@ -8,8 +8,8 @@
 
     <TableLayout
         android:id="@+id/tableLayout"
-        android:layout_width="299dp"
-        android:layout_height="339dp"
+        android:layout_width="match_parent"
+        android:layout_height="578dp"
         android:gravity="center"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -22,32 +22,36 @@
 
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:gravity="center"
             android:scaleType="centerInside">
 
             <ImageButton
                 android:id="@+id/imageButton"
-                android:layout_width="100dp"
-                android:layout_height="110dp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:background="#FFFFFF"
                 android:padding="20dp"
+                android:gravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/apple" />
 
             <ImageButton
                 android:id="@+id/imageButton2"
-                android:layout_width="100dp"
-                android:layout_height="110dp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:background="#FFFFFF"
                 android:padding="20dp"
+                android:gravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/facebook" />
 
             <ImageButton
                 android:id="@+id/imageButton3"
-                android:layout_width="100dp"
-                android:layout_height="110dp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:background="#FFFFFF"
                 android:padding="20dp"
+                android:gravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/dropbox" />
 
@@ -55,32 +59,36 @@
 
         <TableRow
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:gravity="center">
 
             <ImageButton
                 android:id="@+id/imageButton4"
-                android:layout_width="100dp"
-                android:layout_height="110dp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:background="#FFFFFF"
                 android:padding="20dp"
+                android:gravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/linkedin" />
 
             <ImageButton
                 android:id="@+id/imageButton5"
-                android:layout_width="100dp"
-                android:layout_height="110dp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:background="#FFFFFF"
                 android:padding="20dp"
+                android:gravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/google" />
 
             <ImageButton
                 android:id="@+id/imageButton6"
-                android:layout_width="100dp"
-                android:layout_height="110dp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:background="#FFFFFF"
                 android:padding="20dp"
+                android:gravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/microsoft" />
 
@@ -88,33 +96,37 @@
 
         <TableRow
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:gravity="center">
 
             <ImageButton
                 android:id="@+id/imageButton7"
-                android:layout_width="100dp"
-                android:layout_height="110dp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:background="#FFFFFF"
                 android:padding="20dp"
+                android:gravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/twitter" />
 
             <ImageButton
                 android:id="@+id/imageButton8"
-                android:layout_width="100dp"
-                android:layout_height="110dp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:background="#FFFFFF"
                 android:padding="20dp"
+                android:gravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/instagram" />
 
             <ImageButton
 
                 android:id="@+id/imageButton9"
-                android:layout_width="100dp"
-                android:layout_height="110dp"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:background="#FFFFFF"
                 android:padding="25dp"
+                android:gravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/other" />
 
@@ -125,17 +137,17 @@
 
     <TextView
         android:id="@+id/textView13"
-        android:layout_width="291dp"
-        android:layout_height="116dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:singleLine="false"
         android:text="@string/intro_2FA_five"
         android:textAlignment="center"
-        android:textSize="20sp"
+        android:textSize="25sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toTopOf="@+id/tableLayout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.529" />
+        app:layout_constraintVertical_bias="0.36" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

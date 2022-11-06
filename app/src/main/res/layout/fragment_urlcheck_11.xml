@@ -9,8 +9,8 @@
 
     <ImageView
         android:id="@+id/imageView7"
-        android:layout_width="match_parent"
-        android:layout_height="560dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:src="@drawable/nine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -20,17 +20,16 @@
         app:layout_constraintVertical_bias="0.0" />
 
     <TextView
-        android:layout_width="288dp"
-        android:layout_height="94dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:gravity="center"
         android:text="1. 搜尋網址\n2. 選擇網址排序方式"
         android:textColor="#FFFFFF"
-        android:textSize="25sp"
+        android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/imageView7"
         app:layout_constraintEnd_toEndOf="@+id/imageView7"
-        app:layout_constraintHorizontal_bias="0.694"
         app:layout_constraintStart_toStartOf="@+id/imageView7"
         app:layout_constraintTop_toTopOf="@+id/imageView7"
-        app:layout_constraintVertical_bias="0.287" />
+        app:layout_constraintVertical_bias="0.36" />
 </androidx.constraintlayout.widget.ConstraintLayout>

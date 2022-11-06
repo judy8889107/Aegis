@@ -9,8 +9,8 @@
 
     <ImageView
         android:id="@+id/imageView6"
-        android:layout_width="match_parent"
-        android:layout_height="560dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:src="@drawable/two_2"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -20,18 +20,18 @@
         app:layout_constraintVertical_bias="0.0" />
 
     <TextView
-        android:layout_width="249dp"
-        android:layout_height="98dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:gravity="center"
         android:text="也可以使用QRcode\n輸入網址"
         android:textColor="#FFFFFF"
-        android:textSize="25sp"
+        android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/imageView6"
         app:layout_constraintEnd_toEndOf="@+id/imageView6"
-        app:layout_constraintHorizontal_bias="0.724"
+        app:layout_constraintHorizontal_bias="0.721"
         app:layout_constraintStart_toStartOf="@+id/imageView6"
         app:layout_constraintTop_toTopOf="@+id/imageView6"
-        app:layout_constraintVertical_bias="0.43" />
+        app:layout_constraintVertical_bias="0.457" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

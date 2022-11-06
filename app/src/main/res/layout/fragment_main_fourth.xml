@@ -11,7 +11,7 @@
     <ImageView
         android:id="@+id/imageView4"
         android:layout_width="match_parent"
-        android:layout_height="520dp"
+        android:layout_height="wrap_content"
         android:src="@drawable/fourth"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -20,17 +20,17 @@
         app:layout_constraintVertical_bias="0.0" />
 
     <TextView
-        android:layout_width="298dp"
-        android:layout_height="85dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:gravity="center"
         android:text="手動設定:先輸入程式名稱\n及程式內部的金鑰"
-        android:textStyle="bold"
         android:textColor="#FFFFFF"
-        android:textSize="25sp"
+        android:textSize="30sp"
+        android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/imageView4"
         app:layout_constraintEnd_toEndOf="@+id/imageView4"
-        app:layout_constraintHorizontal_bias="0.488"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="@+id/imageView4"
         app:layout_constraintTop_toTopOf="@+id/imageView4"
-        app:layout_constraintVertical_bias="0.177" />
+        app:layout_constraintVertical_bias="0.254" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -11,7 +11,7 @@
     <ImageView
         android:id="@+id/imageView4"
         android:layout_width="match_parent"
-        android:layout_height="520dp"
+        android:layout_height="wrap_content"
         android:src="@drawable/fourth_2"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -20,17 +20,17 @@
         app:layout_constraintVertical_bias="0.0" />
 
     <TextView
-        android:layout_width="303dp"
-        android:layout_height="85dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:gravity="center"
         android:text="也可以設定OTP的模式\n配合各個程式"
         android:textColor="#FFFFFF"
-        android:textSize="25sp"
+        android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/imageView4"
         app:layout_constraintEnd_toEndOf="@+id/imageView4"
-        app:layout_constraintHorizontal_bias="0.488"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="@+id/imageView4"
         app:layout_constraintTop_toTopOf="@+id/imageView4"
-        app:layout_constraintVertical_bias="0.177" />
+        app:layout_constraintVertical_bias="0.266" />
 </androidx.constraintlayout.widget.ConstraintLayout>
