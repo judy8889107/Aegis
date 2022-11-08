@@ -27,6 +27,7 @@ import android.os.Build;
 import android.os.Bundle;
 
 
+import android.os.Environment;
 import android.os.Vibrator;
 import android.provider.ContactsContract;
 import android.text.Editable;
@@ -103,11 +104,13 @@ import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -120,6 +123,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.validator.routines.UrlValidator;
 import org.bouncycastle.jcajce.provider.symmetric.ChaCha;
+import org.bouncycastle.util.test.FixedSecureRandom;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -531,6 +535,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         }
         if (requestCode == ACTION_CREATE_DOCUMENT) {
             try {
+
                 Uri fileUri = data.getData();
                 String passwd = ((EditText) dialog_export_file.findViewById(R.id.export_passwd)).getText().toString();
                 exportFile(fileUri, passwd);
@@ -970,20 +975,19 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
 
     //    TODO:URL convert to URI to valid
-    public static boolean urlValidator(String url){
+    public static boolean urlValidator(String url) {
         try {
             URL urlObj = new URL(url);
             URI uriObj = new URI(urlObj.getProtocol(), urlObj.getHost(), urlObj.getPath(), urlObj.getQuery(), null);
             return true;
-        }
-        catch (URISyntaxException exception) {
+        } catch (URISyntaxException exception) {
             return false;
-        }
-        catch (MalformedURLException exception) {
+        } catch (MalformedURLException exception) {
             return false;
         }
 
     }
+
     /* 檢查URL function */
     public void IPQSCheck() {
 
@@ -999,16 +1003,15 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         Matcher matcher = urlPattern.matcher(URL_text);
 
 //        TODO:URL 沒有嚴格按照 RFC 2396 並且不能轉換為 URI
-        System.out.println("是否可轉為URI: "+urlValidator(URL_text));
+        System.out.println("是否可轉為URI: " + urlValidator(URL_text));
         //檢查有無網路
         ConnectivityManager conManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);//先取得此service
         NetworkInfo networInfo = conManager.getActiveNetworkInfo(); //取得相關資訊
         /*若無網路*/
-        if (networInfo == null || !networInfo.isAvailable()){
+        if (networInfo == null || !networInfo.isAvailable()) {
             dialog_toast.setText("目前無網路，無法執行");
             dialog_toast.show();
-        }
-        else{
+        } else {
             if (matcher.matches()) {
                 /* 啟動IPQS thread送出請求 */
                 Thread IPQS_thread = new Thread(this);
@@ -1333,15 +1336,18 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                     break;
                 case R.id.export_confirm_btn: /* 輸出確定按鈕 */
                     String _password = ((EditText) dialog_export_file.findViewById(R.id.export_passwd)).getText().toString();
-                    if (_password.length() < 8) { /* 密碼長度至少 8位數，至多到 15位數 */
-                       dialog_toast.setText("密碼長度過短!");
-                       dialog_toast.show();
-                    }else {
+                    if (_password.length() < 8 || !_password.matches(".*[0-9]+.*") || !_password.matches(".*[A-Za-z]+.*")) {
+                        /* 密碼長度至少 8位數，至多到 15位數，且須英數混合 */
+                        dialog_toast.setText("請輸入8~15位英數混合密碼!");
+                        dialog_toast.show();
+                    } else {
                         Intent intent = new Intent();
                         intent.setAction(Intent.ACTION_CREATE_DOCUMENT);
                         intent.addCategory(Intent.CATEGORY_OPENABLE);
                         intent.setType("application/xml");
-                        intent.putExtra(Intent.EXTRA_TITLE, "myOTP_Database.xml"); /* 預設名稱 */
+                        String fileName = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date());
+                        fileName = fileName + ".xml";
+                        intent.putExtra(Intent.EXTRA_TITLE, fileName); /* 預設名稱 */
                         startActivityForResult(intent, ACTION_CREATE_DOCUMENT);
                         EXP_IMP_dialog.dismiss();
                     }
@@ -1550,7 +1556,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                             EditText editText = dialog_export_file.findViewById(R.id.export_passwd);
                             editText.setText(""); /*清空輸入*/
                             editText.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                            ((ImageButton)dialog_export_file.findViewById(R.id.export_eye_btn)).setSelected(false);
+                            ((ImageButton) dialog_export_file.findViewById(R.id.export_eye_btn)).setSelected(false);
                             EXP_IMP_dialog.setContentView(dialog_export_file);
                             EXP_IMP_dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
                             EXP_IMP_dialog.show();
@@ -1567,7 +1573,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                         EditText editText1 = dialog_import_file.findViewById(R.id.import_passwd);
                         editText1.setText("");
                         editText1.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                        ((ImageButton)dialog_import_file.findViewById(R.id.import_eye_btn)).setSelected(false);
+                        ((ImageButton) dialog_import_file.findViewById(R.id.import_eye_btn)).setSelected(false);
 
                         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                         intent.setType("text/xml");
