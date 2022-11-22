@@ -32,7 +32,7 @@
         android:gravity="center"
         android:letterSpacing="0.1"
         android:lineSpacingMultiplier="1.1"
-        android:text="此網址安全層級為一星\n(低於三星網址建議登入後小心使用)\n此網址不在資料庫中，請問是否要加入資料庫？"
+        android:text="此網址安全層級為一星\n(三星以下網址建議登入後小心使用)\n此網址不在資料庫中，請問是否要加入資料庫？"
         android:textColor="#000000"
         android:textSize="16sp" />
 

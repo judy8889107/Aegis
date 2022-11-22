@@ -466,7 +466,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
                 //設定輸出訊息 && 按鈕 tag
                 String title = "此網址安全層級為<font color='%s'><u>%s星</u></font>";
                 String _msg = "%s此網址不在資料庫中，請問是否要加入資料庫？";
-                String hint = "低於三星網址建議登入後小心使用<br>";
+                String hint = "三星以下網址建議登入後小心使用<br>";
                 int[] drawableID = {0, R.drawable.mydrawble_star_scale1, R.drawable.mydrawble_star_scale2, R.drawable.mydrawble_star_scale3, R.drawable.mydrawble_star_scale4, R.drawable.mydrawble_star_scale5};
                 String[] numText = {"", "一", "二", "三", "四", "五"};
                 String[] textColor = {"", "#d63839", "#f65922", "#fec721", "#78c430", "#457c0d"};
@@ -1008,7 +1008,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
         ConnectivityManager conManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);//先取得此service
         NetworkInfo networInfo = conManager.getActiveNetworkInfo(); //取得相關資訊
         /*若無網路*/
-        if (networInfo == null || !networInfo.isAvailable()) {
+        if (networInfo == null || !networInfo.isConnected()) {
             dialog_toast.setText("目前無網路，無法執行");
             dialog_toast.show();
         } else {
@@ -1060,6 +1060,7 @@ public class UrlCheckActivity extends AegisActivity implements Runnable {
 
             if (connection.getResponseCode() == 200) {
                 result = getData(connection.getInputStream(), false);
+                System.out.println("超級原始訊息:"+"\n"+result+"\n");
                 connection.disconnect();
                 jsonObject = new JSONObject(result);
                 //取出要的資料
