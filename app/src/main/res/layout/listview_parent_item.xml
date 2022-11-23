@@ -27,8 +27,8 @@
 
     <ImageButton
         android:id="@+id/parent_item_icon"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
+        android:layout_width="50dp"
+        android:layout_height="wrap_content"
         android:layout_alignBottom="@+id/tv_group_parent"
 
         android:layout_alignParentTop="true"
